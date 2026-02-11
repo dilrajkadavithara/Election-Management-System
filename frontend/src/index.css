@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+    .gradient-primary {
+        @apply bg-gradient-to-br from-primary-500 to-secondary-500;
+    }
+
+    .gradient-success {
+        @apply bg-gradient-to-br from-green-400 to-emerald-600;
+    }
+
+    .gradient-warning {
+        @apply bg-gradient-to-br from-amber-400 to-orange-500;
+    }
+
+    .card-glass {
+        @apply bg-white/95 backdrop-blur-xl border border-white/30 shadow-2xl;
+    }
+
+    .btn-primary {
+        @apply gradient-primary text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none;
+    }
+
+    .btn-secondary {
+        @apply bg-gray-600 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:bg-gray-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300;
+    }
+
+    .btn-success {
+        @apply gradient-success text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300;
+    }
+}
+
+@layer utilities {
+    .animate-float {
+        animation: float 20s ease-in-out infinite;
+    }
+
+    @keyframes float {
+
+        0%,
+        100% {
+            transform: translate(0, 0) scale(1);
+        }
+
+        33% {
+            transform: translate(100px, -100px) scale(1.1);
+        }
+
+        66% {
+            transform: translate(-100px, 100px) scale(0.9);
+        }
+    }
+}

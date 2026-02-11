@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+data/
+PAGES/
+output/
+*.csv
+*.json
+*.log
+db.sqlite3
+.streamlit/
