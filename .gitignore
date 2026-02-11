@@ -1,12 +1,43 @@
+# Python
 .venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node.js
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+.npm
+package-lock.json
+
+# Environment & Secrets
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Project Specific
 data/
 PAGES/
 output/
 *.csv
 *.json
+!package.json
+!package-lock.json
 *.log
 db.sqlite3
 .streamlit/
+.vscode/
+.DS_Store
+
+# OCR specific
+ocr_result.txt
+voter_crops/
+temp_blocks/
