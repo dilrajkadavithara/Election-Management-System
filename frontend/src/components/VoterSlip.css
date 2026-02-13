@@ -1,0 +1,308 @@
+@import url('https://fonts.googleapis.com/css2?family=Manjari:wght@100;400;700;800&family=JetBrains+Mono:wght@500;800&family=Outfit:wght@400;700;900&display=swap');
+
+/* Main Wrapper - Designer's Choice: The Prestige Frame */
+.voter-slip-wrapper {
+    display: flex;
+    flex-direction: row;
+    width: 100mm;
+    height: 65mm;
+    background: #ffffff;
+    border: 1.5px solid var(--party-color, #000080);
+    /* The Navy Prestige Border */
+    margin: 2mm;
+    font-family: 'Outfit', 'Manjari', sans-serif;
+    color: #0f172a;
+    position: relative;
+    overflow: hidden;
+    page-break-inside: avoid;
+    box-sizing: border-box;
+    border-radius: 12px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), inset 0 0 0 1px var(--party-color-rgba, rgba(0, 0, 128, 0.05));
+}
+
+/* Luxury Side Accent */
+.side-accent-gradient {
+    width: 4px;
+    height: 100%;
+    background: var(--party-gradient, linear-gradient(to bottom, #FF9933, #ffffff, #138808));
+    flex-shrink: 0;
+}
+
+/* --- Left Section (The Iconography) --- */
+.slip-left-section {
+    width: 28mm;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-right: 1px solid #e2e8f0;
+}
+
+.party-symbol-container-premium {
+    width: 22mm;
+    height: 22mm;
+    background: white;
+    padding: 2px;
+    border-radius: 50%;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid var(--party-color, #000080);
+    /* Chakra Navy */
+}
+
+.party-symbol-img-premium {
+    max-width: 85%;
+    max-height: 85%;
+    object-fit: contain;
+}
+
+.symbol-label-premium {
+    margin-top: 8px;
+    font-weight: 900;
+    font-size: 0.8rem;
+    color: var(--party-color, #000080);
+    letter-spacing: 0.1em;
+}
+
+/* --- Right Section (The Grid Architecture) --- */
+.slip-details-section {
+    flex: 1;
+    padding: 12px 16px 0 16px;
+    display: grid !important;
+    grid-template-rows: auto auto 15mm;
+    /* FORCE exactly 15mm for row 3 */
+    height: 100%;
+}
+
+.voter-data-container {
+    grid-row: 1;
+}
+
+.luxury-footer {
+    grid-row: 2;
+    align-self: end;
+    /* Anchor to the top of the safe zone */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 6px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.safe-cut-barrier {
+    grid-row: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 15mm;
+    width: 100%;
+}
+
+/* Premium Header */
+.premium-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.constituency-label {
+    display: block;
+    font-size: 0.55rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #94a3b8;
+    letter-spacing: 0.05em;
+}
+
+.constituency-name-premium {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #334155;
+    margin: 0;
+}
+
+/* Hero Section */
+.voter-hero-section {
+    margin: 8px 0;
+}
+
+.voter-name-hero {
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: #000000;
+    line-height: 1.1;
+    margin: 0 0 4px 0;
+    font-family: 'Manjari', sans-serif;
+    letter-spacing: -0.02em;
+}
+
+.epic-badge-premium {
+    display: inline-flex;
+    align-items: center;
+    background: var(--party-color-tint, #00008010);
+    padding: 3px 8px;
+    border-radius: 4px;
+    border-left: 3px solid var(--party-color, #000080);
+}
+
+.epic-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #64748b;
+    margin-right: 4px;
+}
+
+.epic-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--party-color, #000080);
+}
+
+/* Dual Badge System */
+.dual-badge-system {
+    display: flex;
+    gap: 10px;
+    margin: 8px 0;
+}
+
+.premium-pill-badge {
+    flex: 1;
+    padding: 8px;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.blue-theme {
+    background: #f0f7ff;
+    border: 1px solid #00008030;
+    background: linear-gradient(135deg, #ffffff, #f0f7ff);
+}
+
+.amber-theme {
+    background: linear-gradient(135deg, #ffffff, #fffbeb);
+    border: 1px solid #fcd34d60;
+}
+
+.pill-title {
+    display: block;
+    font-size: 0.55rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 2px;
+}
+
+.pill-number {
+    font-size: 1.4rem;
+    font-weight: 900;
+    display: block;
+}
+
+.blue-theme .pill-number {
+    color: var(--party-color, #000080);
+}
+
+.amber-theme .pill-number {
+    color: var(--party-color-alt, #b45309);
+}
+
+/* Luxury Footer */
+.luxury-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+}
+
+/* The Hard Safety Barrier */
+.safe-cut-spacer {
+    height: 15mm;
+    /* FORCE exactly 15mm of empty space at the bottom */
+    width: 100%;
+}
+
+.station-icon {
+    font-size: 1rem;
+}
+
+.station-label {
+    display: block;
+    font-size: 0.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #94a3b8;
+}
+
+.station-name-luxury {
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin: 0;
+    color: #334155;
+    line-height: 1.2;
+}
+
+/* --- PRINT ARCHITECTURE --- */
+@media print {
+    @page {
+        margin: 5mm;
+        size: A4 portrait;
+    }
+
+    html,
+    body,
+    main {
+        overflow: visible !important;
+        background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    aside,
+    nav,
+    button,
+    .no-print,
+    header.no-print {
+        display: none !important;
+    }
+
+    .voter-slip-wrapper {
+        width: 100mm !important;
+        height: 65mm !important;
+        margin: 3mm !important;
+        /* Expanded gutter for much safer cutting */
+        border: 1.5px dashed #000080 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        display: flex !important;
+    }
+
+    .side-accent-gradient {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        background: linear-gradient(to bottom, #FF9933, #ffffff, #138808) !important;
+    }
+
+    .blue-theme {
+        background: #f0f7ff !important;
+    }
+
+    .amber-theme {
+        background: #fffbeb !important;
+    }
+
+    .party-symbol-container-premium {
+        border-color: #000080 !important;
+    }
+
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}

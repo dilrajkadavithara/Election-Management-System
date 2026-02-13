@@ -51,7 +51,7 @@ class BatchProcessor:
                 parsed_info["Age"] = healed_age
 
         # --- EPIC HEALING & TRUNCATION ---
-        # 1. Take only first 10 alphanumeric characters
+        # 1. Take only first 10 alphanumeric characters (Strict 10-char limit)
         raw_epic = re.sub(r'[^A-Z0-9]', '', raw_data["B_EPIC"].upper())
         clean_epic = raw_epic[:10]
         
@@ -76,7 +76,7 @@ class BatchProcessor:
         parsed_info["Image_Path"] = img_path
         parsed_info["Filename"] = os.path.basename(img_path)
 
-        # 3. Integrity Shield (Auto-Healing & Flagging)
+        # 3. Integrity Shield (REFINED: Silent Pruning & 10-Char Strictness)
         flags = []
         is_healed = False
         
@@ -90,37 +90,29 @@ class BatchProcessor:
             parsed_info["Serial_OCR"] = str(expected_serial)
             is_healed = True
 
+        # --- SILENT PRUNING (Malayalam Fields) ---
+        # Rule: Automatically prune everything except Malayalam, Space, and Dot (.)
+        # Name is sacrosanct, but still pruned. Relation/House are relaxed.
+        mal_fields = ["Full Name", "Relation Name", "House Name"]
+        for field in mal_fields:
+            val = str(parsed_info.get(field, ""))
+            if not val or val == "N/A": continue
+            
+            # Keep only Malayalam (\u0D00-\u0D7F), Space, and Dot (.)
+            pruned_val = re.sub(r'[^ \.\u0D00-\u0D7F]', '', val)
+            # Remove double spaces and trim
+            pruned_val = re.sub(r'\s+', ' ', pruned_val).strip()
+            parsed_info[field] = pruned_val
+
         # --- Data Integrity Checks ---
+        # Sacrosanct Fields: Full Name, Age, Gender, EPIC_ID
+        # Missing fields in Relation/House are still flagged, but noise is gone.
         critical_fields = ["Full Name", "Relation Name", "EPIC_ID", "Age", "Gender"]
-        text_fields = ["Full Name", "Relation Name", "House Name"]
         
         for field in critical_fields:
             val = str(parsed_info.get(field, "N/A"))
             if val == "N/A" or val.strip() == "":
                 flags.append(f"Missing {field}")
-
-        for field in text_fields:
-            val = str(parsed_info.get(field, "N/A"))
-            if val == "N/A" or val.strip() == "":
-                continue
-
-            # Clean invisible control chars before noise check (ZWJ/ZWNJ)
-            check_val = val.replace('\u200c', '').replace('\u200d', '')
-            
-            # 1. Noise Check (English)
-            if re.search(r'[a-zA-Z]', check_val):
-                flags.append(f"Noise (English) in {field}")
-            
-            # 2. Symbol Check: 
-            # - Dot (.) and Comma (,) are allowed in House Name.
-            # - Slash (/), Brackets (()) are often in address fragments.
-            if field == "House Name":
-                symbol_pattern = r'[!@#$%\^&* _=+\[\]{}|;:<>?]'  # Removed /, (, ) from noise
-            else:
-                symbol_pattern = r'[!@#$%\^&*()_=+\[\]{}|;:<>,?]'
-                
-            if re.search(symbol_pattern, check_val):
-                flags.append(f"Noise (Symbol) in {field}")
 
         # --- EPIC Strict Pattern Validation ---
         epic_val = str(parsed_info.get("EPIC_ID", "")).strip()
