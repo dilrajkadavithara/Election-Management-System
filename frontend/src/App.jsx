@@ -1223,7 +1223,7 @@ const App = () => {
                                                 <button onClick={handleStartOCR} className="bg-slate-900 text-white px-12 py-5 rounded-3xl font-black uppercase tracking-widest text-lg shadow-2xl hover:scale-110 transition-all transform active:scale-95">Begin Extraction ➡️</button>
                                             </div>
                                         )}
-                                        {(stage === 'converting' || stage === 'ocr') && (
+                                        {(stage === 'converting' || stage === 'detecting' || stage === 'ocr') && (
                                             <button onClick={async () => {
                                                 if (confirm('Stop processing and clear RAM? This will discard all progress.')) {
                                                     try {
