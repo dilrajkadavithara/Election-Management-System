@@ -2,8 +2,8 @@ import os
 from pdf2image import convert_from_path
 
 class PDFProcessor:
-    def __init__(self, poppler_path=r"C:\poppler\poppler-25.12.0\Library\bin"):
-        self.poppler_path = poppler_path
+    def __init__(self, poppler_path=None):
+        self.poppler_path = poppler_path or os.getenv('POPPLER_PATH')
 
     def convert_to_images(self, pdf_path, output_dir, dpi=300):
         """

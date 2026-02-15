@@ -5,6 +5,8 @@ import logging
 import re
 from core.ocr_engine import OCREngine
 from core.parser import VoterParser
+from core.malayalam_normalizer import normalize_malayalam
+# AI Integration disabled for now
 
 class BatchProcessor:
     def __init__(self, tesseract_cmd=None):
@@ -102,6 +104,8 @@ class BatchProcessor:
             pruned_val = re.sub(r'[^ \.\u0D00-\u0D7F]', '', val)
             # Remove double spaces and trim
             pruned_val = re.sub(r'\s+', ' ', pruned_val).strip()
+            # Normalize to modern atomic chillu forms
+            pruned_val = normalize_malayalam(pruned_val)
             parsed_info[field] = pruned_val
 
         # --- Data Integrity Checks ---
@@ -123,6 +127,7 @@ class BatchProcessor:
         if flags:
             parsed_info["Flags"] = ", ".join(flags)
             parsed_info["Status"] = "⚠️ REVIEW"
+            
         elif is_healed:
             parsed_info["Flags"] = "(Serial Auto-Healed)"
             parsed_info["Status"] = "✅ OK"

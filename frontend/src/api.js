@@ -102,6 +102,11 @@ const api = {
         return response.data;
     },
 
+    cancelBatch: async (batchId) => {
+        const response = await client.post(`/api/batch/${batchId}/cancel`);
+        return response.data;
+    },
+
     downloadCSV: (batchId) => {
         const token = localStorage.getItem('voter_token');
         client.get(`/api/download-csv/${batchId}`, { responseType: 'blob' })
@@ -132,8 +137,8 @@ const api = {
         return response.data;
     },
 
-    getVoters: async (search = null, page = 1, filters = {}) => {
-        const response = await client.get('/api/voters', { params: { search, page, ...filters } });
+    getVoters: async (search = null, page = 1, filters = {}, pageSize = 50) => {
+        const response = await client.get('/api/voters', { params: { search, page, page_size: pageSize, ...filters } });
         return response.data;
     },
 
@@ -167,6 +172,10 @@ const api = {
         const response = await client.post('/api/admin/create-user', data);
         return response.data;
     },
+    updateManagedUser: async (uid, data) => {
+        const response = await client.put(`/api/admin/update-user/${uid}`, data);
+        return response.data;
+    },
     deleteUser: async (uid) => {
         const response = await client.delete(`/api/admin/delete-user/${uid}`);
         return response.data;
@@ -185,6 +194,23 @@ const api = {
         const response = await client.post('/api/admin/parties', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
+        return response.data;
+    },
+
+    getCommStats: async () => {
+        const response = await client.get('/api/comm/stats');
+        return response.data;
+    },
+    getTemplates: async () => {
+        const response = await client.get('/api/comm/templates');
+        return response.data;
+    },
+    createTemplate: async (data) => {
+        const response = await client.post('/api/comm/templates', data);
+        return response.data;
+    },
+    sendComm: async (data) => {
+        const response = await client.post('/api/comm/send', data);
         return response.data;
     }
 };

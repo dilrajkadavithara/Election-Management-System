@@ -86,9 +86,10 @@ class Voter(models.Model):
     current_location = models.CharField(max_length=20, choices=LOCATION_CHOICES, db_index=True, null=True, blank=True)
 
     LEANING_CHOICES = [
-        ('SUPPORTER', 'Supporter'),
+        ('UDF', 'UDF'),
+        ('LDF', 'LDF'),
+        ('NDA', 'NDA'),
         ('NEUTRAL', 'Neutral'),
-        ('OPPONENT', 'Opponent'),
     ]
     voter_leaning = models.CharField(max_length=20, choices=LEANING_CHOICES, db_index=True, null=True, blank=True)
 
@@ -104,6 +105,7 @@ class Voter(models.Model):
     source_file = models.CharField(max_length=300, help_text="Original PDF Filename")
     original_serial = models.CharField(max_length=50, blank=True, help_text="Raw OCR value if needed")
     status = models.CharField(max_length=20, choices=SERIAL_STATUS, default='VERIFIED')
+    created_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='uploaded_voters', help_text="User who uploaded this batch")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -136,21 +138,37 @@ from django.contrib.auth.models import User
 class UserProfile(models.Model):
     """
     Extends Django User model with role-based access control.
-    Supports 4-tier hierarchy: Manager, Constituency, Local Body, Booth
+    Supports 7-tier hierarchy:
+    1. SUPERUSER: Global Admin
+    2. MANAGER: Global Monitor & Data Manager (Full Access: Upload/OCR/Edit/Export)
+    3. OPERATOR: Data Entry (Upload/OCR/Edit - Own batches only)
+    4. CONSTITUENCY_ADMIN: Constituency Scope
+    5. LOCAL_BODY_HEAD: Local Body Scope (Municipality/Panchayat - 80-120 booths)
+    6. ZONE_COMMANDER: Cluster Scope (10-15 Booths)
+    7. BOOTH_AGENT: Single/Multi Booth Scope
     """
     ROLE_CHOICES = [
-        ('SUPERUSER', "Superuser (Global Access)"),
-        ('EMPLOYEE', "Employee (Upload Only)"),
-        ('CONSTITUENCY', 'Constituency Level Manager'),
-        ('LOCAL_BODY', 'Local Body Level Manager'),
-        ('BOOTH', 'Booth Level Worker'),
+        ('SUPERUSER', "Superuser (Global Admin)"),
+        ('MANAGER', "Manager (Global Monitor)"),
+        ('OPERATOR', "Operator (Data Entry - Own Batches)"),
+        ('CONSTITUENCY_ADMIN', 'Constituency Admin'),
+        ('LOCAL_BODY_HEAD', 'Local Body Head'),
+        ('ZONE_COMMANDER', 'Zone Commander'),
+        ('BOOTH_AGENT', 'Booth Agent'),
     ]
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='BOOTH')
-    can_download = models.BooleanField(default=False, help_text="Can this user export CSV/Excel?")
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='BOOTH_AGENT')
     
-    # Access Restrictions
+    # Granular Permissions
+    can_download = models.BooleanField(default=False, help_text="Can this user export CSV/Excel?")
+    can_upload = models.BooleanField(default=False, help_text="Can access OCR Engine & upload lists")
+    can_verify = models.BooleanField(default=True, help_text="Can approve/save OCR results to DB")
+    can_edit_voters = models.BooleanField(default=True, help_text="Can update voter intelligence & phone numbers")
+    can_send_broadcasts = models.BooleanField(default=False, help_text="Can access Communication Hub & send messages")
+    can_manage_system = models.BooleanField(default=False, help_text="Can add locations & manage parties")
+    
+    # Access Restrictions (Scopes)
     assigned_constituencies = models.ManyToManyField(
         Constituency, 
         blank=True,
@@ -180,13 +198,66 @@ class UserProfile(models.Model):
     def get_accessible_voters(self):
         """
         Returns queryset of voters this user can access based on their role and scope.
+        Strict Enforcement via Backend.
         """
-        if self.role in ['SUPERUSER', 'EMPLOYEE']:
+        if self.role == 'SUPERUSER':
             return Voter.objects.all()
-        elif self.role == 'CONSTITUENCY':
+        
+        elif self.role == 'MANAGER':
+            # Manager sees all but cannot edit (Edit restriction handled in View)
+            return Voter.objects.all()
+        
+        elif self.role == 'OPERATOR':
+            # Operator sees only voters from batches they personally uploaded
+            return Voter.objects.filter(created_by=self.user)
+            
+        elif self.role == 'CONSTITUENCY_ADMIN':
             return Voter.objects.filter(booth__constituency__in=self.assigned_constituencies.all())
-        elif self.role == 'LOCAL_BODY':
+        
+        elif self.role == 'LOCAL_BODY_HEAD':
+            # Local Body Head manages all booths in their municipality/panchayat
             return Voter.objects.filter(booth__local_body__in=self.assigned_local_bodies.all())
-        elif self.role == 'BOOTH':
+            
+        elif self.role == 'ZONE_COMMANDER':
+            # Zone Commander manages a cluster of booths
+            # We use assigned_booths to define the "Zone"
             return Voter.objects.filter(booth__in=self.assigned_booths.all())
+            
+        elif self.role == 'BOOTH_AGENT':
+            return Voter.objects.filter(booth__in=self.assigned_booths.all())
+            
         return Voter.objects.none()
+
+class MessageTemplate(models.Model):
+    TYPES = [
+        ('WA', 'WhatsApp'),
+        ('SMS', 'SMS'),
+        ('CALL', 'Voice Call/IVR'),
+    ]
+    name = models.CharField(max_length=200)
+    msg_type = models.CharField(max_length=10, choices=TYPES)
+    content = models.TextField(help_text="Message body with {{voter_name}} placeholders")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.msg_type})"
+
+class CommunicationLog(models.Model):
+    STATUS = [
+        ('PENDING', 'Pending'),
+        ('SENT', 'Sent'),
+        ('DELIVERED', 'Delivered'),
+        ('FAILED', 'Failed'),
+        ('READ', 'Read/Answered'),
+    ]
+    voter = models.ForeignKey(Voter, on_delete=models.CASCADE, related_name='comm_logs')
+    template = models.ForeignKey(MessageTemplate, on_delete=models.SET_NULL, null=True, blank=True)
+    msg_type = models.CharField(max_length=10) # Duplicate for convenience
+    status = models.CharField(max_length=20, choices=STATUS, default='PENDING')
+    sent_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    response_metadata = models.JSONField(null=True, blank=True)
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-sent_at']

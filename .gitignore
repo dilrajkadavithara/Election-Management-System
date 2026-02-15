@@ -1,5 +1,9 @@
 # Python
 .venv/
+Scripts/
+bin/
+include/
+lib/
 __pycache__/
 *.pyc
 *.pyo
@@ -22,22 +26,32 @@ package-lock.json
 .env.development.local
 .env.test.local
 .env.production.local
+*.pdf
+scripts/test_creds/
 
-# Project Specific
+# Project Specific Data (Should stay local or in S3)
 data/
 PAGES/
 output/
-*.csv
-*.json
-!package.json
-!package-lock.json
-*.log
-db.sqlite3
-.streamlit/
-.vscode/
-.DS_Store
-
-# OCR specific
-ocr_result.txt
 voter_crops/
 temp_blocks/
+*.csv
+*.json
+*.log
+
+# Contradiction Fixes
+!package.json
+!package-lock.json
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+.gemini/
+.agent/
+.cortex/
+
+# Deployment
+docker-compose.override.yml

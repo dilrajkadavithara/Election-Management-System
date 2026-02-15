@@ -4,6 +4,7 @@ import django
 import sys
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 
 # Setup Django Environment for standalone script usage
 # Correctly resolve the project root relative to this file
@@ -44,7 +45,7 @@ def get_local_bodies(constituency_name=None):
         qs = qs.filter(constituency__name=constituency_name)
     return list(qs.values('id', 'name', 'body_type'))
 
-def save_booth_data(constituency_name, local_body_type, local_body_name, booth_number, voter_data_list, original_filename, polling_station_no="", polling_station_name=""):
+def save_booth_data(constituency_name, local_body_type, local_body_name, booth_number, voter_data_list, original_filename, polling_station_no="", polling_station_name="", user_id=None):
     """
     Saves a list of voters to the database with Local Body categorization.
     
@@ -57,6 +58,7 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
         original_filename (str): Name of the uploaded PDF file
         polling_station_no (str): Optional Polling Station Number
         polling_station_name (str): Optional Polling Station Name
+        user_id (int): Optional ID of the user who uploaded this batch
     
     Returns:
         (bool, str): (Success status, Message)
@@ -87,6 +89,15 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
                 name=polling_station_name or f"Booth {booth_number}"
             )
             
+            # Get User object if user_id provided
+            from django.contrib.auth.models import User
+            created_by_user = None
+            if user_id:
+                try:
+                    created_by_user = User.objects.get(id=user_id)
+                except User.DoesNotExist:
+                    pass
+            
             # 4. Prepare Voter Objects
             voters_to_create = []
             for row in voter_data_list:
@@ -113,7 +124,8 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
                     age=age_val,
                     gender=row.get('Gender', ''),
                     source_file=original_filename,
-                    status='VERIFIED'
+                    status='VERIFIED',
+                    created_by=created_by_user  # Track who uploaded this batch
                 )
                 voters_to_create.append(voter)
             
@@ -140,9 +152,10 @@ def get_dashboard_stats(user_profile, constituency_id=None, booth_id=None):
     
     # Campaign Intelligence Stats
     sentiment = {
-        "supporter": voters.filter(voter_leaning='SUPPORTER').count(),
-        "neutral": voters.filter(voter_leaning='NEUTRAL').count(),
-        "opponent": voters.filter(voter_leaning='OPPONENT').count(),
+        "UDF": voters.filter(voter_leaning='UDF').count(),
+        "LDF": voters.filter(voter_leaning='LDF').count(),
+        "NDA": voters.filter(voter_leaning='NDA').count(),
+        "Neutral": voters.filter(voter_leaning='NEUTRAL').count(),
     }
     
     location = {
@@ -157,11 +170,20 @@ def get_dashboard_stats(user_profile, constituency_id=None, booth_id=None):
         "total": total
     }
     
+    # Age Distribution
+    age_dist = {
+        "18_25": voters.filter(age__gte=18, age__lte=25).count(),
+        "26_35": voters.filter(age__gte=26, age__lte=35).count(),
+        "36_45": voters.filter(age__gte=36, age__lte=45).count(),
+        "46_60": voters.filter(age__gte=46, age__lte=60).count(),
+        "60_plus": voters.filter(age__gt=60).count(),
+    }
+
     # Tagging Progress (anyone with either leaning, location, or phone)
     tagged = voters.filter(
-        models.Q(voter_leaning__isnull=False) | 
-        models.Q(current_location__isnull=False) | 
-        models.Q(phone_no__isnull=False)
+        Q(voter_leaning__isnull=False) | 
+        Q(current_location__isnull=False) | 
+        Q(phone_no__isnull=False)
     ).exclude(
         voter_leaning='', 
         current_location='', 
@@ -184,7 +206,6 @@ def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency
     voters = user_profile.get_accessible_voters()
     
     if search:
-        from django.db.models import Q
         voters = voters.filter(
             Q(full_name__icontains=search) | 
             Q(epic_id__icontains=search) |
@@ -255,27 +276,62 @@ def update_voter_in_db(voter_id, data):
         if 'house_no' in data: voter.house_no = data['house_no']
         if 'age' in data: voter.age = int(data['age']) if str(data['age']).isdigit() else voter.age
         if 'gender' in data: voter.gender = data['gender']
-        if 'phone_no' in data: voter.phone_no = data['phone_no']
-        if 'current_location' in data: voter.current_location = data['current_location']
-        if 'voter_leaning' in data: voter.voter_leaning = data['voter_leaning']
-        if 'voting_probability' in data: voter.voting_probability = data['voting_probability']
+        if 'phone_no' in data: voter.phone_no = data['phone_no'] if data['phone_no'] else None
+        if 'current_location' in data: voter.current_location = data['current_location'] if data['current_location'] else None
+        if 'voter_leaning' in data: voter.voter_leaning = data['voter_leaning'] if data['voter_leaning'] else None
+        if 'voting_probability' in data: voter.voting_probability = data['voting_probability'] if data['voting_probability'] else None
         voter.save()
         return True, "Voter updated successfully"
     except Exception as e:
         return False, str(e)
 
-def get_all_locations():
-    """Fetch the entire hierarchy for admin view"""
+def get_all_locations(user_profile=None):
+    """Fetch the hierarchy for admin view, optionally filtered by user occupancy"""
     data = []
-    for c in Constituency.objects.all():
+    
+    # Get base constituency queryset
+    if user_profile and user_profile.role not in ['SUPERUSER', 'MANAGER', 'OPERATOR']:
+        # For localized roles, we need to filter
+        if user_profile.role == 'CONSTITUENCY_ADMIN':
+            c_qs = user_profile.assigned_constituencies.all()
+        else:
+            # For lower roles, they are still within a constituency
+            # Determine constituencies from their lower-level assignments
+            c_ids = set()
+            if user_profile.role == 'LOCAL_BODY_HEAD':
+                c_ids.update(user_profile.assigned_local_bodies.values_list('constituency_id', flat=True))
+            elif user_profile.role in ['ZONE_COMMANDER', 'BOOTH_AGENT']:
+                c_ids.update(user_profile.assigned_booths.values_list('constituency_id', flat=True))
+            c_qs = Constituency.objects.filter(id__in=c_ids)
+    else:
+        c_qs = Constituency.objects.all()
+
+    for c in c_qs:
         c_node = {
             "id": c.id, 
             "name": c.name, 
             "local_bodies": []
         }
-        for lb in c.local_bodies.all():
+        
+        # Filter Local Bodies
+        lb_qs = c.local_bodies.all()
+        if user_profile and user_profile.role not in ['SUPERUSER', 'MANAGER', 'OPERATOR', 'CONSTITUENCY_ADMIN']:
+            if user_profile.role == 'LOCAL_BODY_HEAD':
+                lb_qs = lb_qs.filter(id__in=user_profile.assigned_local_bodies.all())
+            elif user_profile.role in ['ZONE_COMMANDER', 'BOOTH_AGENT']:
+                # For Booth Level, determine local bodies from assigned booths
+                lb_ids = user_profile.assigned_booths.values_list('local_body_id', flat=True)
+                lb_qs = lb_qs.filter(id__in=lb_ids)
+        
+        for lb in lb_qs:
             lb_node = {"id": lb.id, "name": lb.name, "type": lb.body_type, "booths": []}
-            for b in lb.booths.all():
+            
+            # Filter Booths
+            b_qs = lb.booths.all()
+            if user_profile and user_profile.role in ['ZONE_COMMANDER', 'BOOTH_AGENT']:
+                b_qs = b_qs.filter(id__in=user_profile.assigned_booths.all())
+                
+            for b in b_qs:
                 lb_node["booths"].append({
                     "id": b.id, 
                     "number": b.number, 
@@ -327,6 +383,11 @@ def get_all_users():
             "username": u.username,
             "role": profile.role,
             "can_download": profile.can_download,
+            "can_upload": profile.can_upload,
+            "can_verify": profile.can_verify,
+            "can_edit_voters": profile.can_edit_voters,
+            "can_send_broadcasts": profile.can_send_broadcasts,
+            "can_manage_system": profile.can_manage_system,
             "constituencies": list(profile.assigned_constituencies.values_list('name', flat=True)),
             "constituency_ids": list(profile.assigned_constituencies.values_list('id', flat=True)),
             "local_bodies": list(profile.assigned_local_bodies.values_list('name', flat=True)),
@@ -347,16 +408,39 @@ def create_managed_user(username, password, role, assignments):
             user = User.objects.create_user(username=username, password=password)
             profile, _ = UserProfile.objects.get_or_create(user=user)
             profile.role = role
-            profile.can_download = (role != 'EMPLOYEE')
+            
+            # Default Permissions Logic
+            # Superuser & Manager get everything
+            if role in ['SUPERUSER', 'MANAGER']:
+                profile.can_download = True
+                profile.can_upload = True
+                profile.can_verify = True
+                profile.can_edit_voters = True
+                profile.can_send_broadcasts = True
+                profile.can_manage_system = (role == 'SUPERUSER')
+            elif role == 'OPERATOR':
+                profile.can_upload = True
+                profile.can_verify = True
+                profile.can_edit_voters = True
+            elif role in ['CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD']:
+                profile.can_download = True
+                profile.can_send_broadcasts = True
+            
+            # Allow manual overrides from 'data' if passed
+            if isinstance(assignments, dict):
+                profile.can_download = assignments.get('can_download', profile.can_download)
+                profile.can_upload = assignments.get('can_upload', profile.can_upload)
+                profile.can_verify = assignments.get('can_verify', profile.can_verify)
+                profile.can_edit_voters = assignments.get('can_edit_voters', profile.can_edit_voters)
+                profile.can_send_broadcasts = assignments.get('can_send_broadcasts', profile.can_send_broadcasts)
+                profile.can_manage_system = assignments.get('can_manage_system', profile.can_manage_system)
             
             if 'constituencies' in assignments:
                 profile.assigned_constituencies.add(*assignments['constituencies'])
             if 'local_bodies' in assignments:
                 profile.assigned_local_bodies.add(*assignments['local_bodies'])
             if 'booths' in assignments:
-                # Exclusive assignment check for booths
-                if UserProfile.objects.filter(assigned_booths__id__in=assignments['booths']).exists():
-                    return False, "One or more booths are already assigned to another user"
+                # Allow shared assignment (Zone Commander + Booth Agent can both have Booth 45)
                 profile.assigned_booths.add(*assignments['booths'])
             
             profile.save()
@@ -373,5 +457,42 @@ def delete_user(user_id):
             return False, "Cannot delete root superuser"
         user.delete()
         return True, "User deleted successfully"
+    except Exception as e:
+        return False, str(e)
+
+def update_user_profile(user_id, data):
+    """Update an existing user profile's role, permissions, and scope"""
+    from django.contrib.auth.models import User
+    try:
+        with transaction.atomic():
+            user = User.objects.get(id=user_id)
+            profile = user.profile
+            
+            if 'role' in data:
+                profile.role = data['role']
+            if 'can_download' in data:
+                profile.can_download = data['can_download']
+            if 'can_upload' in data:
+                profile.can_upload = data['can_upload']
+            if 'can_verify' in data:
+                profile.can_verify = data['can_verify']
+            if 'can_edit_voters' in data:
+                profile.can_edit_voters = data['can_edit_voters']
+            if 'can_send_broadcasts' in data:
+                profile.can_send_broadcasts = data['can_send_broadcasts']
+            if 'can_manage_system' in data:
+                profile.can_manage_system = data['can_manage_system']
+            
+            if 'assignments' in data:
+                assignments = data['assignments']
+                if 'constituencies' in assignments:
+                    profile.assigned_constituencies.set(assignments['constituencies'])
+                if 'local_bodies' in assignments:
+                    profile.assigned_local_bodies.set(assignments['local_bodies'])
+                if 'booths' in assignments:
+                    profile.assigned_booths.set(assignments['booths'])
+            
+            profile.save()
+            return True, "User updated successfully"
     except Exception as e:
         return False, str(e)

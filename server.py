@@ -12,11 +12,21 @@ sys.path.insert(0, str(ROOT_DIR))
 if __name__ == "__main__":
     print(f"Starting Server from: {ROOT_DIR}")
     
-    # Check for .env
-    env_path = ROOT_DIR / ".env"
-    if not env_path.exists():
-        print("⚠️  WARNING: .env file not found! Database and Poppler might fail.")
-    
+    # --- MIGRATION GATE ---
+    # In production, we need to ensure the DB schema is up to date before starting
+    if os.getenv("RUN_MIGRATIONS", "True").lower() == "true":
+        print("🚀 Running Database Migrations...")
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'voter_vault.settings')
+        try:
+            import django
+            django.setup()
+            from django.core.management import execute_from_command_line
+            # Run migrate command
+            execute_from_command_line([sys.argv[0], "migrate", "--noinput"])
+            print("✅ Migrations Complete.")
+        except Exception as e:
+            print(f"⚠️ Migration Error: {e}")
+
     # Run Uvicorn
     # reload=False is safer here because uploading files to data/ 
     # would trigger a restart if reload was True.
