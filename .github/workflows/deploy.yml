@@ -38,8 +38,9 @@ jobs:
               git pull origin master
             fi
             
-            # Build and Start (force clean build to avoid cache issues)
+            # Build and Start (force clean build and clear stale volumes)
             docker compose down --remove-orphans
+            docker volume rm voterslist_frontend_dist || true
             docker compose build --no-cache
             docker compose up -d
             
