@@ -523,15 +523,22 @@ const App = () => {
                         <div className="grid grid-cols-3 gap-8">
                             <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 flex flex-col h-[420px]">
                                 <h3 className="font-black uppercase tracking-widest text-[10px] text-slate-400 mb-4 border-b pb-4">Voter Sentiment</h3>
-                                <div className="flex-1 w-full relative" style={{ minHeight: 0 }}>
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                                        <PieChart>
-                                            <Pie data={[{ name: 'UDF', value: dashboardStats.sentiment?.UDF || 0 }, { name: 'LDF', value: dashboardStats.sentiment?.LDF || 0 }, { name: 'NDA', value: dashboardStats.sentiment?.NDA || 0 }, { name: 'Neutral', value: dashboardStats.sentiment?.Neutral || 0 }].filter(d => d.value > 0)} innerRadius={65} outerRadius={90} paddingAngle={8} dataKey="value" stroke="none">
-                                                {['#3b82f6', '#ef4444', '#f97316', '#64748b'].map((color, index) => <Cell key={`cell-${index}`} fill={color} />)}
-                                            </Pie>
-                                            <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
+                                <div className="flex-1 w-full relative" style={{ minHeight: '300px' }}>
+                                    {dashboardStats.total > 0 && (dashboardStats.sentiment?.UDF || dashboardStats.sentiment?.LDF || dashboardStats.sentiment?.NDA || dashboardStats.sentiment?.Neutral) ? (
+                                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                                            <PieChart>
+                                                <Pie data={[{ name: 'UDF', value: dashboardStats.sentiment?.UDF || 0 }, { name: 'LDF', value: dashboardStats.sentiment?.LDF || 0 }, { name: 'NDA', value: dashboardStats.sentiment?.NDA || 0 }, { name: 'Neutral', value: dashboardStats.sentiment?.Neutral || 0 }].filter(d => d.value > 0)} innerRadius={65} outerRadius={90} paddingAngle={8} dataKey="value" stroke="none">
+                                                    {['#3b82f6', '#ef4444', '#f97316', '#64748b'].map((color, index) => <Cell key={`cell-${index}`} fill={color} />)}
+                                                </Pie>
+                                                <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }} />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-slate-300 space-y-2">
+                                            <div className="w-24 h-24 rounded-full border-4 border-dashed border-slate-100 flex items-center justify-center text-4xl">📊</div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest">Pending Data Collection</p>
+                                        </div>
+                                    )}
                                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pt-4">
                                         <span className="text-3xl font-black text-slate-800">{dashboardStats.total}</span>
                                         <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Voters</span>
@@ -550,14 +557,19 @@ const App = () => {
 
                             <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 flex flex-col h-[420px]">
                                 <h3 className="font-black uppercase tracking-widest text-[10px] text-slate-400 mb-4 border-b pb-4">Geographical Logistics</h3>
-                                <div className="flex-1 w-full" style={{ minHeight: 0 }}>
-                                    {dashReady && dashboardStats && (
+                                <div className="flex-1 w-full" style={{ minHeight: '300px' }}>
+                                    {dashReady && dashboardStats && (dashboardStats.location?.local || dashboardStats.location?.abroad || dashboardStats.location?.state || dashboardStats.location?.district) ? (
                                         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                                             <RadialBarChart cx="50%" cy="50%" innerRadius="30%" outerRadius="100%" barSize={15} data={[{ name: 'Local', value: dashboardStats.location?.local || 0, fill: '#10b981' }, { name: 'Abroad', value: dashboardStats.location?.abroad || 0, fill: '#3b82f6' }, { name: 'State', value: dashboardStats.location?.state || 0, fill: '#f59e0b' }, { name: 'District', value: dashboardStats.location?.district || 0, fill: '#64748b' }]}>
                                                 <RadialBar background dataKey="value" cornerRadius={10} />
                                                 <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }} />
                                             </RadialBarChart>
                                         </ResponsiveContainer>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-slate-300 space-y-2">
+                                            <div className="w-24 h-24 rounded-full border-4 border-dashed border-slate-100 flex items-center justify-center text-4xl">📍</div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest">Awaiting Location Data</p>
+                                        </div>
                                     )}
                                 </div>
                                 <div className="space-y-1">
@@ -622,17 +634,24 @@ const App = () => {
                         <div className="grid grid-cols-3 gap-8 pb-12">
                             <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 col-span-2 h-[450px] flex flex-col">
                                 <h3 className="font-black uppercase tracking-widest text-[10px] text-slate-400 mb-10 border-b pb-4">Voter Age Brackets</h3>
-                                <div className="flex-1 w-full" style={{ minHeight: 0 }}>
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                                        <BarChart data={Object.entries(dashboardStats.age_dist).map(([label, count]) => ({ name: label.replace('_', '-'), voters: count }))} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-                                            <defs><linearGradient id="ageColor" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#4f46e5" stopOpacity={0.8} /><stop offset="95%" stopColor="#4f46e5" stopOpacity={0.2} /></linearGradient></defs>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }} dy={10} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }} />
-                                            <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }} />
-                                            <Bar dataKey="voters" fill="url(#ageColor)" radius={[10, 10, 0, 0]} barSize={40}><LabelList dataKey="voters" position="top" style={{ fontSize: 10, fontWeight: 900, fill: '#4f46e5' }} /></Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                                <div className="flex-1 w-full" style={{ minHeight: '300px' }}>
+                                    {dashboardStats.age_dist && Object.values(dashboardStats.age_dist).some(v => v > 0) ? (
+                                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                                            <BarChart data={Object.entries(dashboardStats.age_dist).map(([label, count]) => ({ name: label.replace('_', '-'), voters: count }))} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                                                <defs><linearGradient id="ageColor" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#4f46e5" stopOpacity={0.8} /><stop offset="95%" stopColor="#4f46e5" stopOpacity={0.2} /></linearGradient></defs>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }} dy={10} />
+                                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }} />
+                                                <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }} />
+                                                <Bar dataKey="voters" fill="url(#ageColor)" radius={[10, 10, 0, 0]} barSize={40}><LabelList dataKey="voters" position="top" style={{ fontSize: 10, fontWeight: 900, fill: '#4f46e5' }} /></Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-slate-300 space-y-2">
+                                            <div className="w-16 h-16 rounded-2xl bg-slate-50 border-2 border-slate-100 flex items-center justify-center text-3xl">👥</div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest">Age Demographics Loading...</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="bg-slate-900 text-white p-10 rounded-[40px] shadow-2xl relative overflow-hidden h-[450px] flex flex-col justify-between">
