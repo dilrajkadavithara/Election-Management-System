@@ -457,7 +457,7 @@ const App = () => {
                         { id: 'voters', label: 'Voter List', icon: '👥' },
                         { id: 'comm', label: 'Comm Hub', icon: '📡' },
                         { id: 'design', label: 'Slip Design', icon: '🎨' },
-                        ...(['SUPERUSER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER'].includes(userRole) ? [{ id: 'admin', label: 'Admin Hub', icon: '🛡️' }] : [])
+                        ...(['SUPERUSER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER'].includes(userRole) ? [{ id: 'admin', label: 'System Admin', icon: '🛡️' }] : [])
                     ].map(item => (
                         <button key={item.id} onClick={() => setView(item.id)} className={`w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-all ${view === item.id ? 'bg-primary-600 text-white shadow-lg scale-105 font-black' : 'text-slate-400 hover:bg-slate-800 font-bold'}`}>
                             <span>{item.icon}</span>
@@ -713,9 +713,14 @@ const App = () => {
                                         <th className="px-4 py-3 border-r text-center">
                                             <input type="checkbox" checked={voterList.length > 0 && selectedVotersForComm.length === voterList.length} onChange={(e) => setSelectedVotersForComm(e.target.checked ? voterList.map(v => v.id) : [])} className="w-4 h-4 rounded border-slate-300 text-primary-600" />
                                         </th>
-                                        <th className="px-4 py-3">Sl No</th>
-                                        <th className="px-4 py-3 min-w-[200px] border-x">Name</th>
+                                        <th className="px-4 py-3">Sl</th>
+                                        <th className="px-4 py-3 min-w-[180px] border-x">Name</th>
                                         <th className="px-4 py-3 border-x">EPIC ID</th>
+                                        <th className="px-4 py-3 border-x">Const</th>
+                                        <th className="px-4 py-3 border-x">LB</th>
+                                        <th className="px-4 py-3 border-x">Booth</th>
+                                        <th className="px-4 py-3 border-x">Gen</th>
+                                        <th className="px-4 py-3 border-x">Age</th>
                                         <th className="px-4 py-3 border-x">Intel</th>
                                         <th className="px-4 py-3 text-right">Actions</th>
                                     </tr>
@@ -727,8 +732,13 @@ const App = () => {
                                                 <input type="checkbox" checked={selectedVotersForComm.includes(v.id)} onChange={(e) => setSelectedVotersForComm(e.target.checked ? [...selectedVotersForComm, v.id] : selectedVotersForComm.filter(id => id !== v.id))} className="w-4 h-4 rounded border-slate-300 text-primary-600" />
                                             </td>
                                             <td className="px-4 py-2 font-black text-slate-400">{v.serial_no}</td>
-                                            <td className="px-4 py-2 font-bold text-slate-900 text-sm">{v.full_name}</td>
-                                            <td className="px-4 py-2"><span className="bg-slate-100 px-2 py-0.5 rounded font-mono text-[10px]">{v.epic_id}</span></td>
+                                            <td className="px-4 py-2 font-bold text-slate-900">{v.full_name}</td>
+                                            <td className="px-4 py-2"><span className="bg-slate-100 px-2 py-0.5 rounded font-mono text-[9px]">{v.epic_id}</span></td>
+                                            <td className="px-4 py-2 border-x text-slate-500 font-bold">{v.constituency}</td>
+                                            <td className="px-4 py-2 border-x text-slate-500 font-bold">{v.local_body}</td>
+                                            <td className="px-4 py-2 border-x font-black text-primary-600">{v.booth_no}</td>
+                                            <td className="px-4 py-2 border-x font-black">{v.gender?.charAt(0)}</td>
+                                            <td className="px-4 py-2 border-x font-black">{v.age}</td>
                                             <td className="px-4 py-2 border-x">
                                                 <div className="flex gap-1">
                                                     {v.voter_leaning && <span className={`px-2 py-0.5 rounded-full text-[8px] font-black text-white ${v.voter_leaning === 'UDF' ? 'bg-blue-500' : v.voter_leaning === 'LDF' ? 'bg-rose-500' : 'bg-orange-500'}`}>{v.voter_leaning}</span>}
@@ -1172,12 +1182,56 @@ const App = () => {
 
             {editMode && (
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-                    <div className="bg-white w-full max-w-lg rounded-[40px] p-12 shadow-2xl space-y-8">
-                        <h2 className="text-3xl font-black uppercase text-slate-900">Edit Voter</h2>
-                        <input type="text" value={editData.full_name || ''} onChange={(e) => setEditData({ ...editData, full_name: e.target.value })} className="w-full p-4 bg-slate-50 border-2 rounded-2xl" placeholder="Full Name" />
+                    <div className="bg-white w-full max-w-2xl rounded-[40px] p-12 shadow-2xl space-y-6 overflow-y-auto max-h-[90vh]">
+                        <h2 className="text-3xl font-black uppercase text-slate-900 border-b pb-4">Edit Profile</h2>
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Full Name</label>
+                                <input type="text" value={editData.full_name || ''} onChange={(e) => setEditData({ ...editData, full_name: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold" />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">EPIC ID</label>
+                                <input type="text" value={editData.epic_id || ''} onChange={(e) => setEditData({ ...editData, epic_id: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold" />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Age</label>
+                                <input type="number" value={editData.age || ''} onChange={(e) => setEditData({ ...editData, age: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold" />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Gender</label>
+                                <select value={editData.gender || ''} onChange={(e) => setEditData({ ...editData, gender: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold">
+                                    <option value="MALE">Male</option>
+                                    <option value="FEMALE">Female</option>
+                                    <option value="TRANSGENDER">Transgender</option>
+                                </select>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Voter Leaning</label>
+                                <select value={editData.voter_leaning || ''} onChange={(e) => setEditData({ ...editData, voter_leaning: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold">
+                                    <option value="">Unknown</option>
+                                    <option value="UDF">UDF</option>
+                                    <option value="LDF">LDF</option>
+                                    <option value="NDA">NDA</option>
+                                    <option value="NEUTRAL">Neutral</option>
+                                </select>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Current Residence</label>
+                                <select value={editData.current_location || ''} onChange={(e) => setEditData({ ...editData, current_location: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold">
+                                    <option value="LOCAL">Local</option>
+                                    <option value="ABROAD">Abroad</option>
+                                    <option value="STATE">Other State</option>
+                                    <option value="DISTRICT">Other District</option>
+                                </select>
+                            </div>
+                            <div className="space-y-1 col-span-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Phone Number</label>
+                                <input type="text" value={editData.phone_no || ''} onChange={(e) => setEditData({ ...editData, phone_no: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold" placeholder="e.g. +91 9876543210" />
+                            </div>
+                        </div>
                         <div className="flex gap-4 pt-6">
                             <button onClick={() => setEditMode(false)} className="flex-1 font-black uppercase text-xs p-5 border rounded-2xl hover:bg-slate-50">Cancel</button>
-                            <button onClick={saveCorrection} className="flex-[2] bg-primary-600 text-white p-5 rounded-2xl font-black uppercase shadow-lg hover:bg-primary-700">Update</button>
+                            <button onClick={saveCorrection} className="flex-[2] bg-primary-600 text-white p-5 rounded-2xl font-black uppercase shadow-lg hover:bg-primary-700">Update Records</button>
                         </div>
                     </div>
                 </div>
