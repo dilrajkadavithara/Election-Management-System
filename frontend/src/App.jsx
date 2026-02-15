@@ -58,6 +58,7 @@ const App = () => {
     const [activePrintParty, setActivePrintParty] = useState(null);
     const [assignSelection, setAssignSelection] = useState({ constId: '', lbId: '' });
     const [editingUser, setEditingUser] = useState(null);
+    const [dashReady, setDashReady] = useState(false);
 
     // Engine/OCR State
     const [constituency, setConstituency] = useState('');
@@ -146,6 +147,14 @@ const App = () => {
             setAllParties(p);
         } catch (e) { console.error(e); }
     };
+
+    useEffect(() => {
+        if (view === 'dashboard') {
+            setDashReady(false);
+            const t = setTimeout(() => setDashReady(true), 150);
+            return () => clearTimeout(t);
+        }
+    }, [view]);
 
     const handleAddParty = async () => {
         if (!newPartyData.name || !newPartyFile) { alert("Please provide both name and logo."); return; }
@@ -515,7 +524,7 @@ const App = () => {
                             <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 flex flex-col h-[420px]">
                                 <h3 className="font-black uppercase tracking-widest text-[10px] text-slate-400 mb-4 border-b pb-4">Voter Sentiment</h3>
                                 <div className="flex-1 w-full relative">
-                                    <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                                    <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                                         <PieChart>
                                             <Pie data={[{ name: 'UDF', value: dashboardStats.sentiment?.UDF || 0 }, { name: 'LDF', value: dashboardStats.sentiment?.LDF || 0 }, { name: 'NDA', value: dashboardStats.sentiment?.NDA || 0 }, { name: 'Neutral', value: dashboardStats.sentiment?.Neutral || 0 }].filter(d => d.value > 0)} innerRadius={65} outerRadius={90} paddingAngle={8} dataKey="value" stroke="none">
                                                 {['#3b82f6', '#ef4444', '#f97316', '#64748b'].map((color, index) => <Cell key={`cell-${index}`} fill={color} />)}
@@ -542,12 +551,14 @@ const App = () => {
                             <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 flex flex-col h-[420px]">
                                 <h3 className="font-black uppercase tracking-widest text-[10px] text-slate-400 mb-4 border-b pb-4">Geographical Logistics</h3>
                                 <div className="flex-1 w-full">
-                                    <ResponsiveContainer width="100%" height="100%" debounce={100}>
-                                        <RadialBarChart cx="50%" cy="50%" innerRadius="30%" outerRadius="100%" barSize={15} data={[{ name: 'Local', value: dashboardStats.location?.local || 0, fill: '#10b981' }, { name: 'Abroad', value: dashboardStats.location?.abroad || 0, fill: '#3b82f6' }, { name: 'State', value: dashboardStats.location?.state || 0, fill: '#f59e0b' }, { name: 'District', value: dashboardStats.location?.district || 0, fill: '#64748b' }]}>
-                                            <RadialBar background dataKey="value" cornerRadius={10} />
-                                            <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }} />
-                                        </RadialBarChart>
-                                    </ResponsiveContainer>
+                                    {dashReady && dashboardStats && (
+                                        <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                                            <RadialBarChart cx="50%" cy="50%" innerRadius="30%" outerRadius="100%" barSize={15} data={[{ name: 'Local', value: dashboardStats.location?.local || 0, fill: '#10b981' }, { name: 'Abroad', value: dashboardStats.location?.abroad || 0, fill: '#3b82f6' }, { name: 'State', value: dashboardStats.location?.state || 0, fill: '#f59e0b' }, { name: 'District', value: dashboardStats.location?.district || 0, fill: '#64748b' }]}>
+                                                <RadialBar background dataKey="value" cornerRadius={10} />
+                                                <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }} />
+                                            </RadialBarChart>
+                                        </ResponsiveContainer>
+                                    )}
                                 </div>
                                 <div className="space-y-1">
                                     {[{ l: 'Local', v: dashboardStats.location?.local || 0, c: '#10b981' }, { l: 'Abroad', v: dashboardStats.location?.abroad || 0, c: '#3b82f6' }, { l: 'Other State', v: dashboardStats.location?.state || 0, c: '#f59e0b' }, { l: 'Other District', v: dashboardStats.location?.district || 0, c: '#64748b' }].map(i => (
