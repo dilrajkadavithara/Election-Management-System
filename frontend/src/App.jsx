@@ -1222,7 +1222,7 @@ const App = () => {
                                     <div className="grid grid-cols-4 gap-6">
                                         {status.results?.map((r, i) => (
                                             <div key={i} className="p-6 bg-slate-50 rounded-3xl border border-slate-100 text-center relative overflow-hidden group">
-                                                <img src={`/data/${batchId}/crops/${r.VoterID}.jpg`} className="w-full h-32 object-contain mb-4 rounded-xl bg-white shadow-sm" />
+                                                <img src={`/api/voter-image/${batchId}/${r.image_name}`} className="w-full h-32 object-contain mb-4 rounded-xl bg-white shadow-sm" alt="Voter Crop" />
                                                 <h4 className="font-black text-slate-800 uppercase text-xs truncate">{r.Name}</h4>
                                                 <p className="text-[10px] font-bold text-slate-400 mt-1">{r.EPIC}</p>
                                                 <div className="absolute inset-0 bg-slate-900/80 items-center justify-center hidden group-hover:flex">
@@ -1239,7 +1239,7 @@ const App = () => {
                                     <h2 className="text-3xl font-black uppercase text-slate-900">Manual Correction</h2>
                                     <div className="space-y-6">
                                         <div className="bg-slate-50 p-6 rounded-3xl border-2 border-slate-100">
-                                            <img src={`/data/${batchId}/crops/${editData.VoterID}.jpg`} className="w-full max-h-48 object-contain rounded-xl shadow-lg mb-6 border-4 border-white" />
+                                            <img src={`/api/voter-image/${batchId}/${editData.image_name}`} className="w-full max-h-48 object-contain rounded-xl shadow-lg mb-6 border-4 border-white" alt="Correction View" />
                                             <div className="grid gap-4">
                                                 <div className="space-y-1">
                                                     <label className="text-[10px] font-black uppercase text-slate-400 pl-2">Detected Name</label>
