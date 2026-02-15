@@ -309,9 +309,11 @@ def run_processing(batch_id: str):
                     else:
                         flagged_count += 1
                         
-                    batch['clean_count'] = clean_count
-                    batch['flagged_count'] = flagged_count
-                    batch['voters_processed'] = i + 1
+                    # CRITICAL: Update the global batch object immediately
+                    # This ensures the API endpoint returns fresh counts on every poll
+                    active_batches[batch_id]['clean_count'] = clean_count
+                    active_batches[batch_id]['flagged_count'] = flagged_count
+                    active_batches[batch_id]['voters_processed'] = i + 1
                     
                 except Exception as exc:
                     print(f"Task generated an exception: {exc}")
