@@ -35,13 +35,17 @@ jobs:
             if [ ! -d ".git" ]; then
               git clone https://github.com/${{ github.repository }}.git .
             else
-              git pull origin master
+              git fetch origin master
+              git reset --hard origin/master
             fi
             
             # Build and Start (Clean pull and fresh build)
             docker compose down --remove-orphans
             docker compose build --no-cache nginx
             docker compose up -d --build
+            
+            # Cleanup
+            docker system prune -f
             
             # Cleanup
             docker system prune -f
