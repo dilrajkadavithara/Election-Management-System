@@ -280,9 +280,16 @@ const App = () => {
                 await api.updateVoter(batchId, editData.voter_id, editData);
                 const s = await api.getBatchStatus(batchId);
                 setStatus(s);
-                const rem = s.results.filter(r => r.Status !== '✅ OK');
-                if (rem.length > 0) setEditData({ ...rem[0] });
-                else setStage('results');
+                // Smart Workflow: Automatically load next flagged item
+                const nextFlagged = s.results.filter(r => r.Status !== '✅ OK');
+                if (nextFlagged.length > 0) {
+                    setEditData(nextFlagged[0]);
+                    // Stay in 'review' stage, just update data
+                    setStage('review');
+                } else {
+                    // All clean, go to results
+                    setStage('results');
+                }
             }
         } catch (e) { setError(e.message); }
         finally { setLoading(false); }
@@ -411,7 +418,17 @@ const App = () => {
                     const s = await api.getBatchStatus(batchId);
                     setStatus(s);
                     if (s.status === 'extracted' && stage === 'converting') setStage('detecting');
-                    if (s.status === 'processed' && stage === 'ocr') setStage('results');
+                    if (s.status === 'processed' && stage === 'ocr') {
+                        // Restoration of "Review First" workflow
+                        // If there are flagged items, go directly to review mode for the first one
+                        const flagged = s.results.filter(r => r.Status !== '✅ OK');
+                        if (flagged.length > 0) {
+                            setEditData(flagged[0]);
+                            setStage('review');
+                        } else {
+                            setStage('results');
+                        }
+                    }
                 }
                 catch (e) { if (e.response?.status === 401) handleLogout(); }
             }, 1000);
@@ -1183,7 +1200,10 @@ const App = () => {
                                                 <p className="text-primary-600 font-black uppercase text-xs">Processing Page {status.pages_processed || 0} of {status.total_pages}</p>
                                             )}
                                             {stage === 'ocr' && status.total_voters > 0 && (
-                                                <p className="text-primary-600 font-black uppercase text-xs">Reading Voter {status.voters_processed || 0} of {status.total_voters}</p>
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <p className="text-primary-600 font-black uppercase text-xs">Reading Voter {status.voters_processed || 0} of {status.total_voters}</p>
+                                                    <p className="text-rose-500 font-black uppercase text-[10px] tracking-widest">{status.flagged_count || 0} Issues Found So Far</p>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
