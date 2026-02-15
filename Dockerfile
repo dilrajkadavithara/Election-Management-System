@@ -30,6 +30,7 @@ COPY backend/ ./backend/
 COPY core/ ./core/
 COPY voter_vault/ ./voter_vault/
 COPY assets/ ./assets/
+COPY scripts/ ./scripts/
 COPY server.py .
 
 # Copy built frontend from Stage 1
