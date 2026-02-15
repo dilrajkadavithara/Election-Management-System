@@ -1158,7 +1158,96 @@ const App = () => {
                                     {error && <p className="text-rose-600 font-black text-center uppercase text-xs">{error}</p>}
                                 </div>
                             )}
-                            {stage === 'ocr' && <div className="bg-white rounded-[40px] p-12 shadow-xl text-center space-y-8 animate-in"><h2 className="text-3xl font-black uppercase">OCR Activity</h2>{/* Status bars here */}</div>}
+
+                            {['converting', 'detecting', 'ocr'].includes(stage) && (
+                                <div className="bg-white rounded-[40px] p-16 shadow-xl text-center space-y-12 animate-in">
+                                    <div className="relative w-48 h-48 mx-auto">
+                                        <div className="absolute inset-0 border-8 border-slate-100 rounded-full"></div>
+                                        <div className="absolute inset-0 border-8 border-primary-600 rounded-full border-t-transparent animate-spin"></div>
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <span className="text-5xl">⚡</span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <h2 className="text-4xl font-black uppercase tracking-tighter">
+                                            {stage === 'converting' ? "Shredding PDF..." : stage === 'detecting' ? "Mapping Blocks..." : "Optical Read..."}
+                                        </h2>
+                                        <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Engine is processing batch #{batchId}</p>
+                                    </div>
+                                    <div className="max-w-md mx-auto h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                                        <div className="h-full bg-primary-600 transition-all duration-500" style={{ width: stage === 'converting' ? '33%' : stage === 'detecting' ? '66%' : '90%' }}></div>
+                                    </div>
+                                    {stage === 'detecting' && status.pages && (
+                                        <button onClick={handleStartOCR} className="bg-slate-900 text-white px-12 py-5 rounded-3xl font-black uppercase tracking-widest text-lg shadow-2xl hover:scale-105 transition-all">Begin Extraction ➡️</button>
+                                    )}
+                                </div>
+                            )}
+
+                            {stage === 'results' && (
+                                <div className="bg-white rounded-[40px] p-12 shadow-xl space-y-8 animate-in border border-slate-100">
+                                    <div className="flex justify-between items-center border-b pb-8">
+                                        <div>
+                                            <h2 className="text-4xl font-black uppercase tracking-tighter">Extraction Results</h2>
+                                            <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Batch #{batchId} • Ready for final sync</p>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <button onClick={() => api.downloadCSV(batchId)} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase text-xs tracking-widest">Preview CSV 📥</button>
+                                            <button onClick={handleFinalSave} className="bg-primary-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl hover:bg-primary-700 transition-all">Save to Database ⚡</button>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-4 gap-6">
+                                        {status.results?.map((r, i) => (
+                                            <div key={i} className="p-6 bg-slate-50 rounded-3xl border border-slate-100 text-center relative overflow-hidden group">
+                                                <img src={`/data/${batchId}/crops/${r.VoterID}.jpg`} className="w-full h-32 object-contain mb-4 rounded-xl bg-white shadow-sm" />
+                                                <h4 className="font-black text-slate-800 uppercase text-xs truncate">{r.Name}</h4>
+                                                <p className="text-[10px] font-bold text-slate-400 mt-1">{r.EPIC}</p>
+                                                <div className="absolute inset-0 bg-slate-900/80 items-center justify-center hidden group-hover:flex">
+                                                    <button onClick={() => { setEditData(r); setStage('review'); }} className="text-white font-black uppercase text-[10px] border-2 border-white/20 px-4 py-2 rounded-xl hover:bg-white hover:text-slate-900 transition-all">Correct</button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {stage === 'review' && (
+                                <div className="bg-white rounded-[40px] p-12 shadow-xl space-y-8 animate-in max-w-2xl mx-auto border border-slate-100">
+                                    <h2 className="text-3xl font-black uppercase text-slate-900">Manual Correction</h2>
+                                    <div className="space-y-6">
+                                        <div className="bg-slate-50 p-6 rounded-3xl border-2 border-slate-100">
+                                            <img src={`/data/${batchId}/crops/${editData.VoterID}.jpg`} className="w-full max-h-48 object-contain rounded-xl shadow-lg mb-6 border-4 border-white" />
+                                            <div className="grid gap-4">
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 pl-2">Detected Name</label>
+                                                    <input type="text" value={editData.Name || ''} onChange={(e) => setEditData({ ...editData, Name: e.target.value })} className="w-full p-4 bg-white border-none rounded-2xl font-bold text-lg shadow-sm" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 pl-2">Detected EPIC</label>
+                                                    <input type="text" value={editData.EPIC || ''} onChange={(e) => setEditData({ ...editData, EPIC: e.target.value })} className="w-full p-4 bg-white border-none rounded-2xl font-bold text-lg shadow-sm" />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-black uppercase text-slate-400 pl-2">Age</label>
+                                                        <input type="text" value={editData.Age || ''} onChange={(e) => setEditData({ ...editData, Age: e.target.value })} className="w-full p-4 bg-white border-none rounded-2xl font-bold text-lg shadow-sm" />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-black uppercase text-slate-400 pl-2">Gender</label>
+                                                        <select value={editData.Gender || ''} onChange={(e) => setEditData({ ...editData, Gender: e.target.value })} className="w-full p-4 bg-white border-none rounded-2xl font-bold text-lg shadow-sm">
+                                                            <option value="MALE">Male</option>
+                                                            <option value="FEMALE">Female</option>
+                                                            <option value="OTHERS">Others</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <button onClick={() => setStage('results')} className="flex-1 bg-slate-100 text-slate-400 py-5 rounded-3xl font-black uppercase tracking-widest">Cancel</button>
+                                        <button onClick={saveCorrection} className="flex-[2] bg-primary-600 text-white py-5 rounded-3xl text-xl font-black uppercase shadow-2xl hover:bg-primary-700 transition-all active:scale-95">Save Correction ✅</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )
                 }
