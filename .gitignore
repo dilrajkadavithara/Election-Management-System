@@ -55,3 +55,6 @@ desktop.ini
 
 # Deployment
 docker-compose.override.yml
+intelhub_deploy_key
+intelhub_deploy_key.pub
+certbot/
