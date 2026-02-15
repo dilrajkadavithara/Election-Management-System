@@ -317,6 +317,19 @@ def run_processing(batch_id: str):
                     
                 except Exception as exc:
                     print(f"Task generated an exception: {exc}")
+                    # Treat exceptions as flags so they are visible to the user
+                    flagged_count += 1
+                    error_res = {
+                        "voter_id": tasks[i][1], # Recover ID from task list using loop index
+                        "image_name": os.path.basename(tasks[i][0]),
+                        "Status": "⚠️ ERROR",
+                        "Flags": f"Processing Error: {str(exc)}",
+                        "Name": "ERROR", "EPIC": "ERROR", "Age": "0", "Gender": "N/A"
+                    }
+                    results.append(error_res)
+                    
+                    active_batches[batch_id]['flagged_count'] = flagged_count
+                    active_batches[batch_id]['voters_processed'] = i + 1
 
         # Ensure results are sorted by voter_id because as_completed is out of order
         results.sort(key=lambda x: x['voter_id'])
@@ -483,6 +496,7 @@ async def upload(file: UploadFile = File(...), user_info=Depends(get_current_use
         "id": batch_id, "filename": file.filename, "file_path": str(f_path),
         "status": "uploaded", "total_pages": 0, "pages_processed": 0,
         "total_voters": 0, "voters_processed": 0, "results": [],
+        "clean_count": 0, "flagged_count": 0,
         "user": user_info['username']
     }
     return {"success": True, "batch_id": batch_id}
