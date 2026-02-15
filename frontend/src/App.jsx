@@ -1223,6 +1223,18 @@ const App = () => {
                                                 <button onClick={handleStartOCR} className="bg-slate-900 text-white px-12 py-5 rounded-3xl font-black uppercase tracking-widest text-lg shadow-2xl hover:scale-110 transition-all transform active:scale-95">Begin Extraction ➡️</button>
                                             </div>
                                         )}
+                                        {(stage === 'converting' || stage === 'ocr') && (
+                                            <button onClick={async () => {
+                                                if (confirm('Stop processing and clear RAM? This will discard all progress.')) {
+                                                    try {
+                                                        await api.cancelBatch(batchId);
+                                                        handleCycleReset();
+                                                    } catch (e) { console.error(e); }
+                                                }
+                                            }} className="bg-rose-600 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-rose-700 transition-all">
+                                                Stop & Clear RAM 🛑
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             )}
