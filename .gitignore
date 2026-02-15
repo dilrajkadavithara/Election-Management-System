@@ -1,6 +1,5 @@
 # Python
 .venv/
-Scripts/
 bin/
 include/
 lib/
