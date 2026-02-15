@@ -38,9 +38,10 @@ jobs:
               git pull origin master
             fi
             
-            # Build and Start
+            # Build and Start (force clean build to avoid cache issues)
             docker compose down --remove-orphans
-            docker compose up --build -d
+            docker compose build --no-cache
+            docker compose up -d
             
             # Cleanup
             docker system prune -f
