@@ -524,7 +524,7 @@ const App = () => {
                             <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 flex flex-col h-[420px]">
                                 <h3 className="font-black uppercase tracking-widest text-[10px] text-slate-400 mb-4 border-b pb-4">Voter Sentiment</h3>
                                 <div className="flex-1 w-full relative" style={{ minHeight: '300px' }}>
-                                    {dashboardStats.total > 0 && (dashboardStats.sentiment?.UDF || dashboardStats.sentiment?.LDF || dashboardStats.sentiment?.NDA || dashboardStats.sentiment?.Neutral) ? (
+                                    {dashReady && dashboardStats.total > 0 && (dashboardStats.sentiment?.UDF || dashboardStats.sentiment?.LDF || dashboardStats.sentiment?.NDA || dashboardStats.sentiment?.Neutral) ? (
                                         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                                             <PieChart>
                                                 <Pie data={[{ name: 'UDF', value: dashboardStats.sentiment?.UDF || 0 }, { name: 'LDF', value: dashboardStats.sentiment?.LDF || 0 }, { name: 'NDA', value: dashboardStats.sentiment?.NDA || 0 }, { name: 'Neutral', value: dashboardStats.sentiment?.Neutral || 0 }].filter(d => d.value > 0)} innerRadius={65} outerRadius={90} paddingAngle={8} dataKey="value" stroke="none">
@@ -635,7 +635,7 @@ const App = () => {
                             <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 col-span-2 h-[450px] flex flex-col">
                                 <h3 className="font-black uppercase tracking-widest text-[10px] text-slate-400 mb-10 border-b pb-4">Voter Age Brackets</h3>
                                 <div className="flex-1 w-full" style={{ minHeight: '300px' }}>
-                                    {dashboardStats.age_dist && Object.values(dashboardStats.age_dist).some(v => v > 0) ? (
+                                    {dashReady && dashboardStats.age_dist && Object.values(dashboardStats.age_dist).some(v => v > 0) ? (
                                         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                                             <BarChart data={Object.entries(dashboardStats.age_dist).map(([label, count]) => ({ name: label.replace('_', '-'), voters: count }))} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                                                 <defs><linearGradient id="ageColor" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#4f46e5" stopOpacity={0.8} /><stop offset="95%" stopColor="#4f46e5" stopOpacity={0.2} /></linearGradient></defs>
