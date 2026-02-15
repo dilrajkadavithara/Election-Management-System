@@ -6,7 +6,10 @@ from pathlib import Path
 # 1. Setup Python Path
 # This ensures 'core', 'backend', and 'voter_vault' are always importable
 ROOT_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = ROOT_DIR / "voter_vault"
 sys.path.insert(0, str(ROOT_DIR))
+if PROJECT_DIR not in sys.path:
+    sys.path.insert(0, str(PROJECT_DIR))
 
 # 2. Entry Point
 if __name__ == "__main__":
