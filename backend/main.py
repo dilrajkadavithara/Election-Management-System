@@ -253,8 +253,16 @@ def run_extraction(batch_id: str, dpi: int):
         
         total_voters = 0
         for i, page_path in enumerate(page_images):
+            # Check cancellation before heavy detection
+            if batch_id in cancelled_batches:
+                print(f"Batch {batch_id} cancelled during detection. Clearing RAM...")
+                del active_batches[batch_id]
+                import gc
+                gc.collect()
+                return
+
             batch['pages_processed'] = i + 1
-            boxes = detector.detect_voter_boxes(page_path)
+            boxes = detector.detect_voter_boxes(page_path, i+1) # Pass page number if needed by detector, or just path
             if boxes:
                 count = detector.crop_and_save(page_path, boxes, str(c_dir), i+1, start_index=total_voters)
                 total_voters += count
@@ -291,9 +299,11 @@ def run_processing(batch_id: str):
             for i, future in enumerate(concurrent.futures.as_completed(future_to_id)):
                 # Check if batch has been cancelled
                 if batch_id in cancelled_batches:
-                    print(f"Batch {batch_id} cancelled. Stopping processing...")
-                    batch['status'] = 'cancelled'
-                    batch['results'] = results  # Save partial results
+                    print(f"Batch {batch_id} cancelled. Stopping processing & Clearing RAM...")
+                    if batch_id in active_batches:
+                        del active_batches[batch_id]
+                    import gc
+                    gc.collect()
                     return
                 
                 try:
@@ -513,6 +523,9 @@ async def cancel_batch(batch_id: str, user_info=Depends(get_current_user)):
         raise HTTPException(404, "Batch not found")
     
     cancelled_batches.add(batch_id)
+    # Trigger immediate GC
+    import gc
+    gc.collect()
     return {"success": True, "message": "Batch cancellation requested"}
 
 @app.post("/api/save-to-db")
