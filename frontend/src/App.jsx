@@ -404,10 +404,15 @@ const App = () => {
 
     useEffect(() => {
         let interval;
-        const activeStages = ['converting', 'ocr'];
+        const activeStages = ['converting', 'detecting', 'ocr'];
         if (batchId && activeStages.includes(stage)) {
             interval = setInterval(async () => {
-                try { const s = await api.getBatchStatus(batchId); setStatus(s); }
+                try {
+                    const s = await api.getBatchStatus(batchId);
+                    setStatus(s);
+                    if (s.status === 'extracted' && stage === 'converting') setStage('detecting');
+                    if (s.status === 'processed' && stage === 'ocr') setStage('results');
+                }
                 catch (e) { if (e.response?.status === 401) handleLogout(); }
             }, 1000);
         }
@@ -1172,14 +1177,33 @@ const App = () => {
                                         <h2 className="text-4xl font-black uppercase tracking-tighter">
                                             {stage === 'converting' ? "Shredding PDF..." : stage === 'detecting' ? "Mapping Blocks..." : "Optical Read..."}
                                         </h2>
-                                        <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Engine is processing batch #{batchId}</p>
+                                        <div className="flex flex-col gap-1 items-center">
+                                            <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Batch #{batchId}</p>
+                                            {stage === 'converting' && status.total_pages > 0 && (
+                                                <p className="text-primary-600 font-black uppercase text-xs">Processing Page {status.pages_processed || 0} of {status.total_pages}</p>
+                                            )}
+                                            {stage === 'ocr' && status.total_voters > 0 && (
+                                                <p className="text-primary-600 font-black uppercase text-xs">Reading Voter {status.voters_processed || 0} of {status.total_voters}</p>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="max-w-md mx-auto h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                                        <div className="h-full bg-primary-600 transition-all duration-500" style={{ width: stage === 'converting' ? '33%' : stage === 'detecting' ? '66%' : '90%' }}></div>
+                                    <div className="max-w-md mx-auto w-full space-y-4">
+                                        <div className="h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                                            <div className="h-full bg-primary-600 transition-all duration-500" style={{
+                                                width: stage === 'converting' ? `${(status.pages_processed / status.total_pages) * 100 || 5}%` :
+                                                    stage === 'detecting' ? '100%' :
+                                                        `${(status.voters_processed / status.total_voters) * 100 || 5}%`
+                                            }}></div>
+                                        </div>
+                                        {stage === 'detecting' && (
+                                            <div className="flex flex-col items-center gap-6">
+                                                <div className="bg-emerald-50 text-emerald-600 px-6 py-3 rounded-2xl font-black uppercase text-xs animate-pulse">
+                                                    Mapping Complete: {status.total_voters} Voters Detected
+                                                </div>
+                                                <button onClick={handleStartOCR} className="bg-slate-900 text-white px-12 py-5 rounded-3xl font-black uppercase tracking-widest text-lg shadow-2xl hover:scale-110 transition-all transform active:scale-95">Begin Extraction ➡️</button>
+                                            </div>
+                                        )}
                                     </div>
-                                    {stage === 'detecting' && status.pages && (
-                                        <button onClick={handleStartOCR} className="bg-slate-900 text-white px-12 py-5 rounded-3xl font-black uppercase tracking-widest text-lg shadow-2xl hover:scale-105 transition-all">Begin Extraction ➡️</button>
-                                    )}
                                 </div>
                             )}
 
