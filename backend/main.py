@@ -228,6 +228,17 @@ def process_single_voter(args):
     res['image_name'] = os.path.basename(img_path_str)
     return res
 
+def process_single_page(args):
+    """Helper for parallel detection/cropping"""
+    page_path, i, batch_id, c_dir, total_voters_before = args
+    from core.detector import VoterDetector
+    det = VoterDetector()
+    boxes = det.detect_voter_boxes(page_path)
+    count = 0
+    if boxes:
+        count = det.crop_and_save(page_path, boxes, str(c_dir), i+1, start_index=total_voters_before)
+    return count
+
 def run_extraction(batch_id: str, dpi: int):
     try:
         batch = active_batches[batch_id]
@@ -236,6 +247,7 @@ def run_extraction(batch_id: str, dpi: int):
         c_dir = CROPS_DIR / batch_id
         p_dir.mkdir(exist_ok=True); c_dir.mkdir(exist_ok=True)
 
+        # Get total pages for UI progress bar
         try:
             from PyPDF2 import PdfReader
             with open(pdf_path, 'rb') as f:
@@ -248,30 +260,80 @@ def run_extraction(batch_id: str, dpi: int):
                     batch['total_pages'] = info.get("Pages", 0)
             except: pass
 
+        # 1. Convert PDF to images (Bulk operation)
+        batch['status'] = 'converting'
         page_images = pdf_processor.convert_to_images(pdf_path, str(p_dir), dpi=dpi)
         batch['total_pages'] = len(page_images)
+        batch['status'] = 'detecting'
         
+        # 2. Parallel Detection and Cropping
+        # We process in small chunks to keep total_voters indices semi-ordered and allow cancellation checks
         total_voters = 0
-        for i, page_path in enumerate(page_images):
-            # Check cancellation before heavy detection
-            if batch_id in cancelled_batches:
-                print(f"Batch {batch_id} cancelled during detection. Clearing RAM...")
-                del active_batches[batch_id]
-                import gc
-                gc.collect()
-                return
+        cpu_count = multiprocessing.cpu_count()
+        workers = max(1, min(cpu_count - 1, 4)) # Keep detection workers conservative to save RAM
+        
+        # Since crop_and_save needs a global 'start_index', we'll process in two steps:
+        # Step A: Detect boxes for all pages in parallel to get counts
+        # Step B: Crop and save in parallel with calculated start indices
+        
+        # Actually, for simplicity and speed, let's just do detection in parallel 
+        # but calculate offsets first.
+        
+        def get_box_count(p_path):
+            from core.detector import VoterDetector
+            det = VoterDetector()
+            return len(det.detect_voter_boxes(p_path))
 
-            batch['pages_processed'] = i + 1
-            boxes = detector.detect_voter_boxes(page_path, i+1) # Pass page number if needed by detector, or just path
-            if boxes:
-                count = detector.crop_and_save(page_path, boxes, str(c_dir), i+1, start_index=total_voters)
-                total_voters += count
+        with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
+            # Check cancellation
+            if batch_id in cancelled_batches: return
+
+            # Get box counts for all pages in parallel
+            counts = list(executor.map(get_box_count, page_images))
+            
+            # Check cancellation again
+            if batch_id in cancelled_batches: return
+            
+            # Calculate start indices
+            start_indices = [0] * len(counts)
+            for i in range(1, len(counts)):
+                start_indices[i] = start_indices[i-1] + counts[i-1]
+            total_voters = sum(counts)
+            
+            # Final Parallel Crop and Save
+            tasks = [
+                (page_images[i], i, batch_id, c_dir, start_indices[i])
+                for i in range(len(page_images))
+            ]
+            
+            # Actually we reuse process_single_page but it does both detect and crop
+            # This is slightly redundant on detection but very robust for indices
+            # If we already have counts, we can just pass them? No, process_single_page
+            # will re-detect to get the boxes for cropping. 
+            
+            # To optimize: we should have a 'process_page_with_boxes' but that requires pickling boxes.
+            # Let's just do the whole thing in one parallel map for simplicity.
+            
+            # Re-calculating tasks for full process
+            # We need to pass the pre-calculated start_indices to ensure global voter_id consistency
+            full_tasks = [
+                (page_images[i], i, batch_id, c_dir, start_indices[i])
+                for i in range(len(page_images))
+            ]
+            
+            # Execute parallel detection & cropping
+            list(executor.map(process_single_page, full_tasks))
+
+            # Update progress
+            batch['pages_processed'] = len(page_images)
         
         batch['total_voters'] = total_voters
         batch['status'] = 'extracted'
     except Exception as e:
-        active_batches[batch_id]['status'] = 'error'
-        active_batches[batch_id]['error'] = str(e)
+        logger.error(f"Extraction Error for {batch_id}: {e}")
+        if batch_id in active_batches:
+            active_batches[batch_id]['status'] = 'error'
+            active_batches[batch_id]['error'] = str(e)
 
 def run_processing(batch_id: str):
     try:
