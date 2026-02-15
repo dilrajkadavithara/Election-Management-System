@@ -93,7 +93,7 @@ const App = () => {
             loadConstituencies();
             if (view === 'dashboard') { loadStats(); if (!allLocations.length) loadAdminData(); }
             if (view === 'voters' || view === 'design') { loadVoters(); if (!allLocations.length) loadAdminData(); }
-            if (view === 'admin' || view === 'design') { loadAdminData(); loadParties(); }
+            if (view === 'admin' || view === 'design' || view === 'engine') { loadAdminData(); loadParties(); }
             if (view === 'comm') { loadCommData(); }
         }
     }, [isLoggedIn, view, searchQuery, currentPage, dashFilters, listFilters]);
@@ -1094,17 +1094,58 @@ const App = () => {
                                 <h1 className="text-5xl font-black tracking-tighter uppercase">OCR Engine</h1>
                             </header>
                             {stage === 'setup' && (
-                                <div className="bg-white rounded-[40px] p-12 shadow-xl border border-slate-100 space-y-12">
-                                    <div className="grid grid-cols-2 gap-10">
-                                        <input type="text" placeholder="Constituency" value={constituency} onChange={(e) => setConstituency(e.target.value)} className="p-5 bg-slate-50 border-2 border-slate-50 rounded-3xl font-bold text-lg" />
-                                        <input type="text" placeholder="Booth No" value={booth} onChange={(e) => setBooth(e.target.value)} className="p-5 bg-slate-50 border-2 border-slate-50 rounded-3xl font-bold text-lg" />
+                                <div className="bg-white rounded-[40px] p-12 shadow-xl border border-slate-100 space-y-8">
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Constituency</label>
+                                            <input list="const-list" type="text" placeholder="Select or Type..." value={constituency} onChange={(e) => setConstituency(e.target.value)} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold" />
+                                            <datalist id="const-list">
+                                                {allLocations.map(c => <option key={c.id} value={c.name} />)}
+                                            </datalist>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Local Body Type</label>
+                                            <select value={lgbType} onChange={(e) => setLgbType(e.target.value)} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold">
+                                                <option value="PANCHAYAT">Panchayath</option>
+                                                <option value="MUNICIPALITY">Municipality</option>
+                                                <option value="CORPORATION">Corporation</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Local Body Name</label>
+                                            <input list="lb-list" type="text" placeholder="e.g. Trippunithura" value={lgbName} onChange={(e) => setLgbName(e.target.value)} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold" />
+                                            <datalist id="lb-list">
+                                                {allLocations.find(c => c.name === constituency)?.local_bodies.map(lb => <option key={lb.id} value={lb.name} />)}
+                                            </datalist>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Booth Number</label>
+                                            <input type="text" placeholder="e.g. 145" value={booth} onChange={(e) => setBooth(e.target.value)} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Polling Station No (Optional)</label>
+                                            <input type="text" placeholder="e.g. 145" value={psNo} onChange={(e) => setPsNo(e.target.value)} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Polling Station Name (Optional)</label>
+                                            <input type="text" placeholder="e.g. Govt School..." value={psName} onChange={(e) => setPsName(e.target.value)} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold" />
+                                        </div>
                                     </div>
-                                    <label className="border-4 border-dashed border-slate-100 rounded-[40px] p-16 block text-center cursor-pointer hover:bg-primary-50 transition-all">
-                                        <input type="file" onChange={(e) => setFile(e.target.files[0])} className="hidden" accept=".pdf" />
-                                        <span className="text-5xl mb-4 block">{file ? "✅" : "📄"}</span>
-                                        <h3 className="font-black text-slate-800 uppercase">{file ? file.name : "Drop PDF Document"}</h3>
-                                    </label>
-                                    <button onClick={handleInitialUpload} className="w-full bg-primary-600 text-white py-6 rounded-3xl text-xl font-black uppercase shadow-2xl hover:bg-primary-700">Initialize Engine</button>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Source PDF Document</label>
+                                        <label className="border-4 border-dashed border-slate-100 rounded-[40px] p-10 block text-center cursor-pointer hover:bg-primary-50 transition-all">
+                                            <input type="file" onChange={(e) => setFile(e.target.files[0])} className="hidden" accept=".pdf" />
+                                            <span className="text-4xl mb-2 block">{file ? "✅" : "📄"}</span>
+                                            <h3 className="font-black text-slate-800 uppercase text-sm">{file ? file.name : "Click to Select PDF Roll"}</h3>
+                                        </label>
+                                    </div>
+
+                                    <div className="flex gap-4">
+                                        <button onClick={handleCycleReset} className="flex-1 bg-slate-100 text-slate-400 py-6 rounded-3xl font-black uppercase tracking-widest">Clear</button>
+                                        <button onClick={handleInitialUpload} className="flex-[2] bg-primary-600 text-white py-6 rounded-3xl text-xl font-black uppercase shadow-2xl hover:bg-primary-700 transition-all active:scale-95">Initialize Engine ⚡</button>
+                                    </div>
+                                    {error && <p className="text-rose-600 font-black text-center uppercase text-xs">{error}</p>}
                                 </div>
                             )}
                             {stage === 'ocr' && <div className="bg-white rounded-[40px] p-12 shadow-xl text-center space-y-8 animate-in"><h2 className="text-3xl font-black uppercase">OCR Activity</h2>{/* Status bars here */}</div>}
