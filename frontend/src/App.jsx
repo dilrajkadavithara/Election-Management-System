@@ -477,8 +477,8 @@ const App = () => {
                     <div className="space-y-12 animate-in">
                         <header className="flex justify-between items-end border-b pb-6">
                             <div>
-                                <h1 className="text-5xl font-black tracking-tighter uppercase">Voter Insight</h1>
-                                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mt-2">Constituency Analytics Dashboard</p>
+                                <h1 className="text-5xl font-black tracking-tighter uppercase">Voter Analytics</h1>
+                                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mt-2">Live Intelligence Dashboard</p>
                             </div>
                             <div className="flex gap-4 mb-1">
                                 <div className="flex flex-col gap-1">
