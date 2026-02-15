@@ -58,7 +58,8 @@ class VoterParser:
         val = val.strip().strip(':.-_=+* ')
         
         # Strip everything that isn't a letter/digit
-        pattern = r'[^a-zA-Z0-9\u0D05-\u0D39\u0D3E-\u0D4D\u0D7A-\u0D7F\u200C\u200D]'
+        # Range \u0D00-\u0D7F covers all Malayalam characters including Anusvara and Visarga
+        pattern = r'[^a-zA-Z0-9\.\u0D00-\u0D7F\u200C\u200D]'
         val = re.sub(f"^{pattern}+", "", val)
         val = re.sub(f"{pattern}+$", "", val)
         

@@ -7,8 +7,8 @@ def normalize_malayalam(text):
     """
     Normalize Malayalam text to use atomic chillu characters.
     Converts composite forms (consonant + virama) to single chillu characters
-    ONLY when they appear at word boundaries (end of word or before space).
-    Preserves conjunct consonants like ന്ധ, ന്ത, etc.
+    ONLY when they appear at boundaries (end of word, before space, or before dot).
+    Preserves conjunct consonants and initials with dots.
     """
     if not text or text == "N/A":
         return text
@@ -44,7 +44,7 @@ def normalize_malayalam(text):
         normalized = re.sub(f'{re.escape(composite)}$', atomic, normalized)
         # Replace before space
         normalized = re.sub(f'{re.escape(composite)}(?=\\s)', atomic, normalized)
-        # Replace before punctuation
+        # Replace before punctuation or dot
         normalized = re.sub(f'{re.escape(composite)}(?=[.,!?])', atomic, normalized)
 
     # Specific Post-Correction (Legacy Cleanup)

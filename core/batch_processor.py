@@ -101,9 +101,12 @@ class BatchProcessor:
             if not val or val == "N/A": continue
             
             # Keep only Malayalam (\u0D00-\u0D7F), Space, and Dot (.)
+            # Expanded range to include Anusvara (ം) and Visarga (ഃ)
             pruned_val = re.sub(r'[^ \.\u0D00-\u0D7F]', '', val)
+            
             # Remove double spaces and trim
             pruned_val = re.sub(r'\s+', ' ', pruned_val).strip()
+            
             # Normalize to modern atomic chillu forms
             pruned_val = normalize_malayalam(pruned_val)
             parsed_info[field] = pruned_val
