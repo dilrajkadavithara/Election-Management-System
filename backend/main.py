@@ -341,7 +341,7 @@ def run_processing(batch_id: str):
                     # Let's append to results and sort later or just append
                     results.append(res)
                     
-                    if res.get('Status') == 'Γ£à OK':
+                    if res.get('Status') == '✅ OK':
                         clean_count += 1
                     else:
                         flagged_count += 1
@@ -359,7 +359,7 @@ def run_processing(batch_id: str):
                     error_res = {
                         "voter_id": tasks[i][1], # Recover ID from task list using loop index
                         "image_name": os.path.basename(tasks[i][0]),
-                        "Status": "ΓÜá∩╕Å ERROR",
+                        "Status": "⚠️ ERROR",
                         "Flags": f"Processing Error: {str(exc)}",
                         "Name": "ERROR", "EPIC": "ERROR", "Age": "0", "Gender": "N/A"
                     }
@@ -711,9 +711,9 @@ async def update_voter(batch_id: str, voter_id: int, data: dict, user_info=Depen
     for i, res in enumerate(batch['results']):
         if res.get('voter_id') == voter_id:
             batch['results'][i].update(data)
-            batch['results'][i]['Status'] = 'Γ£à OK'
-            batch['clean_count'] = len([r for r in batch['results'] if r.get('Status') == 'Γ£à OK'])
-            batch['flagged_count'] = len([r for r in batch['results'] if r.get('Status') != 'Γ£à OK'])
+            batch['results'][i]['Status'] = '✅ OK'
+            batch['clean_count'] = len([r for r in batch['results'] if r.get('Status') == '✅ OK'])
+            batch['flagged_count'] = len([r for r in batch['results'] if r.get('Status') != '✅ OK'])
             return {"success": True}
     return {"success": False}
 
