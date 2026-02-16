@@ -98,6 +98,7 @@ authenticate_async = sync_to_async(sync_authenticate, thread_sensitive=True)
 get_user_info_async = sync_to_async(sync_get_user_info, thread_sensitive=True)
 get_constituencies_async = sync_to_async(get_constituencies, thread_sensitive=True)
 get_local_bodies_async = sync_to_async(get_local_bodies, thread_sensitive=True)
+check_booth_exists_async = sync_to_async(check_booth_exists, thread_sensitive=True)
 save_booth_data_async = sync_to_async(save_booth_data, thread_sensitive=True)
 get_stats_async = sync_to_async(sync_dashboard_wrapper, thread_sensitive=True)
 get_voters_async = sync_to_async(sync_voter_list_wrapper, thread_sensitive=True)
@@ -535,7 +536,10 @@ async def cancel_batch(batch_id: str, user_info=Depends(get_current_user)):
     return {"success": True, "message": "Batch cancellation requested"}
 
 @app.post("/api/save-to-db")
-async def save_to_db(constituency: str, lgb_type: str, lgb_name: str, b_num: str, batch_id: str, ps_no: str = "", ps_name: str = "", user_info=Depends(get_current_user)):
+async def save_to_db(
+    constituency: str, lgb_type: str, lgb_name: str, b_num: str, batch_id: str, 
+    ps_no: str = "", ps_name: str = "", user_info=Depends(get_current_user)
+):
     if batch_id not in active_batches: raise HTTPException(404, "Batch not found")
     results = active_batches[batch_id]['results']
     # Pass user_id to track who uploaded this batch (for OPERATOR role filtering)
@@ -566,11 +570,14 @@ async def send_comm_api(data: dict, user_info=Depends(get_current_user)):
 
 @app.get("/api/download-csv/{batch_id}")
 async def download_csv(batch_id: str, user_info=Depends(get_current_user)):
-    if not user_info.get('can_download', False):
+    if batch_id not in active_batches: raise HTTPException(404)
+    batch = active_batches[batch_id]
+    
+    # Permission bypass: Owner can always download their own batch results
+    if not user_info.get('can_download', False) and batch.get('user') != user_info['username']:
         raise HTTPException(403, "You do not have permission to download reports.")
         
-    if batch_id not in active_batches: raise HTTPException(404)
-    results = active_batches[batch_id]['results']
+    results = batch['results']
     
     import csv, io
     from fastapi.responses import StreamingResponse
@@ -596,6 +603,15 @@ async def get_const(user_info=Depends(get_current_user)):
 async def get_lb(constituency: str = None, user_info=Depends(get_current_user)):
     try: return await get_local_bodies_async(constituency)
     except: return []
+
+@app.get("/api/check-booth")
+async def check_booth(constituency: str, booth: str, user_info=Depends(get_current_user)):
+    """Check if booth exists before starting extraction"""
+    from core.db_bridge import check_booth_exists
+    # We need to use the sync->async bridge
+    check_fn = sync_to_async(check_booth_exists, thread_sensitive=True)
+    exists = await check_fn(constituency, booth)
+    return {"exists": exists}
 
 # Missing endpoints needed by App.jsx
 @app.post("/api/extract/{batch_id}")

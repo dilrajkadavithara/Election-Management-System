@@ -102,6 +102,11 @@ const api = {
         return response.data;
     },
 
+    checkBoothExists: async (constituency, booth) => {
+        const response = await client.get(`/api/check-booth`, { params: { constituency, booth } });
+        return response.data;
+    },
+
     cancelBatch: async (batchId) => {
         const response = await client.post(`/api/batch/${batchId}/cancel`);
         return response.data;

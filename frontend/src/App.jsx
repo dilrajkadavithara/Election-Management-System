@@ -230,8 +230,17 @@ const App = () => {
         if (!constituency || !lgbName || !booth || !file) {
             setError("All fields, including Booth Number, are mandatory."); return;
         }
+
         setLoading(true); setError(null);
         try {
+            // Early Guard: Check if booth already exists
+            const check = await api.checkBoothExists(constituency, booth);
+            if (check.exists) {
+                setError(`Booth ${booth} already has data for ${constituency}. Please delete the existing booth from Admin if you want to re-upload.`);
+                setLoading(false);
+                return;
+            }
+
             const res = await api.uploadPDF(file);
             setBatchId(res.batch_id); setStage('converting');
             await api.extractBoxes(res.batch_id);

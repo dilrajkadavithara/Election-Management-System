@@ -45,6 +45,14 @@ def get_local_bodies(constituency_name=None):
         qs = qs.filter(constituency__name=constituency_name)
     return list(qs.values('id', 'name', 'body_type'))
 
+def check_booth_exists(constituency_name, booth_number):
+    """Verifies if a booth already has voters in the given constituency"""
+    exists = Booth.objects.filter(
+        constituency__name=constituency_name, 
+        number=str(booth_number)
+    ).exists()
+    return exists
+
 def save_booth_data(constituency_name, local_body_type, local_body_name, booth_number, voter_data_list, original_filename, polling_station_no="", polling_station_name="", user_id=None):
     """
     Saves a list of voters to the database with Local Body categorization.
