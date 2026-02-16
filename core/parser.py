@@ -37,10 +37,10 @@ class VoterParser:
         return text.strip()
 
     def _strip_value(self, val):
-        """Aggressively removes leading junk until a valid letter or digit is found."""
+        """Aggressively removes junk and handles merged fields."""
         if not val: return ""
         
-        # 1. Remove Malayalam keyword fragments/stubs
+        # 1. Remove Malayalam keyword fragments/stubs from START
         stubs = [
             r"വീട്ടു\s*നമ്പ[ർര]", r"വിട്ടു\s*നമ്പ[ർര]", r"ു\s*നമ്പ[ർര]", r"ം\s*നമ്പ[ർര]", 
             r"പേര[്]?", r"പേര്", r"പേര്‍", r"പെര[്]?",
@@ -49,11 +49,12 @@ class VoterParser:
         for stub in stubs:
             val = re.sub(f"^{stub}\\s*[:\\+]?\\s*", "", val, flags=re.IGNORECASE)
 
-        # 2. Advanced Cleanup
-        # is NOT an English Letter, Digit, Malayalam Letter, or Malayalam Vowel Sign.
-        # Consonants: \u0D05-\u0D39, Chillu: \u0D7A-\u0D7F, Vowels/Signs: \u0D3E-\u0D4D
-        # ZWNJ: \u200C, ZWJ: \u200D
-        
+        # 2. Handle merges: If the extracted value contains keywords from NEXT fields, trim it
+        seps = ["ഭർത്താ", "അച്ഛ", "അമ്മ", "വീട്ട", "പ്രായ", "ലിംഗ"]
+        for sep in seps:
+            if sep in val:
+                val = val.split(sep)[0]
+
         # First, strip common punctuation/separators from ends
         val = val.strip().strip(':.-_=+* ')
         
@@ -156,14 +157,12 @@ class VoterParser:
                 gender_raw = match.group(2).strip()
                 
                 # GENDER LOGIC IMPROVISATION: Binary Choice
-                # Ultra-strict check for Male markers. Default everything else to Female.
-                if any(x in gender_raw for x in ["പുരുഷൻ", "പുരുഷന്", "Male"]):
+                if any(x in line for x in ["പുരുഷൻ", "പുരുഷന്", "Male"]):
                     data["Gender"] = "Male"
-                else:
+                elif any(x in line for x in ["സ്ത്രീ", "സത്രീ", "Female"]):
                     data["Gender"] = "Female"
                 
                 collecting_house = collecting_name = collecting_rel = False
-                continue
 
             # 2. Check for Relation Name (Priority over generic Name to avoid keyword overlaps)
             rel_found = False
@@ -179,14 +178,10 @@ class VoterParser:
                     collecting_rel = True
                     collecting_name = collecting_house = False
                     break
-            if rel_found: continue
 
-            # 3. Check for Name (Specific Keyword Match)
-            # CRITICAL: Use a strict exclusion filter to ensure we don't grab a Relation line
-            name_match = self.patterns["name"].search(line)
-            is_rel_keyword = any(k in line for k in ["അച്ഛ", "അച്ച", "ഭർത്താ", "ഭര്‍ത്താ", "അമ്മ", "അമമ", "മറ്റുള്ള"])
-            
-            if name_match and not is_rel_keyword:
+
+            if name_match:
+
                 extracted_name = self._strip_value(name_match.group(1))
                 if extracted_name:
                     # Clean leading EPICs or numbers from name
@@ -195,7 +190,7 @@ class VoterParser:
                         data["Full Name"] = clean_name
                         collecting_name = True
                         collecting_house = collecting_rel = False
-                        continue
+
 
             # 4. Check for House Start
             match = self.patterns["house"].search(line)
@@ -204,14 +199,13 @@ class VoterParser:
                 if val: house_raw_accumulator.append(val)
                 collecting_house = True
                 collecting_name = collecting_rel = False
-                continue
+
 
             # 5. Continuity Logic (Generic line handling)
-            # If line has a colon, it's very likely a new field we missed
             if ":" in line or any(k in line for k in ["പേര്", "പ്രായ", "വീട്ടു", "വിട്ടു"]):
                 collecting_name = collecting_rel = collecting_house = False
                 unassigned_lines.append(line)
-                continue
+
             
             if collecting_name:
                 data["Full Name"] += " " + self._strip_value(line)
