@@ -41,7 +41,7 @@ jobs:
             
             # Build and Start (Clean pull and fresh build)
             docker compose down --remove-orphans
-            docker compose build --no-cache nginx
+            docker compose build nginx
             docker compose up -d --build
             
             # Cleanup
