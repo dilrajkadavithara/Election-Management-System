@@ -1296,8 +1296,7 @@ const App = () => {
                                                         <input type="text" value={editData.Age || ''} onChange={(e) => setEditData({ ...editData, Age: e.target.value })} className="w-full p-4 bg-white border-none rounded-2xl font-bold text-lg shadow-sm" />
                                                     </div>
                                                     <div className="space-y-1">
-                                                        <label className="text-[10px] font-black uppercase text-slate-400 pl-2">Gender</label>
-                                                        <select value={editData.Gender || ''} onChange={(e) => setEditData({ ...editData, Gender: e.target.value })} className="w-full p-4 bg-white border-none rounded-2xl font-bold text-lg shadow-sm">
+                                                        <select value={(editData.Gender || '').toUpperCase()} onChange={(e) => setEditData({ ...editData, Gender: e.target.value })} className="w-full p-4 bg-white border-none rounded-2xl font-bold text-lg shadow-sm">
                                                             <option value="MALE">Male</option>
                                                             <option value="FEMALE">Female</option>
                                                             <option value="OTHERS">Others</option>
