@@ -71,9 +71,9 @@ class BatchProcessor:
                 else:
                     healed_suffix += char
             
-            parsed_info["EPIC_ID"] = prefix + healed_suffix
+            parsed_info["EPIC"] = prefix + healed_suffix
         else:
-            parsed_info["EPIC_ID"] = clean_epic
+            parsed_info["EPIC"] = clean_epic
 
         parsed_info["Image_Path"] = img_path
         parsed_info["Filename"] = os.path.basename(img_path)
@@ -95,7 +95,7 @@ class BatchProcessor:
         # --- SILENT PRUNING (Malayalam Fields) ---
         # Rule: Automatically prune everything except Malayalam, Space, and Dot (.)
         # Name is sacrosanct, but still pruned. Relation/House are relaxed.
-        mal_fields = ["Full Name", "Relation Name", "House Name"]
+        mal_fields = ["Name", "Relation Name", "House Name"]
         for field in mal_fields:
             val = str(parsed_info.get(field, ""))
             if not val or val == "N/A": continue
@@ -112,28 +112,19 @@ class BatchProcessor:
             parsed_info[field] = pruned_val
 
         # --- Data Integrity Checks ---
-        # Sacrosanct Fields: Full Name, Age, Gender, EPIC_ID
-        # Missing fields in Relation/House are still flagged, but noise is gone.
-        critical_fields = ["Full Name", "Relation Name", "EPIC_ID", "Age", "Gender"]
+        # Only flag if a field is truly missing (N/A)
+        critical_fields = ["Name", "Age", "Gender"]
         
         for field in critical_fields:
             val = str(parsed_info.get(field, "N/A"))
             if val == "N/A" or val.strip() == "":
                 flags.append(f"Missing {field}")
 
-        # --- EPIC Strict Pattern Validation ---
-        epic_val = str(parsed_info.get("EPIC_ID", "")).strip()
-        if not re.match(r'^[A-Z]{3}[0-9]{7}$', epic_val):
-            flags.append(f"Invalid EPIC Pattern (Captured: {epic_val})")
-
         # Final Status determination
         if flags:
             parsed_info["Flags"] = ", ".join(flags)
             parsed_info["Status"] = "⚠️ REVIEW"
             
-        elif is_healed:
-            parsed_info["Flags"] = "(Serial Auto-Healed)"
-            parsed_info["Status"] = "✅ OK"
         else:
             parsed_info["Flags"] = ""
             parsed_info["Status"] = "✅ OK"

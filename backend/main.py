@@ -87,9 +87,9 @@ def sync_dashboard_wrapper(username, constituency_id=None, booth_id=None):
     user = User.objects.get(username=username)
     return get_dashboard_stats(user.profile, constituency_id, booth_id)
 
-def sync_voter_list_wrapper(username, search, page, page_size, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None):
+def sync_voter_list_wrapper(username, search, page, page_size, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None, serial_from=None, serial_to=None):
     user = User.objects.get(username=username)
-    return get_voter_list(user.profile, search, page, page_size, constituency_id, lb_id, booth_id, gender, age_from, age_to, leaning)
+    return get_voter_list(user.profile, search, page, page_size, constituency_id, lb_id, booth_id, gender, age_from, age_to, leaning, serial_from, serial_to)
 
 def sync_locations_wrapper(username):
     user = User.objects.get(username=username)
@@ -143,7 +143,13 @@ manage_templates_async = sync_to_async(sync_manage_templates, thread_sensitive=T
 send_broadcast_async = sync_to_async(sync_send_broadcast, thread_sensitive=True)
 
 # Auth Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "election-super-secret-key-2026")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not JWT_SECRET_KEY:
+    logger.error("CRITICAL SECURITY WARNING: JWT_SECRET_KEY not found in .env! Using insecure fallback.")
+    SECRET_KEY = "election-super-secret-key-2026-insecure-dev"
+else:
+    SECRET_KEY = JWT_SECRET_KEY
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 600
 
@@ -193,9 +199,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise HTTPException(401, "Invalid credentials")
 
 # CORS
+raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
+origins = [o.strip() for o in raw_origins.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -457,7 +466,7 @@ async def list_voters(
     search: str = None, page: int = 1, 
     constituency: str = None, lb: str = None, booth: str = None,
     gender: str = None, age_from: str = None, age_to: str = None,
-    leaning: str = None,
+    leaning: str = None, serial_from: str = None, serial_to: str = None,
     page_size: int = 50,
     user_info=Depends(get_current_user)
 ):
@@ -466,7 +475,9 @@ async def list_voters(
     b_id = int(booth) if booth and str(booth).isdigit() else None
     af = int(age_from) if age_from and str(age_from).isdigit() else None
     at = int(age_to) if age_to and str(age_to).isdigit() else None
-    return await get_voters_async(user_info['username'], search, page, page_size, c_id, l_id, b_id, gender, af, at, leaning)
+    sf = int(serial_from) if serial_from and str(serial_from).isdigit() else None
+    st = int(serial_to) if serial_to and str(serial_to).isdigit() else None
+    return await get_voters_async(user_info['username'], search, page, page_size, c_id, l_id, b_id, gender, af, at, leaning, sf, st)
 
 @app.get("/api/export-voters")
 async def export_voters(
@@ -585,9 +596,24 @@ async def save_to_db(req: SaveRequest, user_info=Depends(get_current_user)):
         )
         
         if success:
-            logger.info(f"Successfully saved batch {req.batch_id} to DB.")
-            # Optional: Clear batch from memory after successful save to free RAM
-            # del active_batches[req.batch_id]
+            logger.info(f"Successfully saved batch {req.batch_id} to DB. Clearing RAM and Disk cache...")
+            
+            # --- IMMEDIATE CLEANUP & MEMORY CLEARING ---
+            # 1. Clear RAM
+            if req.batch_id in active_batches:
+                del active_batches[req.batch_id]
+            import gc
+            gc.collect()
+            
+            # 2. Clear Disk (Page Images and Crops)
+            try:
+                p_dir = PAGES_DIR / req.batch_id
+                c_dir = CROPS_DIR / req.batch_id
+                if p_dir.exists(): shutil.rmtree(p_dir)
+                if c_dir.exists(): shutil.rmtree(c_dir)
+                logger.info(f"Cleaned up disk resources for batch {req.batch_id}")
+            except Exception as cleanup_err:
+                logger.error(f"Post-save cleanup error: {cleanup_err}")
         else:
             logger.error(f"Database Bridge Error: {msg}")
             

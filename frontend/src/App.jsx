@@ -32,7 +32,7 @@ const App = () => {
     const [voterList, setVoterList] = useState([]);
     const [voterTotal, setVoterTotal] = useState(0);
     const [dashFilters, setDashFilters] = useState({ constituency: '', booth: '' });
-    const [listFilters, setListFilters] = useState({ constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '' });
+    const [listFilters, setListFilters] = useState({ constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '', serialFrom: '', serialTo: '' });
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -118,6 +118,8 @@ const App = () => {
 
     const loadVoters = async () => {
         try {
+            const isFiltered = listFilters.constituency || listFilters.booth || searchQuery;
+            const limit = view === 'design' ? (isFiltered ? 2000 : 30) : 50;
             const res = await api.getVoters(searchQuery, currentPage, {
                 constituency: listFilters.constituency,
                 lb: listFilters.lb,
@@ -125,8 +127,10 @@ const App = () => {
                 gender: listFilters.gender,
                 age_from: listFilters.ageFrom,
                 age_to: listFilters.ageTo,
-                leaning: listFilters.leaning
-            }, view === 'design' ? 2500 : 50);
+                leaning: listFilters.leaning,
+                serial_from: listFilters.serialFrom,
+                serial_to: listFilters.serialTo
+            }, limit);
             setVoterList(res.results);
             setVoterTotal(res.total);
         } catch (e) { console.error(e); }
@@ -732,7 +736,7 @@ const App = () => {
                             </div>
                             <div className="flex gap-2">
                                 <button onClick={() => { loadVoters(); loadAdminData(); }} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 shadow-md">Apply</button>
-                                <button onClick={() => { setListFilters({ constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '' }); setSearchQuery(''); }} className="px-5 py-2.5 bg-slate-100 text-slate-400 rounded-xl text-[10px] font-black uppercase hover:bg-slate-200">Clear</button>
+                                <button onClick={() => { setListFilters({ constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '', serialFrom: '', serialTo: '' }); setSearchQuery(''); }} className="px-5 py-2.5 bg-slate-100 text-slate-400 rounded-xl text-[10px] font-black uppercase hover:bg-slate-200">Clear</button>
                             </div>
                         </div>
 
@@ -1319,13 +1323,57 @@ const App = () => {
                 {
                     view === 'design' && (
                         <div className="w-full flex-1 flex flex-col items-center py-12 px-6 gap-8 animate-in bg-slate-100/50 min-h-full print:p-0 print:bg-white">
-                            <header className="mb-8 w-full max-w-6xl no-print flex justify-between items-end">
-                                <h1 className="text-4xl font-black uppercase text-slate-800 tracking-tighter">Voter Slip Engine</h1>
-                                <button onClick={() => window.print()} className="bg-primary-600 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs shadow-lg hover:scale-105 transition-all">Print Slips 🖨️</button>
+                            <header className="mb-4 w-full max-w-6xl no-print flex justify-between items-end border-b pb-6 border-slate-200">
+                                <div>
+                                    <h1 className="text-4xl font-black uppercase text-slate-800 tracking-tighter">Voter Slip Engine</h1>
+                                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mt-1">Found {voterList.length} slips for selection</p>
+                                </div>
+                                <button onClick={() => window.print()} className="bg-primary-600 text-white px-10 py-5 rounded-2xl font-black uppercase text-sm shadow-xl hover:scale-105 transition-all flex items-center gap-3">
+                                    <span>🖨️</span> Print Selected Slips
+                                </button>
                             </header>
-                            <div className="grid grid-cols-2 gap-4 w-fit mx-auto print:p-0 print:gap-0">
+
+                            <div className="w-full max-w-6xl no-print bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 space-y-6">
+                                <div className="flex flex-wrap gap-6 items-end">
+                                    <div className="flex-1 min-w-[200px] space-y-1">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2 font-bold">Constituency Unit</label>
+                                        <select className="w-full p-3 bg-slate-50 rounded-2xl font-bold border-2 border-slate-100 focus:border-primary-500 transition-all text-sm" value={listFilters.constituency} onChange={(e) => setListFilters({ ...listFilters, constituency: e.target.value, lb: '', booth: '' })}>
+                                            <option value="">All Areas</option>
+                                            {allLocations.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="flex-1 min-w-[150px] space-y-1">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2 font-bold">Booth Number</label>
+                                        <select disabled={!listFilters.constituency} className="w-full p-3 bg-slate-50 rounded-2xl font-bold border-2 border-slate-100 focus:border-primary-500 transition-all text-sm disabled:opacity-50" value={listFilters.booth} onChange={(e) => setListFilters({ ...listFilters, booth: e.target.value })}>
+                                            <option value="">All Booths</option>
+                                            {listFilters.constituency && allLocations.find(c => String(c.id) === String(listFilters.constituency))?.local_bodies.flatMap(lb => lb.booths).sort((a, b) => a.number - b.number).map(b => <option key={b.id} value={b.id}>Booth {b.number}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="w-[120px] space-y-1">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2 font-bold">Serial From</label>
+                                        <input type="number" placeholder="Start" className="w-full p-3 bg-slate-50 rounded-2xl font-bold border-2 border-slate-100 focus:border-primary-500 transition-all text-sm text-center" value={listFilters.serialFrom} onChange={(e) => setListFilters({ ...listFilters, serialFrom: e.target.value })} />
+                                    </div>
+                                    <div className="w-[120px] space-y-1">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2 font-bold">Serial To</label>
+                                        <input type="number" placeholder="End" className="w-full p-3 bg-slate-50 rounded-2xl font-bold border-2 border-slate-100 focus:border-primary-500 transition-all text-sm text-center" value={listFilters.serialTo} onChange={(e) => setListFilters({ ...listFilters, serialTo: e.target.value })} />
+                                    </div>
+                                    <div className="flex-1 min-w-[200px] space-y-1">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2 font-bold underline decoration-primary-500 decoration-2">Party Branding</label>
+                                        <select className="w-full p-3 bg-primary-50 rounded-2xl font-black uppercase text-primary-700 border-2 border-primary-100 focus:border-primary-500 transition-all text-xs tracking-widest" value={activePrintParty?.id || ''} onChange={(e) => setActivePrintParty(allParties.find(p => String(p.id) === String(e.target.value)))}>
+                                            <option value="">No Branding (Plain)</option>
+                                            {allParties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={loadVoters} className="bg-slate-900 text-white px-8 py-3.5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-slate-800 transition-all active:scale-95">Apply Filter</button>
+                                        <button onClick={() => { setListFilters({ ...listFilters, serialFrom: '', serialTo: '' }); loadVoters(); }} className="bg-slate-100 text-slate-400 px-6 py-3.5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-all">Reset</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 w-fit mx-auto print:p-0 print:gap-0 print:block">
                                 {(voterList.length > 0 ? voterList : [...Array(6)]).map((v, i) => (
-                                    <VoterSlip key={v?.id || i} voterName={v?.full_name || "Voter Name"} serialNo={v?.serial_no || i + 1} epicNo={v?.epic_id || "KL/XX/XXX/XXXXXX"} pollingStation={v?.ps_name || "Polling Station"} party={activePrintParty} />
+                                    <VoterSlip key={v?.id || i} voterName={v?.full_name || "Voter Name"} serialNo={v?.serial_no || i + 1} epicNo={v?.epic_id || "KL/XX/XXX/XXXXXX"} boothNo={v?.booth_no || "N/A"} constituency={v?.constituency || "N/A"} pollingStation={v?.ps_name || "Polling Station"} party={activePrintParty} />
                                 ))}
                             </div>
                         </div>

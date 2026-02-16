@@ -116,7 +116,7 @@ class VoterParser:
     def parse_text_block(self, raw_text):
         """Parses the main Malayalam text block into structured fields."""
         data = {
-            "Full Name": "N/A",
+            "Name": "N/A",
             "Relation Type": "N/A",
             "Relation Name": "N/A",
             "House Number": "N/A",
@@ -158,10 +158,10 @@ class VoterParser:
                 
                 # GENDER LOGIC IMPROVISATION: Binary Choice
                 # Ultra-strict check for Male markers. Default everything else to Female.
-                if any(x in gender_raw for x in ["പുരുഷൻ", "പുരുഷന്", "Male"]):
-                    data["Gender"] = "Male"
-                else:
-                    data["Gender"] = "Female"
+            if "പുരുഷൻ" in raw_text or "പുരുഷന്" in raw_text:
+                data["Gender"] = "MALE"
+            else:
+                data["Gender"] = "FEMALE"
                 
                 collecting_house = collecting_name = collecting_rel = False
                 continue
@@ -193,7 +193,7 @@ class VoterParser:
                     # Clean leading EPICs or numbers from name
                     clean_name = re.sub(r'^[^\u0D05-\u0D39\u0D7A-\u0D7F]*\d+\s*', '', extracted_name).strip()
                     if clean_name:
-                        data["Full Name"] = clean_name
+                        data["Name"] = clean_name
                         collecting_name = True
                         collecting_house = collecting_rel = False
                         continue
@@ -215,7 +215,7 @@ class VoterParser:
                 continue
             
             if collecting_name:
-                data["Full Name"] += " " + self._strip_value(line)
+                data["Name"] += " " + self._strip_value(line)
             elif collecting_rel:
                 data["Relation Name"] += " " + self._strip_value(line)
             elif collecting_house:
@@ -234,7 +234,7 @@ class VoterParser:
                 val = self._strip_value(cand)
                 # Ensure it has Malayalam characters and isn't just noise
                 if len(val) > 2 and re.search(r'[\u0D05-\u0D39\u0D7A-\u0D7F]', val):
-                    data["Full Name"] = val
+                    data["Name"] = val
                     break
 
         # FINAL FALLBACKS

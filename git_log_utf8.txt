@@ -1,0 +1,50 @@
+﻿a73e4af Fix gender case
+553ea78 Robustness Fix: Industrial-strength save-to-db logic with Pydantic flexibility and explicit bridge mapping
+03bf239 Fix: Switch save-to-db to JSON body to handle Malayalam Unicode and avoid 422 errors
+4ef09d3 Fix: Rename b_num to booth in save_to_db to match frontend call
+47425e8 UI Fix: Streamline dashboard booth dropdown and align widths
+20168c5 Fix: missing import
+fa09166 Feature: Add Early Guard booth check
+457fb30 Fix: Restore Malayalam dots and initials
+030f608 Revert: Serial extraction to ensure steady progress and fix resource usage
+821d74d Optimize: Parallelize extraction and fix detect_voter_boxes TypeError
+846011b Fix: Restore CSS styling and Chart dimensions via proper Nginx root mapping
+3f90331 Trigger deployment with new SSH key
+eb21a70 Fix: Force reset on server and standard Nginx root mapping
+acd7ad9 Final MIME Fix: Explicit mime.types and alias mapping for assets
+811f370 Final Fix: Bundle frontend in Nginx image and remove shared volumes to kill MIME error
+6a05cee Deploy: Explicitly clear stale frontend volume to fix MIME type error
+e4d16ff CRITICAL FIX: Nginx serving HTML for JS/CSS assets - add /assets/ location block
+edc79e1 Fix: Force clean Docker build to resolve blank site issue
+457a18c Fix: Upgrade nginx to 1.25-alpine and add stop button to all OCR stages
+908ab1e feat: add stop & clear RAM button during extraction
+948228c feat: backend stop & clear RAM functionality
+8c0a73a fix: init flagged count and catch worker exceptions as errors
+66ee8c5 fix: real-time flagged count visibility
+a8ff8d2 feat: restore sequential review workflow and live flag count
+3311682 fix: voter image paths to use correct API endpoint
+b8055c9 fix: memory leak in pdf conversion using stream processing
+b384de3 fix: numeric ocr progress and dynamic progress bar
+c22ba68 fix: deterministic chart layout and branding update
+03a259a fix: apply strict fixed height strategy for charts as peer friend advice
+3604412 fix: apply refined layout solution using fixed heights and aspect ratios
+0d13bee fix: mount charts only after layout is stable to fix -1 dimension error
+f1bc3be fix: dashboard empty states and chart layout robustness
+8d1a650 fix: exhaustive fix for recharts layout width/height error
+0c6d251 fix: apply console suggested chart styles
+1ecfaeb fix: dashboard chart rendering stability
+316d4b9 fix: restore missing ocr status and results stages in engine view
+38259bc fix: restore missing columns and expanded edit fields in voters list
+150de77 debug: add stats check script
+315076c feat: enable ssl and https redirection
+b183c50 chore: refine certbot location config
+897757b chore: add certbot challenge location to nginx
+f727516 fix: restore missing OCR setup fields and enable location selection
+b8a53f0 feat: track scripts directory for server-side administration
+8aa3342 chore: include scripts in docker image
+d1c9a58 fix: add missing dependencies PyJWT and google-generativeai
+92bdef0 chore: trigger deployment after manual docker installation
+deebe29 fix: simplify deployment and force port 22
+17379bd debug: add verbose logging to deployment pipeline
+7c36b1d deploy: final production push with verified ssh connection
+163a11d trigger: cloud deployment pipeline
