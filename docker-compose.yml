@@ -19,8 +19,6 @@ services:
     environment:
       - DATABASE_URL=postgres://admin:secretpassword@db:5432/voter_db
       - DJANGO_SETTINGS_MODULE=voter_vault.settings
-      - SECRET_KEY=change-this-in-production
-      - JWT_SECRET=change-this-in-production
     env_file:
       - .env
     volumes:
