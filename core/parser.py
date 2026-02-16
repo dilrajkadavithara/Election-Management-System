@@ -3,8 +3,9 @@ import re
 class VoterParser:
     def __init__(self):
         # Malayalam Keyword Patterns - Ultra-flexible for OCR artifacts
+        # Note: We use non-greedy matching (.*?) and lookaheads where possible to handle merged lines
         self.patterns = {
-            "name": re.compile(r"(?:പേര|പേര്‍|പേര്|പെര|പെര്|രേര്|റേര്|രര)[്]?[^:]*[:\+]?\s*(.*)"),
+            "name": re.compile(r"(?:പേര|പേര്|പേര്|പെര|പെര്|രേര്|റേര്|രര)[്]?[^:]*[:\+]?\s*(.*)"),
             "rel_father": re.compile(r"(?:അച്ഛ|അച്ച|അച|അചഛ|അച്ചന|അചഛന|അച്ചൻ)\s*(?:ന്റെ|ന്റ|ൻ|ന്‍|ന)?\s*(?:പേര|പേര്|പെര)?\s*[:\+]?\s*(.*)"),
             "rel_husband": re.compile(r"(?:ഭർത്താ|ഭര്‍ത്താ|ഭർത്ത|ഭര്‍ത്ത|ഭർത്താവി|ഭര്‍ത്താവി)\s*(?:വി|വിൻ|വിന്‍|വിന|വിനെ)?\s*(?:ന്റെ|ന്റ|ൻ|ന്‍|ന)?\s*(?:പേര|പേര്|പെര)?\s*[:\+]?\s*(.*)"),
             "rel_mother": re.compile(r"(?:അമ്മ|അമമ|അമ|അാമമ)\s*(?:യുടെ|യുട|യു|യ|യുടേ)?\s*(?:പേര|പേര്|പെര)?\s*[:\+]?\s*(.*)"),
@@ -37,23 +38,24 @@ class VoterParser:
         return text.strip()
 
     def _strip_value(self, val):
-        """Aggressively removes leading junk until a valid letter or digit is found."""
+        """Aggressively removes leading junk and trailing field overlaps."""
         if not val: return ""
         
         # 1. Remove Malayalam keyword fragments/stubs
         stubs = [
             r"വീട്ടു\s*നമ്പ[ർര]", r"വിട്ടു\s*നമ്പ[ർര]", r"ു\s*നമ്പ[ർര]", r"ം\s*നമ്പ[ർര]", 
-            r"പേര[്]?", r"പേര്", r"പേര്‍", r"പെര[്]?",
+            r"പേര[്]?", r"പേര്", r"പേര്", r"പെര[്]?",
             r"അച്ഛന്റെ", r"ഭർത്താവിന്റെ", r"അമ്മയുടെ", r"മറ്റുള്ളവ"
         ]
         for stub in stubs:
             val = re.sub(f"^{stub}\\s*[:\\+]?\\s*", "", val, flags=re.IGNORECASE)
 
-        # 2. Advanced Cleanup
-        # is NOT an English Letter, Digit, Malayalam Letter, or Malayalam Vowel Sign.
-        # Consonants: \u0D05-\u0D39, Chillu: \u0D7A-\u0D7F, Vowels/Signs: \u0D3E-\u0D4D
-        # ZWNJ: \u200C, ZWJ: \u200D
-        
+        # 2. If the OCR merged fields, strip out the next field labels from the end of the string
+        field_labels = ["ഭർത്താ", "അച്ഛൻ", "അമ്മ", "വീട്ട", "പ്രായ", "ലിംഗ"]
+        for label in field_labels:
+            if label in val:
+                val = val.split(label)[0]
+
         # First, strip common punctuation/separators from ends
         val = val.strip().strip(':.-_=+* ')
         
@@ -82,7 +84,7 @@ class VoterParser:
             return "N/A", "N/A"
 
         # 1. Deep Clear: Remove leaked keywords AND all leading non-alphanumeric punctuation (like : or .)
-        house_text = re.sub(r'^(?:വീട്ടു|വിട്ടു|നമ്പർ|നന്പർ|നമ്പര്|നമ്പര്‍|house|no|number)\s*', '', house_text, flags=re.IGNORECASE)
+        house_text = re.sub(r'^(?:വീട്ടു|വിട്ടു|നമ്പർ|നന്പർ|നമ്പര്|നമ്പര്|house|no|number)\s*', '', house_text, flags=re.IGNORECASE)
         house_text = re.sub(r'^[^a-zA-Z0-9\u0D00-\u0D7F]+', '', house_text).strip()
         
         words = house_text.split()
@@ -136,7 +138,7 @@ class VoterParser:
             "ഹാസ്": "ഹൗസ്",
             "ഹൗസ": "ഹൗസ്",
             "വിട്ടു": "വീട്ടു",
-            "വിട്ടില്‍": "വീട്ടില്‍"
+            "വിട്ടില്": "വീട്ടില്"
         }
         for wrong, right in healing_map.items():
             raw_text = raw_text.replace(wrong, right)
@@ -150,118 +152,86 @@ class VoterParser:
         unassigned_lines = []
 
         for i, line in enumerate(lines):
-            # 1. Age/Gender Check (Strongest delimiter)
-            match = self.patterns["age_gender"].search(line)
-            if match:
-                data["Age"] = self._map_ocr_age(match.group(1).strip())
-                gender_raw = match.group(2).strip()
-                
-                # GENDER LOGIC IMPROVISATION: Binary Choice
-                # Ultra-strict check for Male markers. Default everything else to Female.
-            if "പുരുഷൻ" in raw_text or "പുരുഷന്" in raw_text:
-                data["Gender"] = "MALE"
-            else:
-                data["Gender"] = "FEMALE"
-                
-                collecting_house = collecting_name = collecting_rel = False
-                continue
+            # 1. Age/Gender Check - CRITICAL: No 'continue' so we check Name/House on same line
+            age_match = self.patterns["age_gender"].search(line)
+            if age_match:
+                data["Age"] = self._map_ocr_age(age_match.group(1).strip())
+                if any(m in line for m in ["പുരുഷൻ", "പുരുഷന്", "Male"]):
+                    data["Gender"] = "MALE"
+                elif any(f in line for f in ["സ്ത്രീ", "സത്രീ", "സ്ത്രീ", "Female"]):
+                    data["Gender"] = "FEMALE"
 
-            # 2. Check for Relation Name (Priority over generic Name to avoid keyword overlaps)
+            # 2. Relation Name Check (Priority over generic Name to avoid keyword overlaps)
             rel_found = False
             for rel_type, pattern in [("Father", self.patterns["rel_father"]), 
                                       ("Husband", self.patterns["rel_husband"]), 
                                       ("Mother", self.patterns["rel_mother"]),
                                       ("Others", self.patterns["rel_others"])]:
-                match = pattern.search(line)
-                if match:
-                    data["Relation Name"] = self._strip_value(match.group(1))
+                rel_match = pattern.search(line)
+                if rel_match:
+                    data["Relation Name"] = self._strip_value(rel_match.group(1))
                     data["Relation Type"] = rel_type
                     rel_found = True
                     collecting_rel = True
                     collecting_name = collecting_house = False
                     break
-            if rel_found: continue
-
-            # 3. Check for Name (Specific Keyword Match)
-            # CRITICAL: Use a strict exclusion filter to ensure we don't grab a Relation line
-            name_match = self.patterns["name"].search(line)
-            is_rel_keyword = any(k in line for k in ["അച്ഛ", "അച്ച", "ഭർത്താ", "ഭര്‍ത്താ", "അമ്മ", "അമമ", "മറ്റുള്ള"])
             
-            if name_match and not is_rel_keyword:
+            # 3. Name Check (Avoids grabbing Relation keywords as names)
+            name_match = self.patterns["name"].search(line)
+            is_rel_start = any(line.strip().startswith(k) for k in ["അച്ഛ", "ഭർത്താ", "അമ്മ", "മറ്റുള്ള"])
+            
+            if name_match and not is_rel_start:
                 extracted_name = self._strip_value(name_match.group(1))
                 if extracted_name:
                     # Clean leading EPICs or numbers from name
                     clean_name = re.sub(r'^[^\u0D05-\u0D39\u0D7A-\u0D7F]*\d+\s*', '', extracted_name).strip()
-                    if clean_name:
+                    if clean_name and data["Name"] == "N/A":
                         data["Name"] = clean_name
                         collecting_name = True
                         collecting_house = collecting_rel = False
-                        continue
 
             # 4. Check for House Start
-            match = self.patterns["house"].search(line)
-            if match:
-                val = self._strip_value(match.group(1))
+            house_match = self.patterns["house"].search(line)
+            if house_match:
+                val = self._strip_value(house_match.group(1))
                 if val: house_raw_accumulator.append(val)
                 collecting_house = True
                 collecting_name = collecting_rel = False
-                continue
 
             # 5. Continuity Logic (Generic line handling)
-            # If line has a colon, it's very likely a new field we missed
-            if ":" in line or any(k in line for k in ["പേര്", "പ്രായ", "വീട്ടു", "വിട്ടു"]):
-                collecting_name = collecting_rel = collecting_house = False
-                unassigned_lines.append(line)
-                continue
-            
-            if collecting_name:
-                data["Name"] += " " + self._strip_value(line)
-            elif collecting_rel:
-                data["Relation Name"] += " " + self._strip_value(line)
-            elif collecting_house:
-                house_raw_accumulator.append(line)
-            else:
-                unassigned_lines.append(line)
+            if not any([age_match, rel_found, name_match, house_match]):
+                if collecting_name:
+                    data["Name"] += " " + self._strip_value(line)
+                elif collecting_rel:
+                    data["Relation Name"] += " " + self._strip_value(line)
+                elif collecting_house:
+                    house_raw_accumulator.append(line)
+                else:
+                    unassigned_lines.append(line)
 
-        # FINAL FALLBACKS
-        # Spatial Name Recovery: Only use lines that weren't already classified and DON'T look like relations
-        if data["Name"] == "N/A" and unassigned_lines:
-            for cand in unassigned_lines[:2]:
-                # Strict exclusion for fallback too
-                if any(k in cand for k in ["അച്ഛ", "അച്ച", "ഭർത്താ", "ഭര്‍ത്താ", "അമ്മ", "അമമ", "മറ്റുള്ള"]):
-                    continue
-                    
-                val = self._strip_value(cand)
-                # Ensure it has Malayalam characters and isn't just noise
-                if len(val) > 2 and re.search(r'[\u0D05-\u0D39\u0D7A-\u0D7F]', val):
-                    data["Name"] = val
-                    break
-
-        # FINAL FALLBACKS
+        # FINAL PROCESSING
         # Finalize Split for House Fields
         full_house_text = " ".join(house_raw_accumulator)
         h_num, h_name = self._split_house_info(full_house_text)
         data["House Number"] = h_num
         data["House Name"] = h_name
 
-        # Numeric Scavenger: If Age is still N/A, look inside House Name/Number for a standalone 2-digit number (18-99)
-        if data["Age"] == "N/A":
-            # Search entire raw text for "പ്രായം" or just numbers near the end
-            scavenger_match = re.search(r'(?:പ്രായം|ായം|പം|യം)\s*[:\+]?\s*([^\s]{2,3})', raw_text)
-            if scavenger_match:
-                data["Age"] = self._map_ocr_age(scavenger_match.group(1).strip())
+        # Fallback for Name if still missing
+        if data["Name"] == "N/A" and unassigned_lines:
+            for cand in unassigned_lines[:2]:
+                # Strict exclusion for fallback too
+                if not any(k in cand for k in ["അച്ഛ", "ഭർത്താ", "അമ്മ", "പ്രായം"]):
+                    val = self._strip_value(cand)
+                    # Ensure it has Malayalam characters and isn't just noise
+                    if len(val) > 2 and re.search(r'[\u0D05-\u0D39\u0D7A-\u0D7F]', val):
+                        data["Name"] = val
+                        break
 
-        # Final check for standalone number 18-99 at the bottom of the block
-        if data["Age"] == "N/A":
-            digit_matches = re.findall(r'\b(1[89]|[2-9][0-9])\b', raw_text)
-            if digit_matches:
-                data["Age"] = digit_matches[-1] # Take the last one found (usually at the bottom)
-
-        # Super-Global Gender Search (Scan entire block for Male keywords)
+        # Safety: Final Gender Scan if missing
         if data["Gender"] == "N/A":
-            if "പുരുഷൻ" in raw_text or "പുരുഷന്" in raw_text:
-                data["Gender"] = "Male"
+            if any(m in raw_text for m in ["പുരുഷൻ", "പുരുഷന്"]):
+                data["Gender"] = "MALE"
             else:
-                data["Gender"] = "Female"
+                data["Gender"] = "FEMALE"
 
         return data
