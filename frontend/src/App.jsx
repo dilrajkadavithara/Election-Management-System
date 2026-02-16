@@ -514,16 +514,16 @@ const App = () => {
                             <div className="flex gap-4 mb-1">
                                 <div className="flex flex-col gap-1">
                                     <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Constituency</label>
-                                    <select className="bg-white border-2 border-slate-100 rounded-2xl px-5 py-3 text-xs font-bold focus:border-primary-500 shadow-sm hover:border-slate-300 transition-all cursor-pointer" value={dashFilters.constituency} onChange={(e) => setDashFilters({ ...dashFilters, constituency: e.target.value, booth: '' })}>
+                                    <select className="w-48 bg-white border-2 border-slate-100 rounded-2xl px-5 py-3 text-xs font-bold focus:border-primary-500 shadow-sm hover:border-slate-300 transition-all cursor-pointer" value={dashFilters.constituency} onChange={(e) => setDashFilters({ ...dashFilters, constituency: e.target.value, booth: '' })}>
                                         <option value="">Global View (All)</option>
                                         {allLocations.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
                                 </div>
                                 <div className="flex flex-col gap-1">
                                     <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Booth Unit</label>
-                                    <select className="bg-white border-2 border-slate-100 rounded-2xl px-5 py-3 text-xs font-bold focus:border-primary-500 shadow-sm hover:border-slate-300 transition-all cursor-pointer disabled:opacity-50" value={dashFilters.booth} disabled={!dashFilters.constituency} onChange={(e) => setDashFilters({ ...dashFilters, booth: e.target.value })}>
+                                    <select className="w-40 bg-white border-2 border-slate-100 rounded-2xl px-5 py-3 text-xs font-bold focus:border-primary-500 shadow-sm hover:border-slate-300 transition-all cursor-pointer disabled:opacity-50" value={dashFilters.booth} disabled={!dashFilters.constituency} onChange={(e) => setDashFilters({ ...dashFilters, booth: e.target.value })}>
                                         <option value="">All Booths</option>
-                                        {dashFilters.constituency && allLocations.find(c => String(c.id) === String(dashFilters.constituency))?.local_bodies.flatMap(lb => lb.booths).sort((a, b) => a.number - b.number).map(b => <option key={b.id} value={b.id}>Booth {b.number} - {b.name || b.polling_station_name}</option>)}
+                                        {dashFilters.constituency && allLocations.find(c => String(c.id) === String(dashFilters.constituency))?.local_bodies.flatMap(lb => lb.booths).sort((a, b) => a.number - b.number).map(b => <option key={b.id} value={b.id}>Booth {b.number}</option>)}
                                     </select>
                                 </div>
                             </div>
