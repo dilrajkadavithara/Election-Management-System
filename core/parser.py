@@ -217,11 +217,15 @@ class VoterParser:
                 unassigned_lines.append(line)
 
         # FINAL FALLBACKS
-        # Spatial Name Recovery: Only use lines that weren't already classified and DON'T look like relations
+        # Spatial Name Recovery: Only use lines that weren't already classified
         if data["Full Name"] == "N/A" and unassigned_lines:
-            for cand in unassigned_lines[:2]:
-                # Strict exclusion for fallback too
-                if any(k in cand for k in ["അച്ഛ", "അച്ച", "ഭർത്താ", "ഭര്‍ത്താ", "അമ്മ", "അമമ", "മറ്റുള്ള"]):
+            # Keywords that indicate a building or polling station, not a person
+            building_keywords = ["ഹാൾ", "ഹാള്", "മുനിസിപ്പാലിറ്റി", "ബൂത്ത്", "സ്കൂൾ", "സ്കൂള്", "സകൂൾ", "കെട്ടിടം", "ഓഫീസ്", "വാർഡ്"]
+            
+            for cand in unassigned_lines[:3]:
+                # Strict exclusion for relations and building names
+                is_invalid = any(k in cand for k in ["അച്ഛ", "അമ്മ", "ഭർത്താ", "മറ്റുള്ള"] + building_keywords)
+                if is_invalid:
                     continue
                     
                 val = self._strip_value(cand)
