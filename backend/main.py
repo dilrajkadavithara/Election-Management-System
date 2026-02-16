@@ -537,13 +537,13 @@ async def cancel_batch(batch_id: str, user_info=Depends(get_current_user)):
 
 @app.post("/api/save-to-db")
 async def save_to_db(
-    constituency: str, lgb_type: str, lgb_name: str, b_num: str, batch_id: str, 
+    constituency: str, lgb_type: str, lgb_name: str, booth: str, batch_id: str, 
     ps_no: str = "", ps_name: str = "", user_info=Depends(get_current_user)
 ):
     if batch_id not in active_batches: raise HTTPException(404, "Batch not found")
     results = active_batches[batch_id]['results']
     # Pass user_id to track who uploaded this batch (for OPERATOR role filtering)
-    success, msg = await save_booth_data_async(constituency, lgb_type, lgb_name, b_num, results, active_batches[batch_id]['filename'], ps_no, ps_name, user_info['id'])
+    success, msg = await save_booth_data_async(constituency, lgb_type, lgb_name, booth, results, active_batches[batch_id]['filename'], ps_no, ps_name, user_info['id'])
     return {"success": success, "message": msg}
 
 # ----------------------------------------------------------------
