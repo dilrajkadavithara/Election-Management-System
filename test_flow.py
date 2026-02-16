@@ -69,17 +69,16 @@ def test():
 
     print("Step 6: Testing Save to Database...")
     save_url = f"{BASE_URL}/api/save-to-db"
-    # Note: query params in fastapi
-    params = {
+    payload = {
         "constituency": "1",
         "lgb_type": "PANCHAYAT",
         "lgb_name": "TEST",
-        "b_num": "999",
+        "booth": "999",
         "batch_id": batch_id,
         "ps_no": "1",
         "ps_name": "TEST SCHOOL"
     }
-    save_res = requests.post(save_url, headers=headers, params=params)
+    save_res = requests.post(save_url, headers=headers, json=payload)
     print(f"Save Result: {save_res.status_code}")
     if save_res.status_code == 200:
         print("✅ Save to Database Working!")

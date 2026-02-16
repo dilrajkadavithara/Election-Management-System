@@ -73,16 +73,14 @@ const api = {
     },
 
     saveToDB: async (batchId, constituency, lgbType, lgbName, booth, psNo, psName) => {
-        const response = await client.post(`/api/save-to-db`, null, {
-            params: {
-                batch_id: batchId,
-                constituency,
-                lgb_type: lgbType,
-                lgb_name: lgbName,
-                booth,
-                ps_no: psNo,
-                ps_name: psName
-            }
+        const response = await client.post(`/api/save-to-db`, {
+            batch_id: batchId,
+            constituency,
+            lgb_type: lgbType,
+            lgb_name: lgbName,
+            booth,
+            ps_no: psNo,
+            ps_name: psName
         });
         return response.data;
     },

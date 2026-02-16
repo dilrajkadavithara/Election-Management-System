@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from passlib.context import CryptContext
+from pydantic import BaseModel
 from asgiref.sync import sync_to_async
 import concurrent.futures
 import multiprocessing
@@ -535,15 +536,25 @@ async def cancel_batch(batch_id: str, user_info=Depends(get_current_user)):
     gc.collect()
     return {"success": True, "message": "Batch cancellation requested"}
 
+class SaveRequest(BaseModel):
+    batch_id: str
+    constituency: str
+    lgb_type: str
+    lgb_name: str
+    booth: str
+    ps_no: str = ""
+    ps_name: str = ""
+
 @app.post("/api/save-to-db")
-async def save_to_db(
-    constituency: str, lgb_type: str, lgb_name: str, booth: str, batch_id: str, 
-    ps_no: str = "", ps_name: str = "", user_info=Depends(get_current_user)
-):
-    if batch_id not in active_batches: raise HTTPException(404, "Batch not found")
-    results = active_batches[batch_id]['results']
+async def save_to_db(req: SaveRequest, user_info=Depends(get_current_user)):
+    if req.batch_id not in active_batches: raise HTTPException(404, "Batch not found")
+    results = active_batches[req.batch_id]['results']
     # Pass user_id to track who uploaded this batch (for OPERATOR role filtering)
-    success, msg = await save_booth_data_async(constituency, lgb_type, lgb_name, booth, results, active_batches[batch_id]['filename'], ps_no, ps_name, user_info['id'])
+    success, msg = await save_booth_data_async(
+        req.constituency, req.lgb_type, req.lgb_name, req.booth, 
+        results, active_batches[req.batch_id]['filename'], 
+        req.ps_no, req.ps_name, user_info['id']
+    )
     return {"success": success, "message": msg}
 
 # ----------------------------------------------------------------
