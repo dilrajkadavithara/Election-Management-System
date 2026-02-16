@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 import sys
 import os
 import fastapi
@@ -14,8 +14,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from passlib.context import CryptContext
-from pydantic import BaseModel
-from typing import Optional, Any
 from asgiref.sync import sync_to_async
 import concurrent.futures
 import multiprocessing
@@ -87,9 +85,9 @@ def sync_dashboard_wrapper(username, constituency_id=None, booth_id=None):
     user = User.objects.get(username=username)
     return get_dashboard_stats(user.profile, constituency_id, booth_id)
 
-def sync_voter_list_wrapper(username, search, page, page_size, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None, serial_from=None, serial_to=None):
+def sync_voter_list_wrapper(username, search, page, page_size, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None):
     user = User.objects.get(username=username)
-    return get_voter_list(user.profile, search, page, page_size, constituency_id, lb_id, booth_id, gender, age_from, age_to, leaning, serial_from, serial_to)
+    return get_voter_list(user.profile, search, page, page_size, constituency_id, lb_id, booth_id, gender, age_from, age_to, leaning)
 
 def sync_locations_wrapper(username):
     user = User.objects.get(username=username)
@@ -142,6 +140,14 @@ get_comm_stats_async = sync_to_async(sync_comm_stats, thread_sensitive=True)
 manage_templates_async = sync_to_async(sync_manage_templates, thread_sensitive=True)
 send_broadcast_async = sync_to_async(sync_send_broadcast, thread_sensitive=True)
 
+# Auth Configuration
+SECRET_KEY = os.getenv("SECRET_KEY", "election-super-secret-key-2026")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 600
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
+
 # Professional Logging Configuration
 import logging.handlers
 
@@ -161,21 +167,6 @@ logging.basicConfig(
     handlers=[file_handler, stream_handler]
 )
 logger = logging.getLogger("ElectionEngine")
-
-# Auth Configuration
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-if not JWT_SECRET_KEY:
-    logger.error("CRITICAL SECURITY WARNING: JWT_SECRET_KEY not found in .env! Using insecure fallback.")
-    SECRET_KEY = "election-super-secret-key-2026-insecure-dev"
-else:
-    SECRET_KEY = JWT_SECRET_KEY
-
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 600
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
-
 
 app = FastAPI(title="Election Management System Backend")
 
@@ -200,25 +191,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise HTTPException(401, "Invalid credentials")
 
 # CORS
-raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
-origins = [o.strip() for o in raw_origins.split(",")]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# NO-CACHE MIDDLEWARE: Added to ensure real-time synchronization
-@app.middleware("http")
-async def add_no_cache_header(request, call_next):
-    response = await call_next(request)
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    return response
 
 # Paths
 DATA_DIR = BASE_DIR / "data"
@@ -467,7 +446,7 @@ async def list_voters(
     search: str = None, page: int = 1, 
     constituency: str = None, lb: str = None, booth: str = None,
     gender: str = None, age_from: str = None, age_to: str = None,
-    leaning: str = None, serial_from: str = None, serial_to: str = None,
+    leaning: str = None,
     page_size: int = 50,
     user_info=Depends(get_current_user)
 ):
@@ -476,9 +455,7 @@ async def list_voters(
     b_id = int(booth) if booth and str(booth).isdigit() else None
     af = int(age_from) if age_from and str(age_from).isdigit() else None
     at = int(age_to) if age_to and str(age_to).isdigit() else None
-    sf = int(serial_from) if serial_from and str(serial_from).isdigit() else None
-    st = int(serial_to) if serial_to and str(serial_to).isdigit() else None
-    return await get_voters_async(user_info['username'], search, page, page_size, c_id, l_id, b_id, gender, af, at, leaning, sf, st)
+    return await get_voters_async(user_info['username'], search, page, page_size, c_id, l_id, b_id, gender, af, at, leaning)
 
 @app.get("/api/export-voters")
 async def export_voters(
@@ -558,71 +535,16 @@ async def cancel_batch(batch_id: str, user_info=Depends(get_current_user)):
     gc.collect()
     return {"success": True, "message": "Batch cancellation requested"}
 
-class SaveRequest(BaseModel):
-    batch_id: str
-    constituency: str
-    lgb_type: str
-    lgb_name: str
-    booth: Any  # Allow mix of int/str
-    ps_no: Optional[str] = ""
-    ps_name: Optional[str] = ""
-
 @app.post("/api/save-to-db")
-async def save_to_db(req: SaveRequest, user_info=Depends(get_current_user)):
-    logger.info(f"Incoming Save Request: {req.dict()}")
-    
-    if req.batch_id not in active_batches:
-        logger.error(f"Save failed: Batch {req.batch_id} not found in memory.")
-        raise HTTPException(404, "Batch not found in server memory. Please re-upload or re-process.")
-        
-    batch = active_batches[req.batch_id]
-    results = batch.get('results', [])
-    
-    if not results:
-        logger.warning(f"Save attempted for batch {req.batch_id} with 0 results.")
-        return {"success": False, "message": "No voter records found in this batch to save."}
-
-    # Pass everything as keyword arguments to the bridge to be safe
-    try:
-        success, msg = await save_booth_data_async(
-            constituency_name=req.constituency,
-            local_body_type=req.lgb_type,
-            local_body_name=req.lgb_name,
-            booth_number=str(req.booth), # Standardize to string for DB
-            voter_data_list=results,
-            original_filename=batch['filename'],
-            polling_station_no=req.ps_no or "",
-            polling_station_name=req.ps_name or "",
-            user_id=user_info['id']
-        )
-        
-        if success:
-            logger.info(f"Successfully saved batch {req.batch_id} to DB. Clearing RAM and Disk cache...")
-            
-            # --- IMMEDIATE CLEANUP & MEMORY CLEARING ---
-            # 1. Clear RAM
-            if req.batch_id in active_batches:
-                del active_batches[req.batch_id]
-            import gc
-            gc.collect()
-            
-            # 2. Clear Disk (Page Images and Crops)
-            try:
-                p_dir = PAGES_DIR / req.batch_id
-                c_dir = CROPS_DIR / req.batch_id
-                if p_dir.exists(): shutil.rmtree(p_dir)
-                if c_dir.exists(): shutil.rmtree(c_dir)
-                logger.info(f"Cleaned up disk resources for batch {req.batch_id}")
-            except Exception as cleanup_err:
-                logger.error(f"Post-save cleanup error: {cleanup_err}")
-        else:
-            logger.error(f"Database Bridge Error: {msg}")
-            
-        return {"success": success, "message": msg}
-        
-    except Exception as e:
-        logger.exception(f"Critical error during save_to_db: {str(e)}")
-        return {"success": False, "message": f"Server Error: {str(e)}"}
+async def save_to_db(
+    constituency: str, lgb_type: str, lgb_name: str, b_num: str, batch_id: str, 
+    ps_no: str = "", ps_name: str = "", user_info=Depends(get_current_user)
+):
+    if batch_id not in active_batches: raise HTTPException(404, "Batch not found")
+    results = active_batches[batch_id]['results']
+    # Pass user_id to track who uploaded this batch (for OPERATOR role filtering)
+    success, msg = await save_booth_data_async(constituency, lgb_type, lgb_name, b_num, results, active_batches[batch_id]['filename'], ps_no, ps_name, user_info['id'])
+    return {"success": success, "message": msg}
 
 # ----------------------------------------------------------------
 # COMMUNICATION SYSTEM ENDPOINTS

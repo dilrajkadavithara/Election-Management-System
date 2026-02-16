@@ -123,8 +123,8 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
                 voter = Voter(
                     booth=booth,
                     serial_no=serial_val,
-                    epic_id=row.get('EPIC', 'UNK'),
-                    full_name=row.get('Name', 'N/A'),
+                    epic_id=row.get('EPIC_ID', 'UNK'),
+                    full_name=row.get('Full Name', 'N/A'),
                     relation_type=row.get('Relation Type', ''),
                     relation_name=row.get('Relation Name', ''),
                     house_no=row.get('House Number', ''),
@@ -209,7 +209,7 @@ def get_dashboard_stats(user_profile, constituency_id=None, booth_id=None):
         "tagging_progress": tagged
     }
 
-def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None, serial_from=None, serial_to=None):
+def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None):
     """Fetch paginated voters with advanced filters"""
     voters = user_profile.get_accessible_voters()
     
@@ -234,10 +234,6 @@ def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency
         voters = voters.filter(age__lte=age_to)
     if leaning:
         voters = voters.filter(voter_leaning=leaning)
-    if serial_from:
-        voters = voters.filter(serial_no__gte=serial_from)
-    if serial_to:
-        voters = voters.filter(serial_no__lte=serial_to)
 
     total_count = voters.count()
     
