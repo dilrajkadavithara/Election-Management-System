@@ -1,3 +1,4 @@
+
 import logging
 import sys
 import os
@@ -145,7 +146,6 @@ send_broadcast_async = sync_to_async(sync_send_broadcast, thread_sensitive=True)
 # Auth Configuration
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 if not JWT_SECRET_KEY:
-    logger.error("CRITICAL SECURITY WARNING: JWT_SECRET_KEY not found in .env! Using insecure fallback.")
     SECRET_KEY = "election-super-secret-key-2026-insecure-dev"
 else:
     SECRET_KEY = JWT_SECRET_KEY
@@ -233,16 +233,14 @@ detector = VoterDetector()
 batch_processor = BatchProcessor()
 
 active_batches = {}
-cancelled_batches = set()  # Track which batches have been cancelled
+cancelled_batches = set()
 
 # ----------------------------------------------------------------
 # PURE BACKGROUND TASKS
 # ----------------------------------------------------------------
 
 def process_single_voter(args):
-    """Helper for parallel processing to avoid pickling issues"""
     img_path_str, voter_id = args
-    # Instantiate locally to avoid shared state in subprocess
     processor = BatchProcessor() 
     res = processor.process_box(img_path_str, voter_id)
     res['voter_id'] = voter_id
@@ -257,7 +255,6 @@ def run_extraction(batch_id: str, dpi: int):
         c_dir = CROPS_DIR / batch_id
         p_dir.mkdir(exist_ok=True); c_dir.mkdir(exist_ok=True)
 
-        # 1. Get total pages
         try:
             from PyPDF2 import PdfReader
             with open(pdf_path, 'rb') as f:
@@ -270,22 +267,18 @@ def run_extraction(batch_id: str, dpi: int):
                     batch['total_pages'] = info.get("Pages", 0)
             except: pass
 
-        # 2. Convert and Process page-by-page serially (Stable & Low RAM)
         page_images = pdf_processor.convert_to_images(pdf_path, str(p_dir), dpi=dpi)
         batch['total_pages'] = len(page_images)
         
         total_voters = 0
         for i, page_path in enumerate(page_images):
-            # Check cancellation
             if batch_id in cancelled_batches:
-                logger.info(f"Batch {batch_id} cancelled. Cleaning up...")
                 del active_batches[batch_id]
                 import gc
                 gc.collect()
                 return
 
             batch['pages_processed'] = i + 1
-            # Correct call: detect_voter_boxes only takes image_path
             boxes = detector.detect_voter_boxes(page_path) 
             
             if boxes:
@@ -311,22 +304,15 @@ def run_processing(batch_id: str):
         clean_count = 0
         flagged_count = 0
         
-        # CPU-Bound Optimization: Use ProcessPoolExecutor
         cpu_count = multiprocessing.cpu_count()
-        # Reserve 1 core for system/server, cap at 8 to prevent freeze
         workers = max(1, min(cpu_count - 1, 8))
         
         with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
-            # Prepare tasks
             tasks = [(str(p), i+1) for i, p in enumerate(voter_files)]
-            
-            # Submit all tasks
             future_to_id = {executor.submit(process_single_voter, t): t[1] for t in tasks}
             
             for i, future in enumerate(concurrent.futures.as_completed(future_to_id)):
-                # Check if batch has been cancelled
                 if batch_id in cancelled_batches:
-                    print(f"Batch {batch_id} cancelled. Stopping processing & Clearing RAM...")
                     if batch_id in active_batches:
                         del active_batches[batch_id]
                     import gc
@@ -335,42 +321,20 @@ def run_processing(batch_id: str):
                 
                 try:
                     res = future.result()
-                    # Preserve original order not guaranteed here, but we sort by voter_id later if needed
-                    # Actually we need results to be in correct order for UI?
-                    # The UI likely just shows progress. The 'results' list order might matter for export?
-                    # Let's append to results and sort later or just append
                     results.append(res)
-                    
                     if res.get('Status') == '✅ OK':
                         clean_count += 1
                     else:
                         flagged_count += 1
-                        
-                    # CRITICAL: Update the global batch object immediately
-                    # This ensures the API endpoint returns fresh counts on every poll
                     active_batches[batch_id]['clean_count'] = clean_count
                     active_batches[batch_id]['flagged_count'] = flagged_count
                     active_batches[batch_id]['voters_processed'] = i + 1
-                    
                 except Exception as exc:
-                    print(f"Task generated an exception: {exc}")
-                    # Treat exceptions as flags so they are visible to the user
                     flagged_count += 1
-                    error_res = {
-                        "voter_id": tasks[i][1], # Recover ID from task list using loop index
-                        "image_name": os.path.basename(tasks[i][0]),
-                        "Status": "⚠️ ERROR",
-                        "Flags": f"Processing Error: {str(exc)}",
-                        "Name": "ERROR", "EPIC": "ERROR", "Age": "0", "Gender": "N/A"
-                    }
-                    results.append(error_res)
-                    
                     active_batches[batch_id]['flagged_count'] = flagged_count
                     active_batches[batch_id]['voters_processed'] = i + 1
 
-        # Ensure results are sorted by voter_id because as_completed is out of order
         results.sort(key=lambda x: x['voter_id'])
-        
         batch['results'] = results
         batch['status'] = 'processed'
     except Exception as e:
@@ -378,82 +342,20 @@ def run_processing(batch_id: str):
         active_batches[batch_id]['error'] = str(e)
 
 # ----------------------------------------------------------------
-# SYSTEM ADMIN ENDPOINTS
+# ENDPOINTS
 # ----------------------------------------------------------------
-
-@app.get("/api/admin/locations")
-async def admin_get_locations(user_info=Depends(get_current_user)):
-    # Scoped locations: Allowed for all authenticated users
-    # Filtering is handled in the wrapper/db_bridge
-    return await get_all_locations_async(user_info['username'])
-
-@app.post("/api/admin/add-const")
-async def admin_add_const(data: dict, user_info=Depends(get_current_user)):
-    if user_info['role'] != 'SUPERUSER': raise HTTPException(403)
-    return await add_const_async(data['name'])
-
-@app.post("/api/admin/add-lb")
-async def admin_add_lb(data: dict, user_info=Depends(get_current_user)):
-    if user_info['role'] != 'SUPERUSER': raise HTTPException(403)
-    return await add_lb_async(data['const_id'], data['name'], data['type'])
-
-@app.post("/api/admin/add-booth")
-async def admin_add_booth(data: dict, user_info=Depends(get_current_user)):
-    if user_info['role'] != 'SUPERUSER': raise HTTPException(403)
-    return await add_booth_async(data['const_id'], data['lb_id'], data['number'], data.get('ps_name', ''), data.get('ps_no', ''))
-
-@app.get("/api/admin/users")
-async def admin_get_users(user_info=Depends(get_current_user)):
-    if user_info['role'] != 'SUPERUSER': raise HTTPException(403)
-    return await get_all_users_async()
-
-@app.post("/api/admin/create-user")
-async def admin_create_user(data: dict, user_info=Depends(get_current_user)):
-    # Hierarchical user creation: Superuser, Constituency Admin, Local Body Head, and Zone Commander can create users
-    # But they can only create users at their level or below
-    allowed_roles = ['SUPERUSER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER']
-    if user_info['role'] not in allowed_roles:
-        raise HTTPException(403, "You do not have permission to create users")
-    
-    success, msg = await create_user_async(
-        data['username'], data['password'], data['role'], data.get('assignments', {})
-    )
-    return {"success": success, "message": msg}
-
-@app.delete("/api/admin/delete-user/{uid}")
-async def admin_delete_user(uid: int, user_info=Depends(get_current_user)):
-    if user_info['role'] != 'SUPERUSER': raise HTTPException(403)
-    success, msg = await delete_user_async(uid)
-    return {"success": success, "message": msg}
-
-@app.put("/api/admin/update-user/{uid}")
-async def admin_update_user(uid: int, data: dict, user_info=Depends(get_current_user)):
-    # Only Superuser can modify any user
-    # Constituency Admin can modify their subordinates (future logic)
-    if user_info['role'] != 'SUPERUSER': raise HTTPException(403)
-    success, msg = await update_user_async(uid, data)
-    return {"success": success, "message": msg}
-
-# ----------------------------------------------------------------
-# GATED API ENDPOINTS
-# ----------------------------------------------------------------
-
-@app.get("/api/health")
-async def health(): return {"status": "healthy"}
 
 @app.post("/api/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user_info = await authenticate_async(username=form_data.username, password=form_data.password)
-    if not user_info:
-        raise HTTPException(401, "Invalid username or password")
-    
-    access_token = create_access_token(data={"sub": user_info['username']})
-    return {
-        "access_token": access_token, 
-        "token_type": "bearer", 
-        "role": user_info['role'], 
-        "username": user_info['username']
-    }
+    user_data = await authenticate_async(form_data.username, form_data.password)
+    if not user_data:
+        raise HTTPException(401, "Invalid credentials")
+    token = create_access_token(data={"sub": user_data['username']})
+    return {"access_token": token, "token_type": "bearer", "user": user_data}
+
+@app.get("/api/user-info")
+async def get_user_info_token(user_info=Depends(get_current_user)):
+    return user_info
 
 @app.get("/api/stats")
 async def get_stats(constituency: str = None, booth: str = None, user_info=Depends(get_current_user)):
@@ -479,299 +381,103 @@ async def list_voters(
     st = int(serial_to) if serial_to and str(serial_to).isdigit() else None
     return await get_voters_async(user_info['username'], search, page, page_size, c_id, l_id, b_id, gender, af, at, leaning, sf, st)
 
-@app.get("/api/export-voters")
-async def export_voters(
-    search: str = None, 
-    constituency: str = None, lb: str = None, booth: str = None,
-    gender: str = None, age_from: str = None, age_to: str = None,
-    leaning: str = None,
-    user_info=Depends(get_current_user)
-):
-    # Check download permission (BOOTH_AGENT and ZONE_COMMANDER cannot download by default)
-    if not user_info.get('can_download', False):
-        raise HTTPException(403, "You do not have permission to export data")
-    
-    c_id = int(constituency) if constituency and str(constituency).isdigit() else None
-    l_id = int(lb) if lb and str(lb).isdigit() else None
-    b_id = int(booth) if booth and str(booth).isdigit() else None
-    af = int(age_from) if age_from and str(age_from).isdigit() else None
-    at = int(age_to) if age_to and str(age_to).isdigit() else None
-    
-    data = await get_voters_async(user_info['username'], search, None, 0, c_id, l_id, b_id, gender, af, at, leaning)
-    results = data['results']
-    
-    import csv, io
-    from fastapi.responses import StreamingResponse
-    output = io.StringIO()
-    if results:
-        writer = csv.DictWriter(output, fieldnames=results[0].keys())
-        writer.writeheader()
-        writer.writerows(results)
-    output.seek(0)
-    return StreamingResponse(
-        io.BytesIO(output.getvalue().encode("utf-8-sig")),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=voters_export.csv"}
-    )
-
-@app.post("/api/edit-voter/{voter_id}")
+@app.post("/api/voters/{voter_id}")
 async def edit_voter(voter_id: int, data: dict, user_info=Depends(get_current_user)):
-    # Role check: All developer-side roles (Superuser, Manager, Operator) can edit.
-    # On client-side, Booth Agents can edit intelligence data.
-    # Constituency Admins and Local Body Heads remain read-only for voter records.
-    if user_info['role'] in ['CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD']:
-        raise HTTPException(403, "Admins have read-only access to individual voter records")
-        
+    if not user_info['can_edit_voters']: raise HTTPException(403)
     success, msg = await edit_voter_async(voter_id, data)
-    return {"success": success, "message": msg}
+    if not success: raise HTTPException(400, msg)
+    return {"success": True}
+
+@app.get("/api/admin/locations")
+async def admin_get_locations(user_info=Depends(get_current_user)):
+    return await get_all_locations_async(user_info['username'])
+
+@app.get("/api/parties")
+async def list_parties(user_info=Depends(get_current_user)):
+    return await get_parties_async()
 
 @app.post("/api/upload")
-async def upload(file: UploadFile = File(...), user_info=Depends(get_current_user)):
-    batch_id = str(uuid.uuid4())[:8]
-    f_path = UPLOAD_DIR / f"{batch_id}_{file.filename}"
-    with f_path.open("wb") as b: shutil.copyfileobj(file.file, b)
-    
+async def upload_pdf(background_tasks: BackgroundTasks, file: UploadFile = File(...), user_info=Depends(get_current_user)):
+    if not user_info['can_upload']: raise HTTPException(403)
+    batch_id = str(uuid.uuid4())
+    path = UPLOAD_DIR / f"{batch_id}.pdf"
+    with open(path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
     active_batches[batch_id] = {
-        "id": batch_id, "filename": file.filename, "file_path": str(f_path),
-        "status": "uploaded", "total_pages": 0, "pages_processed": 0,
-        "total_voters": 0, "voters_processed": 0, "results": [],
-        "clean_count": 0, "flagged_count": 0,
-        "user": user_info['username']
+        'id': batch_id, 'status': 'uploading', 'filename': file.filename, 
+        'file_path': str(path), 'pages_processed': 0, 'total_pages': 0
     }
-    return {"success": True, "batch_id": batch_id}
+    return {"batch_id": batch_id}
 
-@app.get("/api/batch/{batch_id}/status")
-async def get_status(batch_id: str, user_info=Depends(get_current_user)):
-    if batch_id not in active_batches: return {"status": "cleared"}
-    return active_batches[batch_id]
-
-@app.post("/api/batch/{batch_id}/cancel")
-async def cancel_batch(batch_id: str, user_info=Depends(get_current_user)):
-    """Cancel an ongoing OCR batch"""
-    if batch_id not in active_batches:
-        raise HTTPException(404, "Batch not found")
-    
-    cancelled_batches.add(batch_id)
-    # Trigger immediate GC
-    import gc
-    gc.collect()
-    return {"success": True, "message": "Batch cancellation requested"}
-
-class SaveRequest(BaseModel):
-    batch_id: str
-    constituency: str
-    lgb_type: str
-    lgb_name: str
-    booth: Any  # Allow mix of int/str
-    ps_no: Optional[str] = ""
-    ps_name: Optional[str] = ""
-
-@app.post("/api/save-to-db")
-async def save_to_db(req: SaveRequest, user_info=Depends(get_current_user)):
-    logger.info(f"Incoming Save Request: {req.dict()}")
-    
-    if req.batch_id not in active_batches:
-        logger.error(f"Save failed: Batch {req.batch_id} not found in memory.")
-        raise HTTPException(404, "Batch not found in server memory. Please re-upload or re-process.")
-        
-    batch = active_batches[req.batch_id]
-    results = batch.get('results', [])
-    
-    if not results:
-        logger.warning(f"Save attempted for batch {req.batch_id} with 0 results.")
-        return {"success": False, "message": "No voter records found in this batch to save."}
-
-    # Pass everything as keyword arguments to the bridge to be safe
-    try:
-        success, msg = await save_booth_data_async(
-            constituency_name=req.constituency,
-            local_body_type=req.lgb_type,
-            local_body_name=req.lgb_name,
-            booth_number=str(req.booth), # Standardize to string for DB
-            voter_data_list=results,
-            original_filename=batch['filename'],
-            polling_station_no=req.ps_no or "",
-            polling_station_name=req.ps_name or "",
-            user_id=user_info['id']
-        )
-        
-        if success:
-            logger.info(f"Successfully saved batch {req.batch_id} to DB. Clearing RAM and Disk cache...")
-            
-            # --- IMMEDIATE CLEANUP & MEMORY CLEARING ---
-            # 1. Clear RAM
-            if req.batch_id in active_batches:
-                del active_batches[req.batch_id]
-            import gc
-            gc.collect()
-            
-            # 2. Clear Disk (Page Images and Crops)
-            try:
-                p_dir = PAGES_DIR / req.batch_id
-                c_dir = CROPS_DIR / req.batch_id
-                if p_dir.exists(): shutil.rmtree(p_dir)
-                if c_dir.exists(): shutil.rmtree(c_dir)
-                logger.info(f"Cleaned up disk resources for batch {req.batch_id}")
-            except Exception as cleanup_err:
-                logger.error(f"Post-save cleanup error: {cleanup_err}")
-        else:
-            logger.error(f"Database Bridge Error: {msg}")
-            
-        return {"success": success, "message": msg}
-        
-    except Exception as e:
-        logger.exception(f"Critical error during save_to_db: {str(e)}")
-        return {"success": False, "message": f"Server Error: {str(e)}"}
-
-# ----------------------------------------------------------------
-# COMMUNICATION SYSTEM ENDPOINTS
-# ----------------------------------------------------------------
-
-@app.get("/api/comm/stats")
-async def get_comm_stats_api(user_info=Depends(get_current_user)):
-    return await get_comm_stats_async(user_info['username'])
-
-@app.get("/api/comm/templates")
-async def get_templates_api(user_info=Depends(get_current_user)):
-    return await manage_templates_async('list')
-
-@app.post("/api/comm/templates")
-async def create_template_api(data: dict, user_info=Depends(get_current_user)):
-    if user_info['role'] not in ['SUPERUSER', 'MANAGER']: raise HTTPException(403)
-    return await manage_templates_async('create', data)
-
-@app.post("/api/comm/send")
-async def send_comm_api(data: dict, user_info=Depends(get_current_user)):
-    # Check if user has permission to broadcast
-    return await send_broadcast_async(user_info['username'], data['voter_ids'], data['template_id'])
-
-@app.get("/api/download-csv/{batch_id}")
-async def download_csv(batch_id: str, user_info=Depends(get_current_user)):
-    if batch_id not in active_batches: raise HTTPException(404)
-    batch = active_batches[batch_id]
-    
-    # Permission bypass: Owner can always download their own batch results
-    if not user_info.get('can_download', False) and batch.get('user') != user_info['username']:
-        raise HTTPException(403, "You do not have permission to download reports.")
-        
-    results = batch['results']
-    
-    import csv, io
-    from fastapi.responses import StreamingResponse
-    output = io.StringIO()
-    if results:
-        writer = csv.DictWriter(output, fieldnames=results[0].keys())
-        writer.writeheader()
-        writer.writerows(results)
-    output.seek(0)
-    filename = f"export_{batch_id}.csv"
-    return StreamingResponse(
-        io.BytesIO(output.getvalue().encode("utf-8-sig")),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
-
-@app.get("/api/constituencies")
-async def get_const(user_info=Depends(get_current_user)):
-    try: return await get_constituencies_async()
-    except: return ["No Data"]
-
-@app.get("/api/local-bodies")
-async def get_lb(constituency: str = None, user_info=Depends(get_current_user)):
-    try: return await get_local_bodies_async(constituency)
-    except: return []
-
-@app.get("/api/check-booth")
-async def check_booth(constituency: str, booth: str, user_info=Depends(get_current_user)):
-    """Check if booth exists before starting extraction"""
-    from core.db_bridge import check_booth_exists
-    # We need to use the sync->async bridge
-    check_fn = sync_to_async(check_booth_exists, thread_sensitive=True)
-    exists = await check_fn(constituency, booth)
-    return {"exists": exists}
-
-# Missing endpoints needed by App.jsx
-@app.post("/api/extract/{batch_id}")
-async def start_extract(batch_id: str, bg: BackgroundTasks, user_info=Depends(get_current_user)):
+@app.post("/api/process/{batch_id}/extract")
+async def start_extraction(batch_id: str, background_tasks: BackgroundTasks, dpi: int = 200, user_info=Depends(get_current_user)):
     if batch_id not in active_batches: raise HTTPException(404)
     active_batches[batch_id]['status'] = 'extracting'
-    bg.add_task(run_extraction, batch_id, 300)
+    background_tasks.add_task(run_extraction, batch_id, dpi)
     return {"success": True}
 
-@app.post("/api/process-batch/{batch_id}")
-async def start_process(batch_id: str, bg: BackgroundTasks, user_info=Depends(get_current_user)):
+@app.post("/api/process/{batch_id}/ocr")
+async def start_ocr(batch_id: str, background_tasks: BackgroundTasks, user_info=Depends(get_current_user)):
     if batch_id not in active_batches: raise HTTPException(404)
     active_batches[batch_id]['status'] = 'processing'
-    bg.add_task(run_processing, batch_id)
+    active_batches[batch_id]['voters_processed'] = 0
+    background_tasks.add_task(run_processing, batch_id)
     return {"success": True}
 
-@app.post("/api/update-voter/{batch_id}/{voter_id}")
-async def update_voter(batch_id: str, voter_id: int, data: dict, user_info=Depends(get_current_user)):
-    batch = active_batches[batch_id]
-    for i, res in enumerate(batch['results']):
-        if res.get('voter_id') == voter_id:
-            batch['results'][i].update(data)
-            batch['results'][i]['Status'] = '✅ OK'
-            batch['clean_count'] = len([r for r in batch['results'] if r.get('Status') == '✅ OK'])
-            batch['flagged_count'] = len([r for r in batch['results'] if r.get('Status') != '✅ OK'])
-            return {"success": True}
-    return {"success": False}
+@app.get("/api/process/{batch_id}/status")
+async def get_status(batch_id: str, user_info=Depends(get_current_user)):
+    if batch_id not in active_batches: raise HTTPException(404)
+    return active_batches[batch_id]
+
+@app.post("/api/process/{batch_id}/save-to-db")
+async def save_to_db(batch_id: str, req: dict, user_info=Depends(get_current_user)):
+    if batch_id not in active_batches: raise HTTPException(404)
+    if not user_info['can_verify']: raise HTTPException(403)
+    
+    success, msg = await save_booth_data_async(
+        req['constituency'], req['lb_type'], req['lb_name'], req['booth_no'],
+        active_batches[batch_id]['results'], active_batches[batch_id]['filename'],
+        req.get('ps_no', ''), req.get('ps_name', ''), user_id=user_info['id']
+    )
+    if not success: raise HTTPException(400, msg)
+    
+    del active_batches[batch_id]
+    import gc
+    gc.collect()
+    
+    p_dir = PAGES_DIR / batch_id
+    c_dir = CROPS_DIR / batch_id
+    if p_dir.exists(): shutil.rmtree(p_dir)
+    if c_dir.exists(): shutil.rmtree(c_dir)
+    
+    return {"success": True}
+
+@app.post("/api/process/{batch_id}/cancel")
+async def cancel_batch(batch_id: str, user_info=Depends(get_current_user)):
+    cancelled_batches.add(batch_id)
+    if batch_id in active_batches:
+        del active_batches[batch_id]
+    import gc
+    gc.collect()
+    return {"success": True}
 
 @app.get("/api/voter-image/{batch_id}/{image_name}")
 async def get_voter_image(batch_id: str, image_name: str):
     path = CROPS_DIR / batch_id / image_name
     return FileResponse(path)
 
-@app.get("/api/parties")
-async def list_parties(user_info=Depends(get_current_user)):
-    return await get_parties_async()
-
-@app.post("/api/admin/parties")
-async def create_party(
-    name: str = fastapi.Form(...), 
-    file: UploadFile = File(...), 
-    short_label: str = fastapi.Form(""),
-    primary_color: str = fastapi.Form("#000080"),
-    accent_gradient: str = fastapi.Form("linear-gradient(to bottom, #FF9933, #ffffff, #138808)"),
-    user_info=Depends(get_current_user)
-):
-    if user_info['role'] != 'SUPERUSER':
-        raise HTTPException(403, "Only superusers can manage parties.")
-    
-    ext = Path(file.filename).suffix
-    sym_name = f"{uuid.uuid4()}{ext}"
-    path = SYMBOLS_DIR / sym_name
-    
-    with open(path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-    
-    return await add_party_async(name, sym_name, short_label, primary_color, accent_gradient)
-
 @app.get("/api/party-symbol/{image_name}")
 async def get_party_symbol(image_name: str):
     path = SYMBOLS_DIR / image_name
-    if not path.exists():
-        raise HTTPException(404)
+    if not path.exists(): raise HTTPException(404)
     return FileResponse(path)
-
-@app.post("/api/clear-session/{batch_id}")
-async def clear_session(batch_id: str, user_info=Depends(get_current_user)):
-    if batch_id in active_batches:
-        del active_batches[batch_id]
-    return {"success": True}
 
 @app.get("/api/admin/system-health")
 async def get_system_health(user_info=Depends(get_current_user)):
-    if user_info['role'] != 'SUPERUSER':
-        raise HTTPException(403)
-    
-    # Calculate disk usage and memory for 140-candidate scalability check
-    import shutil
-    import psutil
-    
+    if user_info['role'] != 'SUPERUSER': raise HTTPException(403)
+    import shutil, psutil
     total, used, free = shutil.disk_usage("/")
     memory = psutil.virtual_memory()
-    
     return {
         "status": "Healthy",
         "disk_free_gb": round(free / (1024**3), 2),
@@ -780,7 +486,6 @@ async def get_system_health(user_info=Depends(get_current_user)):
         "uptime_start": datetime.utcnow().isoformat()
     }
 
-# Static Frontend Support
 dist_path = BASE_DIR / "frontend" / "dist"
 if dist_path.exists():
     app.mount("/assets", StaticFiles(directory=str(dist_path / "assets")), name="assets")
