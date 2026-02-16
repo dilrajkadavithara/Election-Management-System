@@ -14,9 +14,8 @@ class OCREngine:
     }
 
     def __init__(self, tesseract_cmd=None):
-        cmd = tesseract_cmd or os.getenv('TESSERACT_CMD')
-        if cmd:
-            pytesseract.pytesseract.tesseract_cmd = cmd
+        if tesseract_cmd:
+            pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
         
         # Configuration for specific tasks
         # psm 6: Assume a single uniform block of text
