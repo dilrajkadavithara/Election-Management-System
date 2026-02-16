@@ -201,6 +201,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# NO-CACHE MIDDLEWARE: Added to ensure real-time synchronization
+@app.middleware("http")
+async def add_no_cache_header(request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
 # Paths
 DATA_DIR = BASE_DIR / "data"
 UPLOAD_DIR = DATA_DIR / "raw_pdf"
