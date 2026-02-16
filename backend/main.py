@@ -142,20 +142,6 @@ get_comm_stats_async = sync_to_async(sync_comm_stats, thread_sensitive=True)
 manage_templates_async = sync_to_async(sync_manage_templates, thread_sensitive=True)
 send_broadcast_async = sync_to_async(sync_send_broadcast, thread_sensitive=True)
 
-# Auth Configuration
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-if not JWT_SECRET_KEY:
-    logger.error("CRITICAL SECURITY WARNING: JWT_SECRET_KEY not found in .env! Using insecure fallback.")
-    SECRET_KEY = "election-super-secret-key-2026-insecure-dev"
-else:
-    SECRET_KEY = JWT_SECRET_KEY
-
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 600
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
-
 # Professional Logging Configuration
 import logging.handlers
 
@@ -175,6 +161,21 @@ logging.basicConfig(
     handlers=[file_handler, stream_handler]
 )
 logger = logging.getLogger("ElectionEngine")
+
+# Auth Configuration
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not JWT_SECRET_KEY:
+    logger.error("CRITICAL SECURITY WARNING: JWT_SECRET_KEY not found in .env! Using insecure fallback.")
+    SECRET_KEY = "election-super-secret-key-2026-insecure-dev"
+else:
+    SECRET_KEY = JWT_SECRET_KEY
+
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 600
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
+
 
 app = FastAPI(title="Election Management System Backend")
 
