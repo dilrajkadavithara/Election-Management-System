@@ -35,7 +35,7 @@ from core.pdf_processor import PDFProcessor
 from core.detector import VoterDetector
 from core.batch_processor import BatchProcessor
 from core.db_bridge import (
-    get_constituencies, get_local_bodies, save_booth_data,
+    get_constituencies, get_local_bodies, check_booth_exists, save_booth_data,
     get_dashboard_stats, get_voter_list, update_voter_in_db,
     get_all_locations, add_constituency, add_local_body, add_booth,
     get_all_users, create_managed_user, delete_user, update_user_profile, get_parties, add_party
