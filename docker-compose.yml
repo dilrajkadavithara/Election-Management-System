@@ -39,5 +39,15 @@ services:
     depends_on:
       - app
 
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    # Checks for existing certs. If valid, does nothing. If missing/expiring, renews them.
+    command: certonly --webroot --webroot-path=/var/www/certbot --email dilrajkadavithara@gmail.com --agree-tos --no-eff-email -d intelhub.live -d www.intelhub.live --keep-until-expiring
+    depends_on:
+      - nginx
+
 volumes:
   postgres_data:
