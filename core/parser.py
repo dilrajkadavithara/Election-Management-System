@@ -225,7 +225,7 @@ class VoterParser:
 
         # FINAL FALLBACKS
         # Spatial Name Recovery: Only use lines that weren't already classified and DON'T look like relations
-        if data["Full Name"] == "N/A" and unassigned_lines:
+        if data["Name"] == "N/A" and unassigned_lines:
             for cand in unassigned_lines[:2]:
                 # Strict exclusion for fallback too
                 if any(k in cand for k in ["അച്ഛ", "അച്ച", "ഭർത്താ", "ഭര്‍ത്താ", "അമ്മ", "അമമ", "മറ്റുള്ള"]):
