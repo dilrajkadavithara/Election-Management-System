@@ -30,6 +30,25 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"⚠️ Migration Error: {e}")
 
+    # --- AUTO-RESET ADMIN (Temporary) ---
+    try:
+        print("🔧 Auto-Resetting Admin Password...")
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'voter_vault.settings')
+        import django
+        django.setup()
+        from django.contrib.auth.models import User
+        from core_db.models import UserProfile
+        
+        u, _ = User.objects.get_or_create(username="admin")
+        u.set_password("admin")
+        u.is_superuser = True; u.is_staff = True; u.save()
+        
+        p, _ = UserProfile.objects.get_or_create(user=u)
+        p.role = 'SUPERUSER'; p.can_download = True; p.save()
+        print("✅ ADMIN PASSWORD SET TO: 'admin'")
+    except Exception as e:
+        print(f"⚠️ Reset Failed: {e}")
+
     # Run Uvicorn
     # reload=False is safer here because uploading files to data/ 
     # would trigger a restart if reload was True.
