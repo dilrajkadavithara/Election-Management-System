@@ -637,7 +637,7 @@ const App = () => {
                                 <div>
                                     <h3 className="font-black uppercase tracking-widest text-[10px] opacity-60 mb-8">Work Strategy</h3>
                                     <h2 className="text-4xl font-black uppercase tracking-tighter leading-tight">Focus on Neutral Voters</h2>
-                                    <p className="text-sm font-bold opacity-80 mt-2 max-w-sm">Targeting <span className="text-white underline decoration-amber-400 decoration-4 underline-offset-4 font-black">{dashboardStats.sentiment?.neutral || 0} neutral voters</span> can flip the results.</p>
+                                    <p className="text-sm font-bold opacity-80 mt-2 max-w-sm">Targeting <span className="text-white underline decoration-amber-400 decoration-4 underline-offset-4 font-black">{dashboardStats?.sentiment?.neutral || 0} neutral voters</span> can flip the results.</p>
                                 </div>
                                 <button onClick={() => { setListFilters({ ...listFilters, leaning: 'NEUTRAL' }); setView('voters'); }} className="w-fit bg-white text-emerald-600 px-10 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-lg hover:scale-105 transition-all">Filter Neutral List</button>
                             </div>
@@ -648,7 +648,7 @@ const App = () => {
                                 <h3 className="font-black uppercase tracking-widest text-[10px] text-slate-400 mb-10 border-b pb-4">Voter Age Brackets</h3>
                                 <div className="w-full h-[400px]">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={Object.entries(dashboardStats.age_dist).map(([label, count]) => ({ name: label.replace('_', '-'), voters: count }))} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                                        <BarChart data={dashboardStats?.age_dist ? Object.entries(dashboardStats.age_dist).map(([label, count]) => ({ name: label.replace('_', '-'), voters: count })) : []} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                                             <defs><linearGradient id="ageColor" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#4f46e5" stopOpacity={0.8} /><stop offset="95%" stopColor="#4f46e5" stopOpacity={0.2} /></linearGradient></defs>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }} dy={10} />
@@ -956,6 +956,16 @@ const App = () => {
                                             <div className="flex items-center gap-2 border-b border-slate-50 pb-2">
                                                 <span className="text-[10px] font-black uppercase text-slate-400">Permission Matrix</span>
                                             </div>
+                                            <PieChart>
+                                                <Pie
+                                                    data={dashboardStats?.sentiment ? [
+                                                        { name: 'UDF', value: dashboardStats.sentiment.udf || 0, color: '#4f46e5' },
+                                                        { name: 'LDF', value: dashboardStats.sentiment.ldf || 0, color: '#ef4444' },
+                                                        { name: 'NDA', value: dashboardStats.sentiment.nda || 0, color: '#f59e0b' },
+                                                        { name: 'Neutral', value: dashboardStats.sentiment.neutral || 0, color: '#10b981' },
+                                                    ] : []}
+                                                />
+                                            </PieChart>
                                             <div className="grid grid-cols-2 gap-3">
                                                 {[
                                                     { key: 'can_download', label: 'Report Export', icon: '📊' },

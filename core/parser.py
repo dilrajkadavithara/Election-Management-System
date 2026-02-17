@@ -180,6 +180,8 @@ class VoterParser:
                     break
 
 
+            # 3. Check for Name (Specific Keyword Match)
+            name_match = self.patterns["name"].search(line)
             if name_match:
 
                 extracted_name = self._strip_value(name_match.group(1))
