@@ -4,7 +4,6 @@ services:
   db:
     image: postgres:15-alpine
     restart: always
-    mem_limit: 400m
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -17,7 +16,6 @@ services:
   redis:
     image: redis:7-alpine
     restart: always
-    mem_limit: 100m
     ports:
       - "6379:6379"
     volumes:
@@ -40,8 +38,6 @@ services:
     depends_on:
       - db
       - redis
-    # Add memory limit (Compatibility mode for v2/v3)
-    mem_limit: 300m
 
   worker:
     build: .
@@ -62,7 +58,6 @@ services:
     depends_on:
       - db
       - redis
-    mem_limit: 700m
 
   nginx:
     build:
