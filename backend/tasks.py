@@ -122,18 +122,13 @@ def run_processing_task(batch_id: str, use_gemini: bool = False):
         flagged_count = 0
         error_stats = {}
         
-        cpu_count = multiprocessing.cpu_count()
-        # For Gemini, we don't want too high concurrency to avoid network congestion, 
-        if use_gemini:
-            # Gemini is I/O Bound. Threads are better (especially on Windows).
-            # 30 workers is the sweet spot for 8GB RAM / high-speed Gemini processing.
-            workers = 30
-            executor_class = concurrent.futures.ThreadPoolExecutor
-        else:
-            # For Tesseract (CPU-bound), use ProcessPoolExecutor
-            # even if API limits are high. Let's cap at 4 for Gemini, or 8 for Tesseract.
-            workers = max(1, min(cpu_count - 1, 2)) # Cap at 2 for Tesseract/Safety
-            executor_class = concurrent.futures.ProcessPoolExecutor
+        # force threads to avoid OOM forking
+        import concurrent.futures
+        
+        # Always use ThreadPoolExecutor on low-RAM servers
+        # Processes duplicate memory (100MB+ overhead per worker), Threads share memory.
+        executor_class = concurrent.futures.ThreadPoolExecutor
+        workers = 2 # Safe concurrency limit
         
         with executor_class(max_workers=workers) as executor:
             tasks = [(str(p), i+1, use_gemini) for i, p in enumerate(voter_files)]
