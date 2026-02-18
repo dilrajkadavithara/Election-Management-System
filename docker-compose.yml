@@ -12,8 +12,6 @@ services:
       - POSTGRES_PASSWORD=secretpassword
     ports:
       - "5432:5432"
-    mem_limit: 800m
-    memswap_limit: 1.5g
 
   redis:
     image: redis:7-alpine
@@ -22,8 +20,6 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    mem_limit: 300m
-    memswap_limit: 600m
 
   app:
     build: .
@@ -42,8 +38,6 @@ services:
     depends_on:
       - db
       - redis
-    mem_limit: 800m
-    memswap_limit: 1.5g
 
   worker:
     build: .
@@ -64,8 +58,6 @@ services:
     depends_on:
       - db
       - redis
-    mem_limit: 1500m
-    memswap_limit: 3g
 
   nginx:
     build:
