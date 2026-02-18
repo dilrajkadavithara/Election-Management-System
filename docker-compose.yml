@@ -21,6 +21,7 @@ services:
 
   app:
     build: .
+    restart: always
     expose:
       - "8000"
     environment:
@@ -32,14 +33,15 @@ services:
     volumes:
       - .:/app
       - /app/node_modules # Precaution if any node_modules exist in root
-
     depends_on:
       - db
       - redis
 
   worker:
     build: .
-    command: celery -A backend.celery_app worker --loglevel=info
+    restart: always
+    # Use -P solo to avoid forking overhead on low-RAM servers
+    command: celery -A backend.celery_app worker --loglevel=info -P solo
     environment:
       - DATABASE_URL=postgres://admin:secretpassword@db:5432/voter_db
       - REDIS_URL=redis://redis:6379/0
@@ -57,6 +59,7 @@ services:
     build:
       context: .
       dockerfile: nginx/Dockerfile
+    restart: always
     ports:
       - "80:80"
       - "443:443"
