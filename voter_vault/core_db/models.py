@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.contrib.postgres.indexes import GistIndex
 
 class Constituency(models.Model):
     name = models.CharField(max_length=200, unique=True, help_text="e.g. Trippunithura")
@@ -113,6 +114,10 @@ class Voter(models.Model):
         ordering = ['booth', 'serial_no']
         permissions = [
             ("can_export_data", "Can export voter data to Excel"),
+        ]
+        indexes = [
+            GistIndex(fields=['full_name'], name='voter_name_gist_trgm', opclasses=['gist_trgm_ops']),
+            GistIndex(fields=['house_name'], name='voter_house_gist_trgm', opclasses=['gist_trgm_ops']),
         ]
 
     def __str__(self):

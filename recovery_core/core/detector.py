@@ -87,21 +87,9 @@ class VoterDetector:
         for i, (x, y, w, h) in enumerate(boxes):
             voter_index = start_index + i
             crop = img[y:y+h, x:x+w]
-            
-            # --- Enhanced Optical Pre-processing for Electronic PDFs ---
-            # 1. Convert to Gray
-            gray_crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-            
-            # 2. Sharpening: Adaptive Binarization to remove smoothing blur
-            _, thresh_crop = cv2.threshold(gray_crop, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-            
-            # 3. Light Thickening: Reduced kernel to prevent smudging electronic fonts
-            kernel = np.ones((1, 1), np.uint8) 
-            processed_crop = cv2.erode(thresh_crop, kernel, iterations=1)
-            
             # Precise naming for traceability
             filename = f"voter_{voter_index:04d}_pg{page_num:03d}_box{i:02d}.png"
-            cv2.imwrite(os.path.join(output_dir, filename), processed_crop)
+            cv2.imwrite(os.path.join(output_dir, filename), crop)
             count += 1
             
         return count

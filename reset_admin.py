@@ -4,9 +4,13 @@ import django
 import sys
 
 # Setup Django Environment
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if BASE_DIR not in sys.path:
-    sys.path.insert(0, BASE_DIR)
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.join(ROOT_DIR, 'voter_vault')
+
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+if PROJECT_DIR not in sys.path:
+    sys.path.insert(0, PROJECT_DIR)
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'voter_vault.settings')
 django.setup()

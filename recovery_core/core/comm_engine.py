@@ -68,63 +68,18 @@ class CommunicationEngine:
         return results
 
     @staticmethod
-    def send_direct_broadcast(voter_ids, heading, message, medium, image_path, user):
-        """
-        Send a broadcast with direct content (no template).
-        """
-        results = {"success": 0, "failed": 0}
-        msg_type = 'WA' if medium == 'WATI' else 'SMS'
-        
-        for vid in voter_ids:
-            try:
-                voter = Voter.objects.get(id=vid)
-                if not voter.phone_no:
-                    results["failed"] += 1
-                    continue
-                
-                content = f"{heading}\n\n{message}" if heading else message
-                
-                if msg_type == 'WA':
-                    success = CommunicationEngine.mock_whatsapp_provider_with_media(voter, content, image_path)
-                else:
-                    success = CommunicationEngine.mock_sms_provider(voter, content)
-                
-                # Log it
-                CommunicationLog.objects.create(
-                    voter=voter,
-                    msg_type=msg_type,
-                    status='SENT' if success else 'FAILED',
-                    sent_by=user,
-                    response_metadata={"heading": heading, "has_image": bool(image_path), "simulated": True}
-                )
-                
-                if success: results["success"] += 1
-                else: results["failed"] += 1
-                
-            except Exception as e:
-                logger.error(f"Error in direct broadcast to {vid}: {e}")
-                results["failed"] += 1
-                
-        return results
-
-    @staticmethod
-    def mock_whatsapp_provider_with_media(voter, content, image_path):
-        """Simulates WhatsApp with optional image"""
-        msg = content.replace("{{voter_name}}", voter.full_name)
-        img_info = f" [IMAGE: {image_path}]" if image_path else ""
-        print(f"[WATI MOCK] To {voter.phone_no}: {msg}{img_info}")
-        return True
-
-    @staticmethod
     def mock_whatsapp_provider(voter, content):
         """Simulates a WhatsApp API call (e.g. Twilio/Gupshup)"""
-        return CommunicationEngine.mock_whatsapp_provider_with_media(voter, content, None)
+        # Replace placeholders
+        msg = content.replace("{{voter_name}}", voter.full_name)
+        print(f"[WHATSAPP MOCK] Sent to {voter.phone_no}: {msg}")
+        return True
 
     @staticmethod
     def mock_sms_provider(voter, content):
         """Simulates an SMS API call"""
         msg = content.replace("{{voter_name}}", voter.full_name)
-        print(f"[SMS MOCK] To {voter.phone_no}: {msg}")
+        print(f"[SMS MOCK] Sent to {voter.phone_no}: {msg}")
         return True
 
     @staticmethod

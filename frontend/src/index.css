@@ -59,12 +59,73 @@
         display: none !important;
     }
 
+    body {
+        background: white !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    @page {
+        margin: 0;
+        size: auto;
+    }
+
     main {
         padding: 0 !important;
+        margin: 0 !important;
         background: transparent !important;
     }
 
     aside {
         display: none !important;
+    }
+
+    .print-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8mm !important;
+        width: 100% !important;
+        margin: 10mm auto !important;
+        padding: 0 !important;
+    }
+}
+
+/* Dashboard V2: Cosmic Dark Theme */
+@layer components {
+    .v2-bg-obsidian {
+        background-color: #0B0E14;
+    }
+
+    .v2-text-cyan {
+        color: #00F3FF;
+    }
+
+    .v2-border-cyan {
+        border-color: rgba(0, 243, 255, 0.3);
+    }
+
+    .v2-glass {
+        background: rgba(11, 14, 20, 0.8);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+    }
+
+    .v2-card-glow {
+        box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .v2-card-glow:hover {
+        box-shadow: 0 0 25px rgba(0, 243, 255, 0.2);
+        border-color: rgba(0, 243, 255, 0.5);
+    }
+
+    .v2-scanline {
+        background: linear-gradient(to bottom,
+                transparent 50%,
+                rgba(0, 243, 255, 0.02) 50%);
+        background-size: 100% 4px;
+        pointer-events: none;
     }
 }

@@ -7,10 +7,10 @@ import re
 class OCREngine:
     # Zones defined as percentages of the box: (x1, y1, x2, y2)
     ZONES = {
-        "A_SERIAL": (0.05, 0.02, 0.40, 0.18),  # Top Left
-        "B_EPIC": (0.50, 0.01, 1.00, 0.22),    # Top Right ID (Widened Left and Heightened)
+        "A_SERIAL": (0.05, 0.04, 0.40, 0.17),  # Widened to 40% to capture trailing digits
+        "B_EPIC": (0.60, 0.02, 1.00, 0.19),    # Top Right ID
         "C_TEXT": (0.00, 0.00, 0.74, 1.00),    # Full height capture
-        "D_AGE_GENDER": (0.00, 0.70, 0.85, 1.00), # Dedicated bottom zone (Lowered start, Widened)
+        "D_AGE_GENDER": (0.00, 0.75, 0.70, 1.00), # Dedicated bottom zone for Age/Gender magnification
     }
 
     def __init__(self, tesseract_cmd=None):

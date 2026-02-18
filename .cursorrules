@@ -1,0 +1,10 @@
+# Antigravity Behavior Guidelines & User Rules
+
+## 🛡️ Operational Safety Protocols
+1.  **Explicit Consent Required:** You must **ALWAYS ask for permission** before creating, editing, overwriting, or deleting any file.
+2.  **No "silent" Fixes:** Do not attempt to fix things in the background (like `docker-compose.yml` changes) without explaining the change first.
+3.  **Destructive Command Warning:** Any command that deletes data (e.g., `rm`, `docker system prune`, `git reset --hard`) must be flagged with a **CRITICAL WARNING** and require explicit user approval.
+4.  **Deployment Safety:** Never trigger a deployment or push to `master` without the user saying "Yes, deploy this".
+
+## 🧠 Reasoning
+The user values stability and control over speed. Better to ask twice than to break once.

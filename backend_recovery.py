@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 import sys
 import os
 import fastapi
@@ -8,13 +8,14 @@ import jwt
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from pathlib import Path
-from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Depends, Body
-from pydantic import BaseModel
+from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from passlib.context import CryptContext
+from pydantic import BaseModel
+from typing import Optional, Any
 from asgiref.sync import sync_to_async
 import concurrent.futures
 import multiprocessing
@@ -31,22 +32,13 @@ try:
 except ImportError:
     pdf_info = None
 
-class SaveBatchRequest(BaseModel):
-    batch_id: str
-    constituency: str  # This is the ID
-    lgb_type: str = ""
-    lgb_name: str      # This is the ID
-    booth: str         # This is the ID
-    ps_no: str = ""
-    ps_name: str = ""
-
 # Pure Core Imports
 from core.pdf_processor import PDFProcessor
 from core.detector import VoterDetector
 from core.batch_processor import BatchProcessor
 from core.db_bridge import (
     get_constituencies, get_local_bodies, check_booth_exists, save_booth_data,
-    get_dashboard_stats, get_strategic_analytics, get_voter_list, update_voter_in_db,
+    get_dashboard_stats, get_voter_list, update_voter_in_db,
     get_all_locations, add_constituency, add_local_body, add_booth,
     get_all_users, create_managed_user, delete_user, update_user_profile, get_parties, add_party
 )
@@ -95,13 +87,9 @@ def sync_dashboard_wrapper(username, constituency_id=None, booth_id=None):
     user = User.objects.get(username=username)
     return get_dashboard_stats(user.profile, constituency_id, booth_id)
 
-def sync_strategic_analytics_wrapper(username, constituency_id=None):
+def sync_voter_list_wrapper(username, search, page, page_size, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None, serial_from=None, serial_to=None):
     user = User.objects.get(username=username)
-    return get_strategic_analytics(user.profile, constituency_id)
-
-def sync_voter_list_wrapper(username, search, page, page_size, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None, serial_from=None, serial_to=None, location=None):
-    user = User.objects.get(username=username)
-    return get_voter_list(user.profile, search, page, page_size, constituency_id, lb_id, booth_id, gender, age_from, age_to, leaning, serial_from, serial_to, location)
+    return get_voter_list(user.profile, search, page, page_size, constituency_id, lb_id, booth_id, gender, age_from, age_to, leaning, serial_from, serial_to)
 
 def sync_locations_wrapper(username):
     user = User.objects.get(username=username)
@@ -149,45 +137,19 @@ def sync_send_broadcast(username, voter_ids, template_id):
     user = User.objects.get(username=username)
     return CommunicationEngine.send_broadcast(voter_ids, template_id, user)
 
-def sync_send_broadcast_form(username, heading, message, medium, filters, image_path=None):
-    from core.comm_engine import CommunicationEngine
-    import json
-    user = User.objects.get(username=username)
-    filters_dict = json.loads(filters)
-    
-    voters_data = get_voter_list(
-        user.profile, 
-        "", 1, 1000000, 
-        filters_dict.get('constituency'),
-        filters_dict.get('lb'),
-        filters_dict.get('booth'),
-        filters_dict.get('gender'),
-        filters_dict.get('ageFrom'),
-        filters_dict.get('ageTo'),
-        filters_dict.get('leaning'),
-        filters_dict.get('serialFrom'),
-        filters_dict.get('serialTo'),
-        filters_dict.get('location')
-    )
-    voter_ids = [v['id'] for v in voters_data['results'] if v.get('phone_no')]
-    
-    return CommunicationEngine.send_direct_broadcast(
-        voter_ids=voter_ids,
-        heading=heading,
-        message=message,
-        medium=medium,
-        image_path=image_path,
-        user=user
-    )
-
 # --- Comm Engine Async Wrappers ---
 get_comm_stats_async = sync_to_async(sync_comm_stats, thread_sensitive=True)
 manage_templates_async = sync_to_async(sync_manage_templates, thread_sensitive=True)
 send_broadcast_async = sync_to_async(sync_send_broadcast, thread_sensitive=True)
-send_broadcast_form_async = sync_to_async(sync_send_broadcast_form, thread_sensitive=True)
 
 # Auth Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "election-super-secret-key-2026")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not JWT_SECRET_KEY:
+    logger.error("CRITICAL SECURITY WARNING: JWT_SECRET_KEY not found in .env! Using insecure fallback.")
+    SECRET_KEY = "election-super-secret-key-2026-insecure-dev"
+else:
+    SECRET_KEY = JWT_SECRET_KEY
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 600
 
@@ -237,13 +199,25 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise HTTPException(401, "Invalid credentials")
 
 # CORS
+raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
+origins = [o.strip() for o in raw_origins.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# NO-CACHE MIDDLEWARE: Added to ensure real-time synchronization
+@app.middleware("http")
+async def add_no_cache_header(request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 # Paths
 DATA_DIR = BASE_DIR / "data"
@@ -258,17 +232,150 @@ pdf_processor = PDFProcessor(poppler_path=poppler) if poppler else PDFProcessor(
 detector = VoterDetector()
 batch_processor = BatchProcessor()
 
-from backend.state_manager import state_manager
+active_batches = {}
+cancelled_batches = set()  # Track which batches have been cancelled
 
 # ----------------------------------------------------------------
 # PURE BACKGROUND TASKS
 # ----------------------------------------------------------------
 
-# ----------------------------------------------------------------
-# OCR TASK TRIGGERS (Moved to tasks.py for Celery)
-# ----------------------------------------------------------------
-from backend.tasks import run_extraction_task, run_processing_task
+def process_single_voter(args):
+    """Helper for parallel processing to avoid pickling issues"""
+    img_path_str, voter_id = args
+    # Instantiate locally to avoid shared state in subprocess
+    processor = BatchProcessor() 
+    res = processor.process_box(img_path_str, voter_id)
+    res['voter_id'] = voter_id
+    res['image_name'] = os.path.basename(img_path_str)
+    return res
 
+def run_extraction(batch_id: str, dpi: int):
+    try:
+        batch = active_batches[batch_id]
+        pdf_path = batch['file_path']
+        p_dir = PAGES_DIR / batch_id
+        c_dir = CROPS_DIR / batch_id
+        p_dir.mkdir(exist_ok=True); c_dir.mkdir(exist_ok=True)
+
+        # 1. Get total pages
+        try:
+            from PyPDF2 import PdfReader
+            with open(pdf_path, 'rb') as f:
+                reader = PdfReader(f)
+                batch['total_pages'] = len(reader.pages)
+        except: 
+            try:
+                if pdf_info:
+                    info = pdf_info(pdf_path, poppler_path=poppler)
+                    batch['total_pages'] = info.get("Pages", 0)
+            except: pass
+
+        # 2. Convert and Process page-by-page serially (Stable & Low RAM)
+        page_images = pdf_processor.convert_to_images(pdf_path, str(p_dir), dpi=dpi)
+        batch['total_pages'] = len(page_images)
+        
+        total_voters = 0
+        for i, page_path in enumerate(page_images):
+            # Check cancellation
+            if batch_id in cancelled_batches:
+                logger.info(f"Batch {batch_id} cancelled. Cleaning up...")
+                del active_batches[batch_id]
+                import gc
+                gc.collect()
+                return
+
+            batch['pages_processed'] = i + 1
+            # Correct call: detect_voter_boxes only takes image_path
+            boxes = detector.detect_voter_boxes(page_path) 
+            
+            if boxes:
+                count = detector.crop_and_save(page_path, boxes, str(c_dir), i+1, start_index=total_voters)
+                total_voters += count
+        
+        batch['total_voters'] = total_voters
+        batch['status'] = 'extracted'
+    except Exception as e:
+        logger.error(f"Extraction Error for {batch_id}: {e}")
+        if batch_id in active_batches:
+            active_batches[batch_id]['status'] = 'error'
+            active_batches[batch_id]['error'] = str(e)
+
+def run_processing(batch_id: str):
+    try:
+        batch = active_batches[batch_id]
+        c_dir = CROPS_DIR / batch_id
+        voter_files = sorted(list(c_dir.glob("*.png")))
+        batch['total_voters'] = len(voter_files)
+        
+        results = []
+        clean_count = 0
+        flagged_count = 0
+        
+        # CPU-Bound Optimization: Use ProcessPoolExecutor
+        cpu_count = multiprocessing.cpu_count()
+        # Reserve 1 core for system/server, cap at 8 to prevent freeze
+        workers = max(1, min(cpu_count - 1, 8))
+        
+        with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
+            # Prepare tasks
+            tasks = [(str(p), i+1) for i, p in enumerate(voter_files)]
+            
+            # Submit all tasks
+            future_to_id = {executor.submit(process_single_voter, t): t[1] for t in tasks}
+            
+            for i, future in enumerate(concurrent.futures.as_completed(future_to_id)):
+                # Check if batch has been cancelled
+                if batch_id in cancelled_batches:
+                    print(f"Batch {batch_id} cancelled. Stopping processing & Clearing RAM...")
+                    if batch_id in active_batches:
+                        del active_batches[batch_id]
+                    import gc
+                    gc.collect()
+                    return
+                
+                try:
+                    res = future.result()
+                    # Preserve original order not guaranteed here, but we sort by voter_id later if needed
+                    # Actually we need results to be in correct order for UI?
+                    # The UI likely just shows progress. The 'results' list order might matter for export?
+                    # Let's append to results and sort later or just append
+                    results.append(res)
+                    
+                    if res.get('Status') == 'Γ£à OK':
+                        clean_count += 1
+                    else:
+                        flagged_count += 1
+                        
+                    # CRITICAL: Update the global batch object immediately
+                    # This ensures the API endpoint returns fresh counts on every poll
+                    active_batches[batch_id]['clean_count'] = clean_count
+                    active_batches[batch_id]['flagged_count'] = flagged_count
+                    active_batches[batch_id]['voters_processed'] = i + 1
+                    
+                except Exception as exc:
+                    print(f"Task generated an exception: {exc}")
+                    # Treat exceptions as flags so they are visible to the user
+                    flagged_count += 1
+                    error_res = {
+                        "voter_id": tasks[i][1], # Recover ID from task list using loop index
+                        "image_name": os.path.basename(tasks[i][0]),
+                        "Status": "ΓÜá∩╕Å ERROR",
+                        "Flags": f"Processing Error: {str(exc)}",
+                        "Name": "ERROR", "EPIC": "ERROR", "Age": "0", "Gender": "N/A"
+                    }
+                    results.append(error_res)
+                    
+                    active_batches[batch_id]['flagged_count'] = flagged_count
+                    active_batches[batch_id]['voters_processed'] = i + 1
+
+        # Ensure results are sorted by voter_id because as_completed is out of order
+        results.sort(key=lambda x: x['voter_id'])
+        
+        batch['results'] = results
+        batch['status'] = 'processed'
+    except Exception as e:
+        active_batches[batch_id]['status'] = 'error'
+        active_batches[batch_id]['error'] = str(e)
 
 # ----------------------------------------------------------------
 # SYSTEM ADMIN ENDPOINTS
@@ -355,29 +462,29 @@ async def get_stats(constituency: str = None, booth: str = None, user_info=Depen
     return await get_stats_async(user_info['username'], c_id, b_id)
 
 @app.get("/api/voters")
-async def get_voters_api(
-    search: str = None, page: int = 1, page_size: int = 50,
+async def list_voters(
+    search: str = None, page: int = 1, 
     constituency: str = None, lb: str = None, booth: str = None,
     gender: str = None, age_from: str = None, age_to: str = None,
     leaning: str = None, serial_from: str = None, serial_to: str = None,
-    location: str = None,
+    page_size: int = 50,
     user_info=Depends(get_current_user)
 ):
     c_id = int(constituency) if constituency and str(constituency).isdigit() else None
     l_id = int(lb) if lb and str(lb).isdigit() else None
     b_id = int(booth) if booth and str(booth).isdigit() else None
-    return await get_voters_async(
-        user_info['username'], search, page, page_size,
-        c_id, l_id, b_id, gender, age_from, age_to, leaning, serial_from, serial_to, location
-    )
+    af = int(age_from) if age_from and str(age_from).isdigit() else None
+    at = int(age_to) if age_to and str(age_to).isdigit() else None
+    sf = int(serial_from) if serial_from and str(serial_from).isdigit() else None
+    st = int(serial_to) if serial_to and str(serial_to).isdigit() else None
+    return await get_voters_async(user_info['username'], search, page, page_size, c_id, l_id, b_id, gender, af, at, leaning, sf, st)
 
 @app.get("/api/export-voters")
 async def export_voters(
     search: str = None, 
     constituency: str = None, lb: str = None, booth: str = None,
     gender: str = None, age_from: str = None, age_to: str = None,
-    leaning: str = None, location: str = None,
-    serial_from: str = None, serial_to: str = None,
+    leaning: str = None,
     user_info=Depends(get_current_user)
 ):
     # Check download permission (BOOTH_AGENT and ZONE_COMMANDER cannot download by default)
@@ -390,7 +497,7 @@ async def export_voters(
     af = int(age_from) if age_from and str(age_from).isdigit() else None
     at = int(age_to) if age_to and str(age_to).isdigit() else None
     
-    data = await get_voters_async(user_info['username'], search, None, 0, c_id, l_id, b_id, gender, af, at, leaning, serial_from, serial_to, location)
+    data = await get_voters_async(user_info['username'], search, None, 0, c_id, l_id, b_id, gender, af, at, leaning)
     results = data['results']
     
     import csv, io
@@ -424,106 +531,97 @@ async def upload(file: UploadFile = File(...), user_info=Depends(get_current_use
     f_path = UPLOAD_DIR / f"{batch_id}_{file.filename}"
     with f_path.open("wb") as b: shutil.copyfileobj(file.file, b)
     
-    batch_data = {
+    active_batches[batch_id] = {
         "id": batch_id, "filename": file.filename, "file_path": str(f_path),
         "status": "uploaded", "total_pages": 0, "pages_processed": 0,
         "total_voters": 0, "voters_processed": 0, "results": [],
         "clean_count": 0, "flagged_count": 0,
         "user": user_info['username']
     }
-    state_manager.set_batch(batch_id, batch_data)
-    return {"success": True, "id": batch_id, "status": "uploaded"}
+    return {"success": True, "batch_id": batch_id}
 
 @app.get("/api/batch/{batch_id}/status")
 async def get_status(batch_id: str, user_info=Depends(get_current_user)):
-    batch = state_manager.get_batch(batch_id)
-    if not batch: return {"status": "cleared"}
-    batch['flagged_items'] = [r['voter_id'] for r in batch.get('results', []) if r.get('Status') != '✅ OK']
-    return batch
-
-@app.get("/api/batch/{batch_id}/export-csv")
-async def export_batch_csv(batch_id: str, user_info=Depends(get_current_user)):
-    batch = state_manager.get_batch(batch_id)
-    if not batch or 'results' not in batch:
-        raise HTTPException(404, "Batch results not found")
-    
-    import csv
-    import io
-    from fastapi.responses import StreamingResponse
-    
-    results = batch['results']
-    if not results: return {"error": "No data"}
-    
-    output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=results[0].keys())
-    writer.writeheader()
-    writer.writerows(results)
-    output.seek(0)
-    
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=ocr_batch_{batch_id}.csv"}
-    )
+    if batch_id not in active_batches: return {"status": "cleared"}
+    return active_batches[batch_id]
 
 @app.post("/api/batch/{batch_id}/cancel")
 async def cancel_batch(batch_id: str, user_info=Depends(get_current_user)):
     """Cancel an ongoing OCR batch"""
-    batch = state_manager.get_batch(batch_id)
-    if not batch:
+    if batch_id not in active_batches:
         raise HTTPException(404, "Batch not found")
     
-    state_manager.mark_cancelled(batch_id)
+    cancelled_batches.add(batch_id)
     # Trigger immediate GC
     import gc
     gc.collect()
     return {"success": True, "message": "Batch cancellation requested"}
 
-# --- New Save Bridge to handle ID vs Name resolution ---
-def sync_save_batch_wrapper(payload_dict, user_id):
-    from core_db.models import Constituency, LocalBody, Booth
-    from core.db_bridge import save_booth_data
-    
-    batch_id = payload_dict['batch_id']
-    print(f"📄 Saving Batch: {batch_id} | Payload: {payload_dict}")
-    batch = state_manager.get_batch(batch_id)
-    if not batch: return False, "Batch session expired or not found"
-    
-    # Resolve IDs to Names (Frontend sends IDs, Backend Bridge expects Names)
-    try:
-        c_obj = Constituency.objects.get(id=int(payload_dict['constituency']))
-        c_name = c_obj.name
-    except: c_name = payload_dict['constituency']
-    
-    try:
-        lb_obj = LocalBody.objects.get(id=int(payload_dict['lgb_name']))
-        lb_name = lb_obj.name
-        lb_type = lb_obj.body_type
-    except:
-        lb_name = payload_dict['lgb_name']
-        lb_type = payload_dict.get('lgb_type') or "PANCHAYAT"
-        
-    try:
-        b_obj = Booth.objects.get(id=int(payload_dict['booth']))
-        b_num = str(b_obj.number).zfill(3)
-    except: 
-        b_num = str(payload_dict['booth']).zfill(3)
-    
-    return save_booth_data(
-        c_name, lb_type, lb_name, b_num, 
-        batch['results'], batch['filename'], 
-        payload_dict.get('ps_no', ""), payload_dict.get('ps_name', ""), user_id
-    )
-
-save_batch_async = sync_to_async(sync_save_batch_wrapper, thread_sensitive=True)
+class SaveRequest(BaseModel):
+    batch_id: str
+    constituency: str
+    lgb_type: str
+    lgb_name: str
+    booth: Any  # Allow mix of int/str
+    ps_no: Optional[str] = ""
+    ps_name: Optional[str] = ""
 
 @app.post("/api/save-to-db")
-async def save_to_db(payload: SaveBatchRequest, user_info=Depends(get_current_user)):
-    success, msg = await save_batch_async(payload.dict(), user_info['id'])
-    if not success:
-        print(f"❌ Save to DB Failed: {msg}")
-        raise HTTPException(status_code=400, detail=msg)
-    return {"success": success, "message": msg}
+async def save_to_db(req: SaveRequest, user_info=Depends(get_current_user)):
+    logger.info(f"Incoming Save Request: {req.dict()}")
+    
+    if req.batch_id not in active_batches:
+        logger.error(f"Save failed: Batch {req.batch_id} not found in memory.")
+        raise HTTPException(404, "Batch not found in server memory. Please re-upload or re-process.")
+        
+    batch = active_batches[req.batch_id]
+    results = batch.get('results', [])
+    
+    if not results:
+        logger.warning(f"Save attempted for batch {req.batch_id} with 0 results.")
+        return {"success": False, "message": "No voter records found in this batch to save."}
+
+    # Pass everything as keyword arguments to the bridge to be safe
+    try:
+        success, msg = await save_booth_data_async(
+            constituency_name=req.constituency,
+            local_body_type=req.lgb_type,
+            local_body_name=req.lgb_name,
+            booth_number=str(req.booth), # Standardize to string for DB
+            voter_data_list=results,
+            original_filename=batch['filename'],
+            polling_station_no=req.ps_no or "",
+            polling_station_name=req.ps_name or "",
+            user_id=user_info['id']
+        )
+        
+        if success:
+            logger.info(f"Successfully saved batch {req.batch_id} to DB. Clearing RAM and Disk cache...")
+            
+            # --- IMMEDIATE CLEANUP & MEMORY CLEARING ---
+            # 1. Clear RAM
+            if req.batch_id in active_batches:
+                del active_batches[req.batch_id]
+            import gc
+            gc.collect()
+            
+            # 2. Clear Disk (Page Images and Crops)
+            try:
+                p_dir = PAGES_DIR / req.batch_id
+                c_dir = CROPS_DIR / req.batch_id
+                if p_dir.exists(): shutil.rmtree(p_dir)
+                if c_dir.exists(): shutil.rmtree(c_dir)
+                logger.info(f"Cleaned up disk resources for batch {req.batch_id}")
+            except Exception as cleanup_err:
+                logger.error(f"Post-save cleanup error: {cleanup_err}")
+        else:
+            logger.error(f"Database Bridge Error: {msg}")
+            
+        return {"success": success, "message": msg}
+        
+    except Exception as e:
+        logger.exception(f"Critical error during save_to_db: {str(e)}")
+        return {"success": False, "message": f"Server Error: {str(e)}"}
 
 # ----------------------------------------------------------------
 # COMMUNICATION SYSTEM ENDPOINTS
@@ -544,36 +642,13 @@ async def create_template_api(data: dict, user_info=Depends(get_current_user)):
 
 @app.post("/api/comm/send")
 async def send_comm_api(data: dict, user_info=Depends(get_current_user)):
-    # Legacy template-based broadcast
-    if user_info['role'] not in ['SUPERUSER', 'MANAGER']: raise HTTPException(403)
+    # Check if user has permission to broadcast
     return await send_broadcast_async(user_info['username'], data['voter_ids'], data['template_id'])
-
-@app.post("/api/comm/send-form")
-async def send_comm_form_api(
-    heading: str = fastapi.Form(''),
-    message: str = fastapi.Form(''),
-    medium: str = fastapi.Form('WATI'),
-    filters: str = fastapi.Form('{}'),
-    image: UploadFile = File(None),
-    user_info=Depends(get_current_user)
-):
-    if user_info['role'] not in ['SUPERUSER', 'MANAGER']: raise HTTPException(403)
-    
-    image_path = None
-    if image:
-        COMM_IMG_DIR = BASE_DIR / "data" / "comm_images"
-        COMM_IMG_DIR.mkdir(parents=True, exist_ok=True)
-        img_name = f"{uuid.uuid4()}_{image.filename}"
-        image_path = str(COMM_IMG_DIR / img_name)
-        with open(image_path, "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
-            
-    return await send_broadcast_form_async(user_info['username'], heading, message, medium, filters, image_path)
 
 @app.get("/api/download-csv/{batch_id}")
 async def download_csv(batch_id: str, user_info=Depends(get_current_user)):
-    batch = state_manager.get_batch(batch_id)
-    if not batch: raise HTTPException(404)
+    if batch_id not in active_batches: raise HTTPException(404)
+    batch = active_batches[batch_id]
     
     # Permission bypass: Owner can always download their own batch results
     if not user_info.get('can_download', False) and batch.get('user') != user_info['username']:
@@ -617,70 +692,34 @@ async def check_booth(constituency: str, booth: str, user_info=Depends(get_curre
 
 # Missing endpoints needed by App.jsx
 @app.post("/api/extract/{batch_id}")
-async def start_extract(batch_id: str, background_tasks: BackgroundTasks, user_info=Depends(get_current_user)):
-    batch = state_manager.get_batch(batch_id)
-    if not batch: raise HTTPException(404)
-    batch['status'] = 'extracting'
-    state_manager.set_batch(batch_id, batch)
-    
-    # Hybrid Dispatch: Use Celery if Redis is up, otherwise use local BackgroundTasks
-    if state_manager.use_redis:
-        try:
-            # We use a short timeout to check if broker is alive
-            run_extraction_task.apply_async(args=[batch_id, 300], countdown=0)
-        except Exception:
-            background_tasks.add_task(run_extraction_task, batch_id, 300)
-    else:
-        background_tasks.add_task(run_extraction_task, batch_id, 300)
-        
+async def start_extract(batch_id: str, bg: BackgroundTasks, user_info=Depends(get_current_user)):
+    if batch_id not in active_batches: raise HTTPException(404)
+    active_batches[batch_id]['status'] = 'extracting'
+    bg.add_task(run_extraction, batch_id, 300)
     return {"success": True}
 
 @app.post("/api/process-batch/{batch_id}")
-async def start_process(batch_id: str, background_tasks: BackgroundTasks, user_info=Depends(get_current_user)):
-    batch = state_manager.get_batch(batch_id)
-    if not batch: raise HTTPException(404)
-    batch['status'] = 'processing'
-    state_manager.set_batch(batch_id, batch)
-    
-    if state_manager.use_redis:
-        try:
-            run_processing_task.apply_async(args=[batch_id], countdown=0)
-        except Exception:
-            background_tasks.add_task(run_processing_task, batch_id)
-    else:
-        background_tasks.add_task(run_processing_task, batch_id)
-        
+async def start_process(batch_id: str, bg: BackgroundTasks, user_info=Depends(get_current_user)):
+    if batch_id not in active_batches: raise HTTPException(404)
+    active_batches[batch_id]['status'] = 'processing'
+    bg.add_task(run_processing, batch_id)
     return {"success": True}
 
 @app.post("/api/update-voter/{batch_id}/{voter_id}")
 async def update_voter(batch_id: str, voter_id: int, data: dict, user_info=Depends(get_current_user)):
-    batch = state_manager.get_batch(batch_id)
-    if not batch: return {"success": False}
-    
-    modified = False
+    batch = active_batches[batch_id]
     for i, res in enumerate(batch['results']):
         if res.get('voter_id') == voter_id:
             batch['results'][i].update(data)
-            batch['results'][i]['Status'] = '✅ OK'
-            modified = True
-            break
-            
-    if modified:
-        batch['clean_count'] = len([r for r in batch['results'] if r.get('Status') == '✅ OK'])
-        batch['flagged_count'] = len([r for r in batch['results'] if r.get('Status') != '✅ OK'])
-        state_manager.set_batch(batch_id, batch)
-        return {"success": True}
+            batch['results'][i]['Status'] = 'Γ£à OK'
+            batch['clean_count'] = len([r for r in batch['results'] if r.get('Status') == 'Γ£à OK'])
+            batch['flagged_count'] = len([r for r in batch['results'] if r.get('Status') != 'Γ£à OK'])
+            return {"success": True}
     return {"success": False}
 
 @app.get("/api/voter-image/{batch_id}/{image_name}")
-@app.get("/api/crop/{batch_id}/{image_name}")
 async def get_voter_image(batch_id: str, image_name: str):
     path = CROPS_DIR / batch_id / image_name
-    if not path.exists():
-        # Fallback to general crops dir if batch_id is actually part of image_name or something
-        alt_path = CROPS_DIR / image_name
-        if alt_path.exists(): path = alt_path
-        else: raise HTTPException(404, "Image not found")
     return FileResponse(path)
 
 @app.get("/api/parties")
@@ -717,8 +756,8 @@ async def get_party_symbol(image_name: str):
 
 @app.post("/api/clear-session/{batch_id}")
 async def clear_session(batch_id: str, user_info=Depends(get_current_user)):
-    state_manager.delete_batch(batch_id)
-    state_manager.remove_cancelled(batch_id)
+    if batch_id in active_batches:
+        del active_batches[batch_id]
     return {"success": True}
 
 @app.get("/api/admin/system-health")
@@ -737,19 +776,9 @@ async def get_system_health(user_info=Depends(get_current_user)):
         "status": "Healthy",
         "disk_free_gb": round(free / (1024**3), 2),
         "memory_usage_percent": memory.percent,
-        "active_batches": len(state_manager.list_all_batches()),
+        "active_batches": len(active_batches),
+        "uptime_start": datetime.utcnow().isoformat()
     }
-
-@app.get("/api/analytics/strategic")
-async def fetch_strategic_analytics(constituency_id: str = None, user_info: dict = Depends(get_current_user)):
-    try:
-        data = await sync_to_async(sync_strategic_analytics_wrapper)(
-            user_info["username"], 
-            constituency_id
-        )
-        return data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 # Static Frontend Support
 dist_path = BASE_DIR / "frontend" / "dist"

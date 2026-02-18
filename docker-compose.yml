@@ -12,12 +12,20 @@ services:
     ports:
       - "5432:5432"
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
   app:
     build: .
     expose:
       - "8000"
     environment:
       - DATABASE_URL=postgres://admin:secretpassword@db:5432/voter_db
+      - REDIS_URL=redis://redis:6379/0
       - DJANGO_SETTINGS_MODULE=voter_vault.settings
     env_file:
       - .env
@@ -27,6 +35,22 @@ services:
 
     depends_on:
       - db
+      - redis
+
+  worker:
+    build: .
+    command: celery -A backend.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgres://admin:secretpassword@db:5432/voter_db
+      - REDIS_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=voter_vault.settings
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
 
   nginx:
     build:
@@ -51,3 +75,4 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:

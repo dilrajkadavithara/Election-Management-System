@@ -56,18 +56,11 @@ class BatchProcessor:
         clean_epic = raw_epic[:10]
         
         # 2. Heuristic Healing (Decision Logic)
-        if len(clean_epic) >= 8:
+        if len(clean_epic) == 10:
             prefix = clean_epic[:3]
             suffix = clean_epic[3:]
             
-            # Heal Prefix: Map numbers to look-alike letters (Fixes misreads like 2GQ -> ZGQ)
-            alpha_map = {'0': 'O', '1': 'I', '2': 'Z', '3': 'J', '4': 'A', '5': 'S', '6': 'G', '8': 'B', '9': 'G'}
-            healed_prefix = ""
-            for char in prefix:
-                if char.isdigit() and char in alpha_map: healed_prefix += alpha_map[char]
-                else: healed_prefix += char
-                
-            # Heal Suffix: Map letters to look-alike numbers
+            # Heal digits (4th to 10th char): Map letters to look-alike numbers
             num_map = {'O': '0', 'U': '0', 'Q': '0', 'D': '0', 'I': '1', 'L': '1', 'Z': '2', 'S': '5', 'B': '8', 'G': '6', 'A': '4'}
             healed_suffix = ""
             for char in suffix:
@@ -76,7 +69,7 @@ class BatchProcessor:
                 else:
                     healed_suffix += char
             
-            parsed_info["EPIC_ID"] = healed_prefix + healed_suffix
+            parsed_info["EPIC_ID"] = prefix + healed_suffix
         else:
             parsed_info["EPIC_ID"] = clean_epic
 
@@ -120,14 +113,10 @@ class BatchProcessor:
             val = str(parsed_info.get(field, "N/A"))
             if val == "N/A" or val.strip() == "":
                 flags.append(f"Missing {field}")
-            elif "$" in val or "9$" in val:
-                flags.append(f"OCR Hallucination in {field} ({val})")
 
         # --- EPIC Strict Pattern Validation ---
         epic_val = str(parsed_info.get("EPIC_ID", "")).strip()
-        if len(epic_val) >= 7 and len(epic_val) <= 9:
-            flags.append(f"Truncated EPIC ({len(epic_val)} chars: {epic_val})")
-        elif not re.match(r'^[A-Z]{3}[0-9]{7}$', epic_val) and epic_val != "":
+        if not re.match(r'^[A-Z]{3}[0-9]{7}$', epic_val):
             flags.append(f"Invalid EPIC Pattern (Captured: {epic_val})")
 
         # Final Status determination

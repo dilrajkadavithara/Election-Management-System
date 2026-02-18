@@ -16,7 +16,7 @@ if PROJECT_PATH not in sys.path:
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'voter_vault.settings')
 django.setup()
 
-from core_db.models import Voter, Booth, Constituency, LocalBody, PoliticalParty, UserProfile
+from core_db.models import Voter, Booth, Constituency, LocalBody, PoliticalParty, UserProfile, MessageTemplate, CommunicationLog
 
 def get_parties():
     """Fetch list of active political parties"""
@@ -53,17 +53,25 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
             constituency, _ = Constituency.objects.get_or_create(name=constituency_name)
             local_body, _ = LocalBody.objects.get_or_create(constituency=constituency, name=local_body_name, body_type=local_body_type)
 
-            if Booth.objects.filter(constituency=constituency, number=booth_number).exists():
-                return False, f"Booth {booth_number} already exists."
-
-            booth = Booth.objects.create(
+            booth, created = Booth.objects.get_or_create(
                 constituency=constituency,
-                local_body=local_body,
                 number=booth_number,
-                polling_station_no=polling_station_no,
-                polling_station_name=polling_station_name,
-                name=polling_station_name or f"Booth {booth_number}"
+                defaults={
+                    'local_body': local_body,
+                    'polling_station_no': polling_station_no,
+                    'polling_station_name': polling_station_name,
+                    'name': polling_station_name or f"Booth {booth_number}"
+                }
             )
+            
+            # Update PS Info if it was an existing booth but PS info is now provided
+            if not created:
+                if polling_station_no: booth.polling_station_no = polling_station_no
+                if polling_station_name: 
+                    booth.polling_station_name = polling_station_name
+                    booth.name = polling_station_name
+                booth.local_body = local_body
+                booth.save()
             
             from django.contrib.auth.models import User
             created_by_user = None
@@ -97,34 +105,164 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
     except Exception as e:
         return False, f"Database Error: {str(e)}"
 
+def get_strategic_analytics(user_profile, constituency_id=None):
+    """Deep analytics aggregation for Command Center V2"""
+    voters = user_profile.get_accessible_voters()
+    if constituency_id:
+        voters = voters.filter(booth__constituency_id=constituency_id)
+        
+    # Get relevant booths
+    if constituency_id:
+        booths = Booth.objects.filter(constituency_id=constituency_id).order_by('number')
+    else:
+        # If no constituency, get all booths accessible to user
+        from django.db.models import Subquery
+        booths = Booth.objects.filter(id__in=Subquery(voters.values('booth_id'))).order_by('constituency', 'number')
+        
+    booth_stats = []
+    for b in booths:
+        bvoters = voters.filter(booth=b)
+        total = bvoters.count()
+        if total == 0: continue
+        
+        udf = bvoters.filter(voter_leaning='UDF').count()
+        ldf = bvoters.filter(voter_leaning='LDF').count()
+        nda = bvoters.filter(voter_leaning='NDA').count()
+        leaning_neutral = bvoters.filter(voter_leaning='NEUTRAL').count()
+        
+        # Coverage: What percentage of voters have any intelligence tag or basic info update?
+        intel_tagged = bvoters.filter(
+            Q(voter_leaning__isnull=False) | 
+            Q(current_location__isnull=False) | 
+            Q(voting_probability__isnull=False) |
+            Q(phone_no__isnull=False)
+        ).distinct().count()
+        
+        booth_stats.append({
+            "id": b.id,
+            "number": b.number,
+            "name": b.polling_station_name or b.name or f"Booth {b.number}",
+            "total": total,
+            "udf": udf,
+            "ldf": ldf,
+            "nda": nda,
+            "neutral": leaning_neutral,
+            "coverage": round((intel_tagged / total) * 100, 1) if total > 0 else 0
+        })
+        
+    # Recent activity across these voters
+    recent_activity = []
+    recent_voters = voters.order_by('-updated_at')[:8]
+    for rv in recent_voters:
+        recent_activity.append({
+            "voter_name": rv.full_name,
+            "booth_no": rv.booth.number,
+            "updated_at": rv.updated_at.isoformat(),
+            "agent": rv.created_by.username if rv.created_by else "System"
+        })
+        
+    return {
+        "booth_stats": booth_stats,
+        "recent_activity": recent_activity
+    }
+
 def get_dashboard_stats(user_profile, constituency_id=None, booth_id=None):
     voters = user_profile.get_accessible_voters()
     if constituency_id: voters = voters.filter(booth__constituency_id=constituency_id)
     if booth_id: voters = voters.filter(booth_id=booth_id)
         
     total = voters.count()
+    
+    # 1. Gender Split
+    male = voters.filter(gender__iexact='Male').count()
+    female = voters.filter(gender__iexact='Female').count()
+    
+    # 2. Voter Sentiment (Leaning) - Keys must match App.jsx exactly
     sentiment = {
         "UDF": voters.filter(voter_leaning='UDF').count(),
         "LDF": voters.filter(voter_leaning='LDF').count(),
         "NDA": voters.filter(voter_leaning='NDA').count(),
         "Neutral": voters.filter(voter_leaning='NEUTRAL').count(),
+        "neutral": voters.filter(voter_leaning='NEUTRAL').count(), # Fallback for some components
     }
-    return {"total": total, "sentiment": sentiment}
+    
+    # 3. Outreach (Data Readiness)
+    outreach = {
+        "with_phone": voters.filter(phone_no__isnull=False).exclude(phone_no='').count(),
+    }
+    
+    # 4. Age Distribution
+    age_dist = {
+        "18_25": voters.filter(age__gte=18, age__lte=25).count(),
+        "26_40": voters.filter(age__gte=26, age__lte=40).count(),
+        "41_60": voters.filter(age__gte=41, age__lte=60).count(),
+        "60_plus": voters.filter(age__gt=60).count(),
+    }
 
-def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None):
+    # 5. Geographical Logistics
+    location = {
+        "local": voters.filter(current_location='LOCAL').count(),
+        "abroad": voters.filter(current_location='ABROAD').count(),
+        "state": voters.filter(current_location='STATE').count(),
+        "district": voters.filter(current_location='DISTRICT').count(),
+    }
+    
+    return {
+        "total": total, 
+        "male": male, 
+        "female": female, 
+        "sentiment": sentiment, 
+        "outreach": outreach,
+        "age_dist": age_dist,
+        "location": location,
+        "tagging_progress": voters.filter(status='VERIFIED').count()
+    }
+
+def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None, serial_from=None, serial_to=None, location=None):
     voters = user_profile.get_accessible_voters()
+    
     if search:
-        voters = voters.filter(Q(full_name__icontains=search) | Q(epic_id__icontains=search))
+        voters = voters.filter(Q(full_name__icontains=search) | Q(epic_id__icontains=search) | Q(house_name__icontains=search))
+    
+    if constituency_id: voters = voters.filter(booth__constituency_id=constituency_id)
+    if lb_id: voters = voters.filter(booth__local_body_id=lb_id)
+    if booth_id: voters = voters.filter(booth_id=booth_id)
+    if gender: voters = voters.filter(gender__iexact=gender)
+    if age_from: voters = voters.filter(age__gte=int(age_from))
+    if age_to: voters = voters.filter(age__lte=int(age_to))
+    if leaning: voters = voters.filter(voter_leaning=leaning)
+    if location: voters = voters.filter(current_location=location)
+    
+    # Serial range filtering for Slip Design
+    if serial_from: voters = voters.filter(serial_no__gte=int(serial_from))
+    if serial_to: voters = voters.filter(serial_no__lte=int(serial_to))
     
     total_count = voters.count()
     start = (page - 1) * page_size
-    voters_slice = voters.select_related('booth')[start:start+page_size]
+    voters_slice = voters.select_related('booth', 'booth__local_body', 'booth__constituency')[start:start+page_size]
 
     results = []
     for v in voters_slice:
         results.append({
-            "id": v.id, "full_name": v.full_name, "epic_id": v.epic_id,
-            "gender": v.gender, "age": v.age, "booth_no": v.booth.number
+            "id": v.id,
+            "serial_no": v.serial_no,
+            "full_name": v.full_name,
+            "epic_id": v.epic_id,
+            "gender": v.gender,
+            "age": v.age,
+            "relation_name": v.relation_name,
+            "relation_type": v.relation_type,
+            "house_name": v.house_name,
+            "house_no": v.house_no,
+            "phone_no": v.phone_no,
+            "voter_leaning": v.voter_leaning,
+            "current_location": v.current_location,
+            "booth_no": v.booth.number,
+            "booth_id": v.booth.id,
+            "constituency": v.booth.constituency.name,
+            "local_body": v.booth.local_body.name if v.booth.local_body else "N/A",
+            "ps_name": v.booth.polling_station_name or v.booth.name or "N/A",
+            "voting_probability": v.voting_probability
         })
     return {"total": total_count, "results": results}
 
@@ -132,6 +270,17 @@ def update_voter_in_db(voter_id, data):
     try:
         voter = Voter.objects.get(id=voter_id)
         if 'full_name' in data: voter.full_name = data['full_name']
+        if 'epic_id' in data: voter.epic_id = data['epic_id']
+        if 'age' in data: voter.age = data['age']
+        if 'gender' in data: voter.gender = data['gender']
+        if 'phone_no' in data: voter.phone_no = data['phone_no']
+        if 'voter_leaning' in data: voter.voter_leaning = data['voter_leaning']
+        if 'current_location' in data: voter.current_location = data['current_location']
+        if 'voting_probability' in data: voter.voting_probability = data['voting_probability']
+        if 'house_no' in data: voter.house_no = data['house_no']
+        if 'house_name' in data: voter.house_name = data['house_name']
+        if 'relation_type' in data: voter.relation_type = data['relation_type']
+        if 'relation_name' in data: voter.relation_name = data['relation_name']
         voter.save()
         return True, "Voter updated"
     except Exception as e: return False, str(e)
@@ -158,7 +307,8 @@ def add_local_body(const_id, name, btype):
     return {"id": lb.id, "name": lb.name, "created": created}
 
 def add_booth(const_id, lb_id, number, ps_name="", ps_no=""):
-    b, created = Booth.objects.get_or_create(constituency_id=const_id, local_body_id=lb_id, number=number)
+    num_str = str(number).zfill(3)
+    b, created = Booth.objects.get_or_create(constituency_id=const_id, local_body_id=lb_id, number=num_str)
     if ps_name or ps_no:
         b.polling_station_name = ps_name
         b.polling_station_no = ps_no
@@ -191,3 +341,32 @@ def update_user_profile(user_id, data):
     user = User.objects.get(id=user_id)
     if 'role' in data: user.profile.role = data['role']; user.profile.save()
     return True, "User updated"
+
+def get_comm_stats(user_profile):
+    """Retrieve communication performance metrics"""
+    voters = user_profile.get_accessible_voters()
+    voter_ids = voters.values_list('id', flat=True)
+    logs = CommunicationLog.objects.filter(voter_id__in=voter_ids)
+    
+    return {
+        "total_sent": logs.count(),
+        "whatsapp": logs.filter(channel='WA').count(),
+        "sms": logs.filter(channel='SMS').count(),
+        "calls": logs.filter(channel='CALL').count(),
+        "pending": logs.filter(status='PENDING').count(),
+        "delivered": logs.filter(status='DELIVERED').count()
+    }
+
+def get_message_templates():
+    """Fetch active message templates"""
+    return list(MessageTemplate.objects.filter(is_active=True).values('id', 'name', 'msg_type', 'content'))
+
+def create_comm_log(voter_id, template_id, channel, status='SENT'):
+    """Record a communication event"""
+    log = CommunicationLog.objects.create(
+        voter_id=voter_id,
+        template_id=template_id,
+        channel=channel,
+        status=status
+    )
+    return log.id

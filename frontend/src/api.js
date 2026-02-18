@@ -10,7 +10,7 @@ const client = axios.create({
 // Add Interceptor for Token
 client.interceptors.request.use((config) => {
     const token = localStorage.getItem('voter_token');
-    if (token) {
+    if (token && token !== 'undefined') {
         config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -52,12 +52,12 @@ const api = {
         return response.data;
     },
 
-    extractBoxes: async (batchId) => {
+    startExtract: async (batchId) => {
         const response = await client.post(`/api/extract/${batchId}`);
         return response.data;
     },
 
-    processBatch: async (batchId) => {
+    startProcess: async (batchId) => {
         const response = await client.post(`/api/process-batch/${batchId}`);
         return response.data;
     },
@@ -70,6 +70,17 @@ const api = {
     updateVoter: async (batchId, voterId, data) => {
         const response = await client.post(`/api/update-voter/${batchId}/${voterId}`, data);
         return response.data;
+    },
+    exportBatchCSV: (batchId) => {
+        client.get(`/api/batch/${batchId}/export-csv`, { responseType: 'blob' })
+            .then(response => {
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `ocr_batch_${batchId}.csv`);
+                document.body.appendChild(link);
+                link.click();
+            }).catch(e => alert("Download Error: " + e.message));
     },
 
     saveToDB: async (batchId, constituency, lgbType, lgbName, booth, psNo, psName) => {
@@ -100,27 +111,9 @@ const api = {
         return response.data;
     },
 
-    checkBoothExists: async (constituency, booth) => {
-        const response = await client.get(`/api/check-booth`, { params: { constituency, booth } });
-        return response.data;
-    },
-
-    cancelBatch: async (batchId) => {
+    stopAndClearRAM: async (batchId) => {
         const response = await client.post(`/api/batch/${batchId}/cancel`);
         return response.data;
-    },
-
-    downloadCSV: (batchId) => {
-        const token = localStorage.getItem('voter_token');
-        client.get(`/api/download-csv/${batchId}`, { responseType: 'blob' })
-            .then(response => {
-                const url = window.URL.createObjectURL(new Blob([response.data]));
-                const link = document.createElement('a');
-                link.href = url;
-                link.setAttribute('download', `voters_batch_${batchId}.csv`);
-                document.body.appendChild(link);
-                link.click();
-            }).catch(e => alert("Access Denied or Download Error: " + (e.response?.status === 403 ? "Restricted for Employees" : e.message)));
     },
 
     exportVoters: (filters) => {
@@ -140,8 +133,13 @@ const api = {
         return response.data;
     },
 
-    getVoters: async (search = null, page = 1, filters = {}, pageSize = 50) => {
-        const response = await client.get('/api/voters', { params: { search, page, page_size: pageSize, ...filters } });
+    getStrategicAnalytics: async (constituencyId = null) => {
+        const response = await client.get('/api/analytics/strategic', { params: { constituency_id: constituencyId } });
+        return response.data;
+    },
+
+    getVoters: async (filters = {}) => {
+        const response = await client.get('/api/voters', { params: filters });
         return response.data;
     },
 
@@ -187,14 +185,32 @@ const api = {
         const response = await client.get('/api/parties');
         return response.data;
     },
-    addParty: async (name, file, shortLabel = '', primaryColor = '#000080', accentGradient = '') => {
+    addParty: async (name, shortLabel, color, gradient, file) => {
         const formData = new FormData();
         formData.append('name', name);
-        formData.append('file', file);
         formData.append('short_label', shortLabel);
-        formData.append('primary_color', primaryColor);
-        formData.append('accent_gradient', accentGradient);
+        formData.append('primary_color', color);
+        formData.append('accent_gradient', gradient);
+        formData.append('file', file);
         const response = await client.post('/api/admin/parties', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        return response.data;
+    },
+
+    sendBroadcast: async (data) => {
+        const response = await client.post('/api/comm/send', data);
+        return response.data;
+    },
+    sendBroadcastForm: async (data) => {
+        const formData = new FormData();
+        formData.append('heading', data.heading || '');
+        formData.append('message', data.message);
+        formData.append('medium', data.medium);
+        formData.append('filters', data.filters || '{}');
+        if (data.image) formData.append('image', data.image);
+
+        const response = await client.post('/api/comm/send-form', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
         return response.data;
@@ -204,18 +220,12 @@ const api = {
         const response = await client.get('/api/comm/stats');
         return response.data;
     },
+
     getTemplates: async () => {
         const response = await client.get('/api/comm/templates');
         return response.data;
-    },
-    createTemplate: async (data) => {
-        const response = await client.post('/api/comm/templates', data);
-        return response.data;
-    },
-    sendComm: async (data) => {
-        const response = await client.post('/api/comm/send', data);
-        return response.data;
     }
 };
+
 
 export default api;
