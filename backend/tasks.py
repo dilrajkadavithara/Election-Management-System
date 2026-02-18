@@ -132,7 +132,7 @@ def run_processing_task(batch_id: str, use_gemini: bool = False):
         else:
             # For Tesseract (CPU-bound), use ProcessPoolExecutor
             # even if API limits are high. Let's cap at 4 for Gemini, or 8 for Tesseract.
-            workers = max(1, min(cpu_count - 1, 8)) # Cap at 8 for Tesseract
+            workers = max(1, min(cpu_count - 1, 2)) # Cap at 2 for Tesseract/Safety
             executor_class = concurrent.futures.ProcessPoolExecutor
         
         with executor_class(max_workers=workers) as executor:

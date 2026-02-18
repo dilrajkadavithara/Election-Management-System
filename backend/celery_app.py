@@ -21,7 +21,7 @@ celery_app.conf.update(
     timezone="UTC",
     enable_utc=True,
     # Capping concurrency to avoid RAM issues
-    worker_concurrency=4 
+    worker_concurrency=1 
 )
 
 if __name__ == "__main__":
