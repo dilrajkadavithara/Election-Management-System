@@ -12,6 +12,11 @@ from backend.state_manager import state_manager
 BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
+    
+# Fix for Nested Django Project Structure
+PROJECT_ROOT = BASE_DIR / "voter_vault"
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 # Mandatory: Setup Django for the worker
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'voter_vault.settings')
@@ -40,9 +45,9 @@ batch_processor = BatchProcessor()
 
 def process_single_voter(args):
     """Helper for parallel processing"""
-    img_path_str, voter_id = args
+    img_path_str, voter_id, use_gemini = args
     processor = BatchProcessor() 
-    res = processor.process_box(img_path_str, voter_id)
+    res = processor.process_box(img_path_str, voter_id, use_gemini=use_gemini)
     res['voter_id'] = voter_id
     res['image_name'] = os.path.basename(img_path_str)
     return res
@@ -101,7 +106,7 @@ def run_extraction_task(batch_id: str, dpi: int):
             state_manager.set_batch(batch_id, batch)
 
 @celery_app.task(name="tasks.run_processing")
-def run_processing_task(batch_id: str):
+def run_processing_task(batch_id: str, use_gemini: bool = False):
     try:
         batch = state_manager.get_batch(batch_id)
         if not batch: return
@@ -109,6 +114,7 @@ def run_processing_task(batch_id: str):
         c_dir = CROPS_DIR / batch_id
         voter_files = sorted(list(c_dir.glob("*.png")))
         batch['total_voters'] = len(voter_files)
+        batch['use_gemini'] = use_gemini
         state_manager.set_batch(batch_id, batch)
         
         results = []
@@ -117,10 +123,20 @@ def run_processing_task(batch_id: str):
         error_stats = {}
         
         cpu_count = multiprocessing.cpu_count()
-        workers = max(1, min(cpu_count - 1, 8))
+        # For Gemini, we don't want too high concurrency to avoid network congestion, 
+        if use_gemini:
+            # Gemini is I/O Bound. Threads are better (especially on Windows).
+            # 30 workers is the sweet spot for 8GB RAM / high-speed Gemini processing.
+            workers = 30
+            executor_class = concurrent.futures.ThreadPoolExecutor
+        else:
+            # For Tesseract (CPU-bound), use ProcessPoolExecutor
+            # even if API limits are high. Let's cap at 4 for Gemini, or 8 for Tesseract.
+            workers = max(1, min(cpu_count - 1, 8)) # Cap at 8 for Tesseract
+            executor_class = concurrent.futures.ProcessPoolExecutor
         
-        with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
-            tasks = [(str(p), i+1) for i, p in enumerate(voter_files)]
+        with executor_class(max_workers=workers) as executor:
+            tasks = [(str(p), i+1, use_gemini) for i, p in enumerate(voter_files)]
             future_to_id = {executor.submit(process_single_voter, t): t[1] for t in tasks}
             
             for i, future in enumerate(concurrent.futures.as_completed(future_to_id)):
@@ -135,10 +151,9 @@ def run_processing_task(batch_id: str):
                     if res.get('Status') == '✅ OK': clean_count += 1
                     else: 
                         flagged_count += 1
-                        # Aggregate Error Reasons
-                        flags = res.get('Flags', '').split(", ")
+                        flags = str(res.get('Flags', '')).split(", ")
                         for f in flags:
-                            if f and not f.startswith("("): # Ignore info flags like (Serial Healed)
+                            if f and not f.startswith("("):
                                 error_stats[f] = error_stats.get(f, 0) + 1
                         
                     current_batch = state_manager.get_batch(batch_id)
@@ -149,6 +164,7 @@ def run_processing_task(batch_id: str):
                         current_batch['voters_processed'] = i + 1
                         state_manager.set_batch(batch_id, current_batch)
                 except Exception as exc:
+                    logger.error(f"Voter processing error: {exc}")
                     flagged_count += 1
                     current_batch = state_manager.get_batch(batch_id)
                     if current_batch:
