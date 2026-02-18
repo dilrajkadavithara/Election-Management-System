@@ -44,6 +44,7 @@ services:
       - DATABASE_URL=postgres://admin:secretpassword@db:5432/voter_db
       - REDIS_URL=redis://redis:6379/0
       - DJANGO_SETTINGS_MODULE=voter_vault.settings
+      - PYTHONPATH=/app/voter_vault
     env_file:
       - .env
     volumes:
