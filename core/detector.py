@@ -21,9 +21,23 @@ class VoterDetector:
         if img is None:
             return []
 
+        h_img, w_img = img.shape[:2]
+        
+        # --- DYNAMIC DPI DETECTION ---
+        # Standard A4 at 300 DPI is approx 2480px wide. 
+        # Standard A4 at 200 DPI is approx 1650px wide.
+        # We calculate the current DPI scale relative to the baseline 300 DPI.
+        dpi_scale = w_img / 2480.0
+        
+        # Adjust constraints based on actual image resolution
+        curr_min_w = self.min_width * dpi_scale
+        curr_max_w = self.max_width * dpi_scale
+        curr_min_h = self.min_height * dpi_scale
+        curr_max_h = self.max_height * dpi_scale
+
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         
-        # Use Adaptive Thresholding instead of fixed threshold for better robustness
+        # Use Adaptive Thresholding instead of fixed threshold
         thresh = cv2.adaptiveThreshold(
             gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
             cv2.THRESH_BINARY_INV, 11, 2
@@ -37,13 +51,14 @@ class VoterDetector:
             x, y, w, h = cv2.boundingRect(cnt)
             aspect_ratio = w / float(h) if h > 0 else 0
             
-            # Filter by specific width, height and aspect ratio constraints
-            if (self.min_width <= w <= self.max_width and 
-                self.min_height <= h <= self.max_height and 
-                2.1 <= aspect_ratio <= 2.6):
+            # Filter by dynamic sizing and stable aspect ratio
+            if (curr_min_w * 0.8 <= w <= curr_max_w * 1.2 and 
+                curr_min_h * 0.8 <= h <= curr_max_h * 1.2 and 
+                2.0 <= aspect_ratio <= 2.8):
                 voter_boxes.append((x, y, w, h))
 
         if not voter_boxes:
+            # Fallback for very low resolution or unusual layouts
             return []
 
         # Sorting logic: Group into rows first, then sort rows by X

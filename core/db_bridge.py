@@ -81,18 +81,29 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
             
             voters_to_create = []
             for row in voter_data_list:
-                age_val = int(row.get('Age')) if str(row.get('Age')).isdigit() else None
+                # Robust key extraction (handles both OCR Title Case and Frontend snake_case)
+                def get_val(keys):
+                    for k in keys:
+                        if k in row and row[k] is not None: return row[k]
+                    return None
+
+                raw_age = get_val(['Age', 'age'])
+                age_val = int(raw_age) if str(raw_age).isdigit() else None
+                
+                raw_serial = get_val(['Serial_OCR', 'serial_no', 'serial_number'])
+                serial_val = int(raw_serial) if str(raw_serial).isdigit() else 0
+
                 voter = Voter(
                     booth=booth,
-                    serial_no=row.get('Serial_OCR', 0),
-                    epic_id=row.get('EPIC_ID', 'UNK'),
-                    full_name=row.get('Full Name', 'N/A'),
-                    relation_type=row.get('Relation Type', ''),
-                    relation_name=row.get('Relation Name', ''),
-                    house_no=row.get('House Number', ''),
-                    house_name=row.get('House Name', ''),
+                    serial_no=serial_val,
+                    epic_id=get_val(['EPIC_ID', 'epic_id', 'EPIC ID']) or 'UNK',
+                    full_name=get_val(['Full Name', 'full_name']) or 'N/A',
+                    relation_type=get_val(['Relation Type', 'relation_type']) or '',
+                    relation_name=get_val(['Relation Name', 'relation_name']) or '',
+                    house_no=get_val(['House Number', 'house_no', 'House No']) or '',
+                    house_name=get_val(['House Name', 'house_name']) or '',
                     age=age_val,
-                    gender=row.get('Gender', ''),
+                    gender=get_val(['Gender', 'gender']) or '',
                     source_file=original_filename,
                     status='VERIFIED',
                     created_by=created_by_user

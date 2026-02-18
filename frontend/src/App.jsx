@@ -164,14 +164,21 @@ const App = () => {
     };
 
     const loadAdminData = async () => {
+        // Individual try-catches ensure one failure doesn't block others (e.g. non-superusers can't get users)
         try {
             const locs = await api.getLocations();
             setAllLocations(locs);
+        } catch (e) { console.error("Locations Load Error:", e); }
+
+        try {
             const users = await api.getUsers();
             setAllUsers(users);
+        } catch (e) { console.error("Users Load Error:", e); }
+
+        try {
             const parties = await api.getParties();
             setAllParties(parties);
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Parties Load Error:", e); }
     };
 
     const handleFileUpload = async (e) => {
@@ -193,11 +200,12 @@ const App = () => {
         } catch (e) { setOcrError(e.message); }
     };
 
+    const [useGemini, setUseGemini] = useState(false);
     const startOcr = async () => {
         if (!ocrBatch) return;
         try {
-            await api.startProcess(ocrBatch.id);
-            setOcrBatch(prev => ({ ...prev, status: 'processing' }));
+            await api.startProcess(ocrBatch.id, useGemini);
+            setOcrBatch(prev => ({ ...prev, status: 'processing', use_gemini: useGemini }));
         } catch (e) { setOcrError(e.message); }
     };
 
@@ -446,7 +454,7 @@ const App = () => {
                 {view === 'voters' && <VoterList voterList={voterList} voterTotal={voterTotal} listFilters={listFilters} setListFilters={setListFilters} searchQuery={searchQuery} setSearchQuery={setSearchQuery} allLocations={allLocations} loadVoters={loadVoters} loadAdminData={loadAdminData} currentUser={currentUser} setEditData={setEditData} setEditMode={setEditMode} handleUpdateIntel={handleUpdateIntel} />}
                 {view === 'admin' && <AdminControl allLocations={allLocations} allUsers={allUsers} userRole={userRole} newLocData={newLocData} setNewLocData={setNewLocData} handleAddLocation={handleAddLocation} newUserData={newUserData} setNewUserData={setNewUserData} assignSelection={assignSelection} setAssignSelection={setAssignSelection} handleCreateUser={handleCreateUser} handleUpdateUser={handleUpdateUser} handleDeleteUser={handleDeleteUser} startEditUser={startEditUser} editingUser={editingUser} setEditingUser={setEditingUser} allParties={allParties} newPartyData={newPartyData} setNewPartyData={setNewPartyData} newPartyFile={newPartyFile} setNewPartyFile={setNewPartyFile} handleAddParty={handleAddParty} PARTY_PRESETS={PARTY_PRESETS} dashboardStats={dashboardStats} />}
                 {view === 'comm' && <CommunicationHub commType={commType} setCommType={setCommType} commMessage={commMessage} setCommMessage={setCommMessage} handleCommunicationSend={handleCommunicationSend} voterTotal={voterTotal} commStats={commStats} commTemplates={commTemplates} allLocations={allLocations} listFilters={listFilters} setListFilters={setListFilters} loadVoters={loadVoters} />}
-                {view === 'engine' && <OCREngine ocrBatch={ocrBatch} setOcrBatch={setOcrBatch} ocrLoading={ocrLoading} setOcrLoading={setOcrLoading} ocrError={ocrError} setOcrError={setOcrError} ocrRef={ocrRef} handleFileUpload={handleFileUpload} startExtraction={startExtraction} startOcr={startOcr} handleSaveBatch={handleSaveBatch} discardBatch={discardBatch} stopAndClearRAM={stopAndClearRAM} setEditData={setEditData} setEditMode={setEditMode} allLocations={allLocations} ocrTargetLoc={ocrTargetLoc} setOcrTargetLoc={setOcrTargetLoc} loadAdminData={loadAdminData} />}
+                {view === 'engine' && <OCREngine ocrBatch={ocrBatch} setOcrBatch={setOcrBatch} ocrLoading={ocrLoading} setOcrLoading={setOcrLoading} ocrError={ocrError} setOcrError={setOcrError} ocrRef={ocrRef} handleFileUpload={handleFileUpload} startExtraction={startExtraction} startOcr={startOcr} handleSaveBatch={handleSaveBatch} discardBatch={discardBatch} stopAndClearRAM={stopAndClearRAM} setEditData={setEditData} setEditMode={setEditMode} allLocations={allLocations} ocrTargetLoc={ocrTargetLoc} setOcrTargetLoc={setOcrTargetLoc} loadAdminData={loadAdminData} useGemini={useGemini} setUseGemini={setUseGemini} />}
                 {view === 'design' && <SlipDesign activePrintParty={activePrintParty} setActivePrintParty={setActivePrintParty} allParties={allParties} allLocations={allLocations} listFilters={listFilters} setListFilters={setListFilters} voterList={voterList} loadVoters={loadVoters} />}
             </main>
 

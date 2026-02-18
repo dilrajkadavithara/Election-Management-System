@@ -32,6 +32,7 @@ class PDFProcessor:
             pages = convert_from_path(
                 pdf_path,
                 dpi=dpi,
+                grayscale=True,
                 first_page=start_page,
                 last_page=end_page,
                 poppler_path=self.poppler_path

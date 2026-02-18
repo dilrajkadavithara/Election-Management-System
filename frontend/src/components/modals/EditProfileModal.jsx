@@ -1,4 +1,5 @@
 import React from 'react';
+import api from '../../api';
 
 const EditProfileModal = ({
     editData,
@@ -7,12 +8,33 @@ const EditProfileModal = ({
     saveCorrection,
     ocrBatch
 }) => {
+    const deleteRecord = async () => {
+        if (!confirm("Are you sure you want to PERMANENTLY DELETE this record from the batch?")) return;
+
+        try {
+            await api.deleteVoterFromBatch(ocrBatch.id, editData.voter_id);
+            // Close modal and let parent refresh or move to next
+            setEditMode(false);
+            // Trigger a refresh of the batch status in App.jsx
+            saveCorrection(); // Re-using saveCorrection logic which re-fetches status
+        } catch (e) {
+            alert("Failed to delete: " + e.message);
+        }
+    };
+
     return (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
             <div className="bg-white w-full max-w-2xl rounded-[40px] p-12 shadow-2xl space-y-6 overflow-y-auto max-h-[90vh]">
                 <div className="flex justify-between items-center border-b pb-4">
                     <h2 className="text-3xl font-black uppercase text-slate-900">Edit Profile</h2>
-                    {ocrBatch && editData.voter_id && <span className="text-[10px] font-black uppercase bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-full border border-indigo-100 animate-pulse">Smart Review Mode</span>}
+                    <div className="flex gap-2">
+                        {ocrBatch && editData.voter_id && (
+                            <button onClick={deleteRecord} className="text-[10px] font-black uppercase bg-rose-50 text-rose-600 px-4 py-1.5 rounded-full border border-rose-100 hover:bg-rose-600 hover:text-white transition-all">
+                                🗑️ Delete Record
+                            </button>
+                        )}
+                        {ocrBatch && editData.voter_id && <span className="text-[10px] font-black uppercase bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-full border border-indigo-100 animate-pulse">Smart Review Mode</span>}
+                    </div>
                 </div>
 
                 {ocrBatch && editData.image_name && (

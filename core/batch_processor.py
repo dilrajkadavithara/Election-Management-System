@@ -12,82 +12,77 @@ class BatchProcessor:
         self.parser = VoterParser()
         self.results = []
 
-    def process_box(self, img_path, expected_serial):
+    def process_box(self, img_path, expected_serial, use_gemini=False):
         """Processes a single voter box and applies the Integrity Shield."""
         img = cv2.imread(img_path)
         if img is None:
             return {"error": "Could not read image"}
 
-        # 1. OCR and Parse
-        raw_data = self.engine.extract_raw_data(img)
-        parsed_info = self.parser.parse_text_block(raw_data["C_TEXT"])
-        
-        # --- Magnified Age Recovery ---
-        # If primary parse failed to get Age, try the Magnified Zone D
-        if (parsed_info.get("Age") == "N/A" or not parsed_info.get("Age")) and raw_data.get("D_AGE_GENDER"):
-            magnified_parse = self.parser.parse_text_block(raw_data["D_AGE_GENDER"])
-            if magnified_parse.get("Age") != "N/A":
-                parsed_info["Age"] = magnified_parse["Age"]
-                # Also try to recover Gender if N/A
-                if parsed_info.get("Gender") == "N/A":
-                    parsed_info["Gender"] = magnified_parse["Gender"]
+        if use_gemini:
+            # --- GEMINI AI FLOW ---
+            gemini_data = self.engine.extract_with_gemini(img)
+            if gemini_data:
+                parsed_info = {
+                    "Full Name": gemini_data.get("name_malayalam", ""),
+                    "Relation Name": gemini_data.get("relation_name_malayalam", ""),
+                    "Relation Type": str(gemini_data.get("relation_type", "")).title(), # Normalize to Title Case
+                    "House Name": gemini_data.get("house_name_malayalam", ""),
+                    "House Number": gemini_data.get("house_number", ""), # Fixed Key
+                    "Age": str(gemini_data.get("age", "")),
+                    "Gender": str(gemini_data.get("gender", "")).title(), # Normalize to Title Case
+                    "EPIC_ID": gemini_data.get("epic_id", ""),
+                    "Serial_OCR": str(gemini_data.get("serial_number", ""))
+                }
+            else:
+                # Fallback to Tesseract if Gemini fails
+                use_gemini = False
 
-        # 2. Add OCR IDs
-        serial_raw = raw_data["A_SERIAL"]
-        serial_digits = re.findall(r'\d+', serial_raw)
-        parsed_info["Serial_OCR"] = serial_digits[-1] if serial_digits else ""
-        
-        # --- AGE HEALING (Decision Logic) ---
-        # If Age is a character that looks like a number, force it to be numeric
-        age_val = str(parsed_info.get("Age", "N/A"))
-        if age_val != "N/A" and not age_val.isdigit():
-            # Decision map for Age look-alikes
-            age_map = {'B': '8', 'O': '0', 'S': '5', 'G': '6', 'I': '1', 'L': '1', 'Z': '2', 'A': '4'}
-            healed_age = ""
-            for char in age_val:
-                if char.isdigit(): healed_age += char
-                elif char.upper() in age_map: healed_age += age_map[char.upper()]
-            if healed_age:
-                parsed_info["Age"] = healed_age
+        if not use_gemini:
+            # --- LEGACY TESSERACT FLOW ---
+            raw_data = self.engine.extract_raw_data(img)
+            parsed_info = self.parser.parse_text_block(raw_data["C_TEXT"])
+            
+            # --- Magnified Age Recovery ---
+            if (parsed_info.get("Age") == "N/A" or not parsed_info.get("Age")) and raw_data.get("D_AGE_GENDER"):
+                magnified_parse = self.parser.parse_text_block(raw_data["D_AGE_GENDER"])
+                if magnified_parse.get("Age") != "N/A":
+                    parsed_info["Age"] = magnified_parse["Age"]
+                    if parsed_info.get("Gender") == "N/A":
+                        parsed_info["Gender"] = magnified_parse["Gender"]
 
-        # --- EPIC HEALING & TRUNCATION ---
-        # 1. Take only first 10 alphanumeric characters (Strict 10-char limit)
-        raw_epic = re.sub(r'[^A-Z0-9]', '', raw_data["B_EPIC"].upper())
-        clean_epic = raw_epic[:10]
-        
-        # 2. Heuristic Healing (Decision Logic)
-        if len(clean_epic) >= 8:
-            prefix = clean_epic[:3]
-            suffix = clean_epic[3:]
+            serial_raw = raw_data["A_SERIAL"]
+            serial_digits = re.findall(r'\d+', serial_raw)
+            parsed_info["Serial_OCR"] = serial_digits[-1] if serial_digits else ""
             
-            # Heal Prefix: Map numbers to look-alike letters (Fixes misreads like 2GQ -> ZGQ)
-            alpha_map = {'0': 'O', '1': 'I', '2': 'Z', '3': 'J', '4': 'A', '5': 'S', '6': 'G', '8': 'B', '9': 'G'}
-            healed_prefix = ""
-            for char in prefix:
-                if char.isdigit() and char in alpha_map: healed_prefix += alpha_map[char]
-                else: healed_prefix += char
-                
-            # Heal Suffix: Map letters to look-alike numbers
-            num_map = {'O': '0', 'U': '0', 'Q': '0', 'D': '0', 'I': '1', 'L': '1', 'Z': '2', 'S': '5', 'B': '8', 'G': '6', 'A': '4'}
-            healed_suffix = ""
-            for char in suffix:
-                if char.isalpha() and char in num_map:
-                    healed_suffix += num_map[char]
-                else:
-                    healed_suffix += char
-            
-            parsed_info["EPIC_ID"] = healed_prefix + healed_suffix
-        else:
-            parsed_info["EPIC_ID"] = clean_epic
+            # --- AGE HEALING ---
+            age_val = str(parsed_info.get("Age", "N/A"))
+            if age_val != "N/A" and not age_val.isdigit():
+                age_map = {'B': '8', 'O': '0', 'S': '5', 'G': '6', 'I': '1', 'L': '1', 'Z': '2', 'A': '4'}
+                healed_age = "".join([char if char.isdigit() else age_map.get(char.upper(), "") for char in age_val])
+                if healed_age: parsed_info["Age"] = healed_age
+
+            # --- EPIC HEALING ---
+            raw_epic = re.sub(r'[^A-Z0-9]', '', raw_data["B_EPIC"].upper())
+            clean_epic = raw_epic[:10]
+            if len(clean_epic) >= 8:
+                prefix = clean_epic[:3]
+                suffix = clean_epic[3:]
+                alpha_map = {'0': 'O', '1': 'I', '2': 'Z', '3': 'J', '4': 'A', '5': 'S', '6': 'G', '8': 'B', '9': 'G'}
+                healed_prefix = "".join([alpha_map.get(c, c) if c.isdigit() else c for c in prefix])
+                num_map = {'O': '0', 'U': '0', 'Q': '0', 'D': '0', 'I': '1', 'L': '1', 'Z': '2', 'S': '5', 'B': '8', 'G': '6', 'A': '4'}
+                healed_suffix = "".join([num_map.get(c.upper(), c) if c.isalpha() else c for c in suffix])
+                parsed_info["EPIC_ID"] = healed_prefix + healed_suffix
+            else:
+                parsed_info["EPIC_ID"] = clean_epic
 
         parsed_info["Image_Path"] = img_path
         parsed_info["Filename"] = os.path.basename(img_path)
 
-        # 3. Integrity Shield (REFINED: Silent Pruning & 10-Char Strictness)
+        # 3. Integrity Shield
         flags = []
         is_healed = False
         
-        # --- Serial Number Healing ---
+        # Serial Number Healing
         try:
             actual_serial = int(parsed_info.get("Serial_OCR", ""))
             if actual_serial != expected_serial:
@@ -97,38 +92,40 @@ class BatchProcessor:
             parsed_info["Serial_OCR"] = str(expected_serial)
             is_healed = True
 
-        # --- SILENT PRUNING (Malayalam Fields) ---
-        # Rule: Automatically prune everything except Malayalam, Space, and Dot (.)
-        # Name is sacrosanct, but still pruned. Relation/House are relaxed.
+        # SILENT PRUNING (Malayalam Fields)
         mal_fields = ["Full Name", "Relation Name", "House Name"]
         for field in mal_fields:
             val = str(parsed_info.get(field, ""))
             if not val or val == "N/A": continue
-            
-            # Keep only Malayalam (\u0D00-\u0D7F), Space, and Dot (.)
             pruned_val = re.sub(r'[^ \.\u0D00-\u0D7F]', '', val)
-            # Remove double spaces and trim
-            pruned_val = re.sub(r'\s+', ' ', pruned_val).strip()
-            parsed_info[field] = pruned_val
+            parsed_info[field] = re.sub(r'\s+', ' ', pruned_val).strip()
 
-        # --- Data Integrity Checks ---
-        # Sacrosanct Fields: Full Name, Age, Gender, EPIC_ID
-        # Missing fields in Relation/House are still flagged, but noise is gone.
+        # Data Integrity Checks
         critical_fields = ["Full Name", "Relation Name", "EPIC_ID", "Age", "Gender"]
-        
         for field in critical_fields:
             val = str(parsed_info.get(field, "N/A"))
             if val == "N/A" or val.strip() == "":
                 flags.append(f"Missing {field}")
             elif "$" in val or "9$" in val:
-                flags.append(f"OCR Hallucination in {field} ({val})")
+                flags.append(f"OCR Hallucination in {field}")
 
-        # --- EPIC Strict Pattern Validation ---
         epic_val = str(parsed_info.get("EPIC_ID", "")).strip()
         if len(epic_val) >= 7 and len(epic_val) <= 9:
-            flags.append(f"Truncated EPIC ({len(epic_val)} chars: {epic_val})")
+            flags.append(f"Truncated EPIC ({len(epic_val)})")
         elif not re.match(r'^[A-Z]{3}[0-9]{7}$', epic_val) and epic_val != "":
-            flags.append(f"Invalid EPIC Pattern (Captured: {epic_val})")
+            flags.append(f"Invalid EPIC Pattern")
+
+        if flags:
+            parsed_info["Flags"] = ", ".join(flags)
+            parsed_info["Status"] = "⚠️ REVIEW"
+        elif is_healed:
+            parsed_info["Flags"] = "(Serial Auto-Healed)"
+            parsed_info["Status"] = "✅ OK"
+        else:
+            parsed_info["Flags"] = ""
+            parsed_info["Status"] = "✅ OK"
+        
+        return parsed_info
 
         # Final Status determination
         if flags:

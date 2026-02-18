@@ -33,10 +33,10 @@ except ImportError:
 
 class SaveBatchRequest(BaseModel):
     batch_id: str
-    constituency: str  # This is the ID
+    constituency: str = ""
     lgb_type: str = ""
-    lgb_name: str      # This is the ID
-    booth: str         # This is the ID
+    lgb_name: str = ""
+    booth: str = ""
     ps_no: str = ""
     ps_name: str = ""
 
@@ -519,6 +519,9 @@ save_batch_async = sync_to_async(sync_save_batch_wrapper, thread_sensitive=True)
 
 @app.post("/api/save-to-db")
 async def save_to_db(payload: SaveBatchRequest, user_info=Depends(get_current_user)):
+    if not payload.constituency or not payload.lgb_name or not payload.booth:
+        return {"success": False, "message": "Please select Constituency, Local Body, and Booth before saving."}
+
     success, msg = await save_batch_async(payload.dict(), user_info['id'])
     if not success:
         print(f"❌ Save to DB Failed: {msg}")
@@ -624,31 +627,35 @@ async def start_extract(batch_id: str, background_tasks: BackgroundTasks, user_i
     state_manager.set_batch(batch_id, batch)
     
     # Hybrid Dispatch: Use Celery if Redis is up, otherwise use local BackgroundTasks
+    # Using 150 DPI as default (Optimal for Memory Saving / Sufficient for Gemini)
+    dpi_val = 150
     if state_manager.use_redis:
         try:
             # We use a short timeout to check if broker is alive
-            run_extraction_task.apply_async(args=[batch_id, 300], countdown=0)
+            run_extraction_task.apply_async(args=[batch_id, dpi_val], countdown=0)
         except Exception:
-            background_tasks.add_task(run_extraction_task, batch_id, 300)
+            background_tasks.add_task(run_extraction_task, batch_id, dpi_val)
     else:
-        background_tasks.add_task(run_extraction_task, batch_id, 300)
+        background_tasks.add_task(run_extraction_task, batch_id, dpi_val)
         
     return {"success": True}
 
 @app.post("/api/process-batch/{batch_id}")
-async def start_process(batch_id: str, background_tasks: BackgroundTasks, user_info=Depends(get_current_user)):
+async def start_process(batch_id: str, background_tasks: BackgroundTasks, data: dict = Body(...), user_info=Depends(get_current_user)):
     batch = state_manager.get_batch(batch_id)
     if not batch: raise HTTPException(404)
     batch['status'] = 'processing'
+    use_gemini = data.get('use_gemini', False)
+    batch['use_gemini'] = use_gemini
     state_manager.set_batch(batch_id, batch)
     
     if state_manager.use_redis:
         try:
-            run_processing_task.apply_async(args=[batch_id], countdown=0)
+            run_processing_task.apply_async(args=[batch_id, use_gemini], countdown=0)
         except Exception:
-            background_tasks.add_task(run_processing_task, batch_id)
+            background_tasks.add_task(run_processing_task, batch_id, use_gemini)
     else:
-        background_tasks.add_task(run_processing_task, batch_id)
+        background_tasks.add_task(run_processing_task, batch_id, use_gemini)
         
     return {"success": True}
 
@@ -671,6 +678,31 @@ async def update_voter(batch_id: str, voter_id: int, data: dict, user_info=Depen
         state_manager.set_batch(batch_id, batch)
         return {"success": True}
     return {"success": False}
+
+@app.delete("/api/batch/{batch_id}/voter/{voter_id}")
+async def delete_voter_from_batch(batch_id: str, voter_id: int, user_info=Depends(get_current_user)):
+    batch = state_manager.get_batch(batch_id)
+    if not batch: raise HTTPException(404, "Batch not found")
+    
+    original_count = len(batch['results'])
+    batch['results'] = [r for r in batch['results'] if r.get('voter_id') != voter_id]
+    
+    if len(batch['results']) < original_count:
+        # Recalculate stats
+        batch['clean_count'] = len([r for r in batch['results'] if r.get('Status') == '✅ OK'])
+        batch['flagged_count'] = len([r for r in batch['results'] if r.get('Status') != '✅ OK'])
+        batch['total_voters'] = len(batch['results'])
+        state_manager.set_batch(batch_id, batch)
+        
+        # Optional: Attempt to delete the crop image to save space
+        try:
+            # We don't have the image name here easily without looping, ensuring we clean up is a "nice to have"
+            pass 
+        except: pass
+        
+        return {"success": True}
+    
+    raise HTTPException(404, "Voter not found in batch")
 
 @app.get("/api/voter-image/{batch_id}/{image_name}")
 @app.get("/api/crop/{batch_id}/{image_name}")

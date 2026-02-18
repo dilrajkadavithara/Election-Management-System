@@ -20,7 +20,9 @@ const OCREngine = ({
     allLocations,
     ocrTargetLoc,
     setOcrTargetLoc,
-    loadAdminData
+    loadAdminData,
+    useGemini,
+    setUseGemini
 }) => {
     // Add provision states
     const [isAddingConst, setIsAddingConst] = useState(false);
@@ -28,6 +30,14 @@ const OCREngine = ({
     const [isAddingBooth, setIsAddingBooth] = useState(false);
     const [newLocName, setNewLocName] = useState('');
     const [newLBType, setNewLBType] = useState('PANCHAYAT');
+
+    // Auto-load locations if missing
+    React.useEffect(() => {
+        if (!allLocations || allLocations.length === 0) {
+            console.log("OCR Engine: Locations missing, triggering load...");
+            loadAdminData();
+        }
+    }, [allLocations, loadAdminData]);
 
     const handleQuickAdd = async (type) => {
         if (!newLocName) return;
@@ -58,9 +68,14 @@ const OCREngine = ({
     return (
         <div className="space-y-12 animate-in pb-20">
             <header className="flex justify-between items-end border-b pb-8">
-                <div>
-                    <h1 className="text-6xl font-black tracking-tighter uppercase text-slate-900 leading-none">OCR Engine <span className="text-3xl align-top text-indigo-600">⚡</span></h1>
-                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mt-4">Optical Intelligence Interface v2.0</p>
+                <div className="flex items-center gap-6">
+                    <div>
+                        <h1 className="text-6xl font-black tracking-tighter uppercase text-slate-900 leading-none">OCR Engine <span className="text-3xl align-top text-indigo-600">⚡</span></h1>
+                        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mt-4">Optical Intelligence Interface v2.0 {allLocations.length > 0 ? `(${allLocations.length} Regions Loaded)` : ''}</p>
+                    </div>
+                    <button onClick={loadAdminData} className="mt-4 p-2 bg-slate-100 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 rounded-xl transition-all" title="Sync Location Data">
+                        <span className="text-xl">🔄</span>
+                    </button>
                 </div>
                 {!ocrBatch && (
                     <div className="flex gap-4 items-end">
@@ -110,7 +125,7 @@ const OCREngine = ({
                                     onChange={(e) => setOcrTargetLoc({ ...ocrTargetLoc, lbId: e.target.value, boothId: '' })}
                                     className="bg-white border-2 border-slate-100 rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-tight shadow-sm hover:border-indigo-200 transition-all outline-none disabled:opacity-50"
                                 >
-                                    <option value="">Select Local Body</option>
+                                    <option value="">{ocrTargetLoc.constId ? (allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies.length > 0 ? "Select Local Body" : "No Local Bodies Found") : "Select Location"}</option>
                                     {allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies.map(lb => <option key={lb.id} value={lb.id}>{lb.name}</option>)}
                                 </select>
                             )}
@@ -134,7 +149,7 @@ const OCREngine = ({
                                     onChange={(e) => setOcrTargetLoc({ ...ocrTargetLoc, boothId: e.target.value })}
                                     className="bg-white border-2 border-slate-100 rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-tight shadow-sm hover:border-indigo-200 transition-all outline-none disabled:opacity-50"
                                 >
-                                    <option value="">Select Booth</option>
+                                    <option value="">{ocrTargetLoc.lbId ? (allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies.find(lb => String(lb.id) === String(ocrTargetLoc.lbId))?.booths.length > 0 ? "Select Booth" : "No Booths Found") : "Select Booth"}</option>
                                     {allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies.find(lb => String(lb.id) === String(ocrTargetLoc.lbId))?.booths.map(b => <option key={b.id} value={b.id}>Booth {b.number}</option>)}
                                 </select>
                             )}
@@ -263,7 +278,26 @@ const OCREngine = ({
                                     <button onClick={startExtraction} className="flex-1 bg-white text-slate-900 py-5 rounded-3xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all">Init Image Converter ➔</button>
                                 )}
                                 {ocrBatch.status === 'extracted' && (
-                                    <button onClick={startOcr} className="flex-1 bg-indigo-500 text-white py-5 rounded-3xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-indigo-500/20">Boot OCR Neural Core ➔</button>
+                                    <div className="flex-1 flex flex-col gap-4">
+                                        <div className="flex items-center justify-between bg-white/5 p-4 rounded-3xl border border-white/10">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-xl">✨</span>
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 leading-none mb-1">AI Smart Mode</p>
+                                                    <p className="text-[9px] font-bold text-slate-400">Gemini 1.5 Pro Neural Extraction</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => setUseGemini(!useGemini)}
+                                                className={`w-12 h-6 rounded-full transition-all relative ${useGemini ? 'bg-indigo-500' : 'bg-slate-700'}`}
+                                            >
+                                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${useGemini ? 'right-1' : 'left-1'}`} />
+                                            </button>
+                                        </div>
+                                        <button onClick={startOcr} className="w-full bg-indigo-500 text-white py-5 rounded-3xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-indigo-500/20">
+                                            {useGemini ? 'Boot AI Neural Core ➔' : 'Boot Standard OCR Core ➔'}
+                                        </button>
+                                    </div>
                                 )}
                                 {ocrBatch.status === 'processed' && (
                                     <div className="flex-1 flex gap-4">

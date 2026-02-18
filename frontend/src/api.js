@@ -57,8 +57,8 @@ const api = {
         return response.data;
     },
 
-    startProcess: async (batchId) => {
-        const response = await client.post(`/api/process-batch/${batchId}`);
+    startProcess: async (batchId, useGemini = false) => {
+        const response = await client.post(`/api/process-batch/${batchId}`, { use_gemini: useGemini });
         return response.data;
     },
 
@@ -69,6 +69,10 @@ const api = {
 
     updateVoter: async (batchId, voterId, data) => {
         const response = await client.post(`/api/update-voter/${batchId}/${voterId}`, data);
+        return response.data;
+    },
+    deleteVoterFromBatch: async (batchId, voterId) => {
+        const response = await client.delete(`/api/batch/${batchId}/voter/${voterId}`);
         return response.data;
     },
     exportBatchCSV: (batchId) => {
