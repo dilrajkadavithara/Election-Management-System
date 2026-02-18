@@ -22,8 +22,9 @@ class PDFProcessor:
         info = pdfinfo_from_path(pdf_path, poppler_path=self.poppler_path)
         total_pages = info["Pages"]
         
+        
         image_paths = []
-        BATCH_SIZE = 5 # Process 5 pages at a time to keep RAM low
+        BATCH_SIZE = 1 # Process 1 page at a time for absolute safety
         
         for start_page in range(1, total_pages + 1, BATCH_SIZE):
             end_page = min(start_page + BATCH_SIZE - 1, total_pages)
