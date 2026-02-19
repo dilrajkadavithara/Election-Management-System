@@ -22,7 +22,9 @@ const OCREngine = ({
     setOcrTargetLoc,
     loadAdminData,
     useGemini,
-    setUseGemini
+    setUseGemini,
+    useDirectPdf,
+    setUseDirectPdf
 }) => {
     // Add provision states
     const [isAddingConst, setIsAddingConst] = useState(false);
@@ -275,7 +277,26 @@ const OCREngine = ({
 
                             <div className="flex gap-4 mt-8 relative z-10">
                                 {ocrBatch.status === 'uploaded' && (
-                                    <button onClick={startExtraction} className="flex-1 bg-white text-slate-900 py-5 rounded-3xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all">Init Image Converter ➔</button>
+                                    <div className="flex-1 flex flex-col gap-4">
+                                        <div className="flex items-center justify-between bg-white/5 p-4 rounded-3xl border border-white/10">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-xl">🛡️</span>
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 leading-none mb-1">Strategic Extraction</p>
+                                                    <p className="text-[9px] font-bold text-slate-400">Native PDF Mode (Prevents RAM Crash)</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => setUseDirectPdf(!useDirectPdf)}
+                                                className={`w-12 h-6 rounded-full transition-all relative ${useDirectPdf ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                                            >
+                                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${useDirectPdf ? 'right-1' : 'left-1'}`} />
+                                            </button>
+                                        </div>
+                                        <button onClick={startExtraction} className="w-full bg-white text-slate-900 py-5 rounded-3xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all">
+                                            {useDirectPdf ? 'Initialize Direct Stream ➔' : 'Init Image Converter ➔'}
+                                        </button>
+                                    </div>
                                 )}
                                 {ocrBatch.status === 'extracted' && (
                                     <div className="flex-1 flex flex-col gap-4">
@@ -295,7 +316,7 @@ const OCREngine = ({
                                             </button>
                                         </div>
                                         <button onClick={startOcr} className="w-full bg-indigo-500 text-white py-5 rounded-3xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-indigo-500/20">
-                                            {useGemini ? 'Boot AI Neural Core ➔' : 'Boot Standard OCR Core ➔'}
+                                            {ocrBatch.direct_pdf ? 'Commit Stream to Neural Core ➔' : (useGemini ? 'Boot AI Neural Core ➔' : 'Boot Standard OCR Core ➔')}
                                         </button>
                                     </div>
                                 )}

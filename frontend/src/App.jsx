@@ -63,6 +63,7 @@ const App = () => {
     const [ocrLoading, setOcrLoading] = useState(false);
     const [ocrError, setOcrError] = useState(null);
     const [ocrTargetLoc, setOcrTargetLoc] = useState({ constId: '', lbId: '', boothId: '', psNo: '', psName: '' });
+    const [useDirectPdf, setUseDirectPdf] = useState(true); // Default to Safe Mode
     const ocrRef = useRef(null);
 
     // Communication State
@@ -195,8 +196,8 @@ const App = () => {
     const startExtraction = async () => {
         if (!ocrBatch) return;
         try {
-            await api.startExtract(ocrBatch.id);
-            setOcrBatch(prev => ({ ...prev, status: 'extracting' }));
+            await api.startExtract(ocrBatch.id, useDirectPdf);
+            setOcrBatch(prev => ({ ...prev, status: 'extracting', direct_pdf: useDirectPdf }));
         } catch (e) { setOcrError(e.message); }
     };
 
@@ -204,7 +205,7 @@ const App = () => {
     const startOcr = async () => {
         if (!ocrBatch) return;
         try {
-            await api.startProcess(ocrBatch.id, useGemini);
+            await api.startProcess(ocrBatch.id, useGemini, ocrBatch.direct_pdf || useDirectPdf);
             setOcrBatch(prev => ({ ...prev, status: 'processing', use_gemini: useGemini }));
         } catch (e) { setOcrError(e.message); }
     };
@@ -454,7 +455,7 @@ const App = () => {
                 {view === 'voters' && <VoterList voterList={voterList} voterTotal={voterTotal} listFilters={listFilters} setListFilters={setListFilters} searchQuery={searchQuery} setSearchQuery={setSearchQuery} allLocations={allLocations} loadVoters={loadVoters} loadAdminData={loadAdminData} currentUser={currentUser} setEditData={setEditData} setEditMode={setEditMode} handleUpdateIntel={handleUpdateIntel} />}
                 {view === 'admin' && <AdminControl allLocations={allLocations} allUsers={allUsers} userRole={userRole} newLocData={newLocData} setNewLocData={setNewLocData} handleAddLocation={handleAddLocation} newUserData={newUserData} setNewUserData={setNewUserData} assignSelection={assignSelection} setAssignSelection={setAssignSelection} handleCreateUser={handleCreateUser} handleUpdateUser={handleUpdateUser} handleDeleteUser={handleDeleteUser} startEditUser={startEditUser} editingUser={editingUser} setEditingUser={setEditingUser} allParties={allParties} newPartyData={newPartyData} setNewPartyData={setNewPartyData} newPartyFile={newPartyFile} setNewPartyFile={setNewPartyFile} handleAddParty={handleAddParty} PARTY_PRESETS={PARTY_PRESETS} dashboardStats={dashboardStats} />}
                 {view === 'comm' && <CommunicationHub commType={commType} setCommType={setCommType} commMessage={commMessage} setCommMessage={setCommMessage} handleCommunicationSend={handleCommunicationSend} voterTotal={voterTotal} commStats={commStats} commTemplates={commTemplates} allLocations={allLocations} listFilters={listFilters} setListFilters={setListFilters} loadVoters={loadVoters} />}
-                {view === 'engine' && <OCREngine ocrBatch={ocrBatch} setOcrBatch={setOcrBatch} ocrLoading={ocrLoading} setOcrLoading={setOcrLoading} ocrError={ocrError} setOcrError={setOcrError} ocrRef={ocrRef} handleFileUpload={handleFileUpload} startExtraction={startExtraction} startOcr={startOcr} handleSaveBatch={handleSaveBatch} discardBatch={discardBatch} stopAndClearRAM={stopAndClearRAM} setEditData={setEditData} setEditMode={setEditMode} allLocations={allLocations} ocrTargetLoc={ocrTargetLoc} setOcrTargetLoc={setOcrTargetLoc} loadAdminData={loadAdminData} useGemini={useGemini} setUseGemini={setUseGemini} />}
+                {view === 'engine' && <OCREngine ocrBatch={ocrBatch} setOcrBatch={setOcrBatch} ocrLoading={ocrLoading} setOcrLoading={setOcrLoading} ocrError={ocrError} setOcrError={setOcrError} ocrRef={ocrRef} handleFileUpload={handleFileUpload} startExtraction={startExtraction} startOcr={startOcr} handleSaveBatch={handleSaveBatch} discardBatch={discardBatch} stopAndClearRAM={stopAndClearRAM} setEditData={setEditData} setEditMode={setEditMode} allLocations={allLocations} ocrTargetLoc={ocrTargetLoc} setOcrTargetLoc={setOcrTargetLoc} loadAdminData={loadAdminData} useGemini={useGemini} setUseGemini={setUseGemini} useDirectPdf={useDirectPdf} setUseDirectPdf={setUseDirectPdf} />}
                 {view === 'design' && <SlipDesign activePrintParty={activePrintParty} setActivePrintParty={setActivePrintParty} allParties={allParties} allLocations={allLocations} listFilters={listFilters} setListFilters={setListFilters} voterList={voterList} loadVoters={loadVoters} />}
             </main>
 

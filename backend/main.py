@@ -620,23 +620,23 @@ async def check_booth(constituency: str, booth: str, user_info=Depends(get_curre
 
 # Missing endpoints needed by App.jsx
 @app.post("/api/extract/{batch_id}")
-async def start_extract(batch_id: str, background_tasks: BackgroundTasks, user_info=Depends(get_current_user)):
+async def start_extract(batch_id: str, background_tasks: BackgroundTasks, data: dict = Body({}), user_info=Depends(get_current_user)):
     batch = state_manager.get_batch(batch_id)
     if not batch: raise HTTPException(404)
+    
+    direct_pdf = data.get('direct_pdf', False)
     batch['status'] = 'extracting'
+    batch['direct_pdf'] = direct_pdf
     state_manager.set_batch(batch_id, batch)
     
-    # Hybrid Dispatch: Use Celery if Redis is up, otherwise use local BackgroundTasks
-    # Using 150 DPI as default (Optimal for Memory Saving / Sufficient for Gemini)
     dpi_val = 150
     if state_manager.use_redis:
         try:
-            # We use a short timeout to check if broker is alive
-            run_extraction_task.apply_async(args=[batch_id, dpi_val], countdown=0)
+            run_extraction_task.apply_async(args=[batch_id, dpi_val, direct_pdf], countdown=0)
         except Exception:
-            background_tasks.add_task(run_extraction_task, batch_id, dpi_val)
+            background_tasks.add_task(run_extraction_task, batch_id, dpi_val, direct_pdf)
     else:
-        background_tasks.add_task(run_extraction_task, batch_id, dpi_val)
+        background_tasks.add_task(run_extraction_task, batch_id, dpi_val, direct_pdf)
         
     return {"success": True}
 
@@ -644,18 +644,21 @@ async def start_extract(batch_id: str, background_tasks: BackgroundTasks, user_i
 async def start_process(batch_id: str, background_tasks: BackgroundTasks, data: dict = Body(...), user_info=Depends(get_current_user)):
     batch = state_manager.get_batch(batch_id)
     if not batch: raise HTTPException(404)
-    batch['status'] = 'processing'
+    
     use_gemini = data.get('use_gemini', False)
+    direct_pdf = batch.get('direct_pdf', False) # Inherit from extraction phase
+    
+    batch['status'] = 'processing'
     batch['use_gemini'] = use_gemini
     state_manager.set_batch(batch_id, batch)
     
     if state_manager.use_redis:
         try:
-            run_processing_task.apply_async(args=[batch_id, use_gemini], countdown=0)
+            run_processing_task.apply_async(args=[batch_id, use_gemini, direct_pdf], countdown=0)
         except Exception:
-            background_tasks.add_task(run_processing_task, batch_id, use_gemini)
+            background_tasks.add_task(run_processing_task, batch_id, use_gemini, direct_pdf)
     else:
-        background_tasks.add_task(run_processing_task, batch_id, use_gemini)
+        background_tasks.add_task(run_processing_task, batch_id, use_gemini, direct_pdf)
         
     return {"success": True}
 

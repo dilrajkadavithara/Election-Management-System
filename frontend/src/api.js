@@ -52,13 +52,13 @@ const api = {
         return response.data;
     },
 
-    startExtract: async (batchId) => {
-        const response = await client.post(`/api/extract/${batchId}`);
+    startExtract: async (batchId, directPdf = false) => {
+        const response = await client.post(`/api/extract/${batchId}`, { direct_pdf: directPdf });
         return response.data;
     },
 
-    startProcess: async (batchId, useGemini = false) => {
-        const response = await client.post(`/api/process-batch/${batchId}`, { use_gemini: useGemini });
+    startProcess: async (batchId, useGemini = false, directPdf = false) => {
+        const response = await client.post(`/api/process-batch/${batchId}`, { use_gemini: useGemini, direct_pdf: directPdf });
         return response.data;
     },
 

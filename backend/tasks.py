@@ -53,7 +53,7 @@ def process_single_voter(args):
     return res
 
 @celery_app.task(name="tasks.run_extraction")
-def run_extraction_task(batch_id: str, dpi: int):
+def run_extraction_task(batch_id: str, dpi: int, direct_pdf: bool = False):
     try:
         batch = state_manager.get_batch(batch_id)
         if not batch: return
@@ -64,7 +64,7 @@ def run_extraction_task(batch_id: str, dpi: int):
         p_dir.mkdir(exist_ok=True, parents=True)
         c_dir.mkdir(exist_ok=True, parents=True)
 
-        # 1. Page Count
+        # 1. Page Count (Using PyPDF2)
         try:
             from PyPDF2 import PdfReader
             with open(pdf_path, 'rb') as f:
@@ -74,7 +74,14 @@ def run_extraction_task(batch_id: str, dpi: int):
         
         state_manager.set_batch(batch_id, batch)
 
-        # 2. Conversion & Processing
+        if direct_pdf:
+            # --- STRATEGIC SHORTCUT ---
+            # Skip heavy image conversion to save RAM
+            batch['status'] = 'extracted'
+            state_manager.set_batch(batch_id, batch)
+            return
+
+        # 2. Conversion & Processing (Legacy Mode)
         page_images = pdf_processor.convert_to_images(pdf_path, str(p_dir), dpi=dpi)
         batch['total_pages'] = len(page_images)
         state_manager.set_batch(batch_id, batch)
@@ -106,15 +113,58 @@ def run_extraction_task(batch_id: str, dpi: int):
             state_manager.set_batch(batch_id, batch)
 
 @celery_app.task(name="tasks.run_processing")
-def run_processing_task(batch_id: str, use_gemini: bool = False):
+def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: bool = False):
     try:
         batch = state_manager.get_batch(batch_id)
         if not batch: return
         
+        batch['use_gemini'] = use_gemini
+        state_manager.set_batch(batch_id, batch)
+
+        if direct_pdf and use_gemini:
+            # --- STRATEGIC DIRECT AI FLOW ---
+            processor = BatchProcessor()
+            pdf_path = Path(batch['file_path'])
+            
+            # --- SLICING SAFETY: Remove first 2 pages (Cover/Index) ---
+            sliced_pdf_path = pdf_path.parent / f"sliced_{pdf_path.name}"
+            try:
+                from PyPDF2 import PdfReader, PdfWriter
+                reader = PdfReader(pdf_path)
+                writer = PdfWriter()
+                # Page index starts at 0, so 2 is the 3rd page
+                if len(reader.pages) > 2:
+                    for i in range(2, len(reader.pages)):
+                        writer.add_page(reader.pages[i])
+                    with open(sliced_pdf_path, "wb") as f:
+                        writer.write(f)
+                    processing_path = str(sliced_pdf_path)
+                else:
+                    processing_path = str(pdf_path)
+            except Exception as e:
+                logger.error(f"Slicing error: {e}")
+                processing_path = str(pdf_path)
+
+            results = processor.process_pdf_directly(processing_path)
+            
+            # Clean up sliced temp file
+            if os.path.exists(sliced_pdf_path):
+                try: os.remove(sliced_pdf_path)
+                except: pass
+
+            batch['results'] = results
+            batch['total_voters'] = len(results)
+            batch['voters_processed'] = len(results)
+            batch['clean_count'] = len([r for r in results if r.get('Status') == '✅ OK'])
+            batch['flagged_count'] = len([r for r in results if r.get('Status') != '✅ OK'])
+            batch['status'] = 'processed'
+            state_manager.set_batch(batch_id, batch)
+            return
+
+        # --- LEGACY IMAGE-BASED FLOW ---
         c_dir = CROPS_DIR / batch_id
         voter_files = sorted(list(c_dir.glob("*.png")))
         batch['total_voters'] = len(voter_files)
-        batch['use_gemini'] = use_gemini
         state_manager.set_batch(batch_id, batch)
         
         results = []

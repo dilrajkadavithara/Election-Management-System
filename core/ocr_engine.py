@@ -40,6 +40,60 @@ class OCREngine:
         else:
             self.gemini_model = None
 
+    def extract_from_pdf(self, pdf_path):
+        """Processes an entire PDF directly using Gemini Vision. Bypasses local rendering."""
+        if not self.gemini_model:
+            return None
+
+        prompt = """
+        You are a highly accurate OCR system for Indian Voter Lists (Malayalam).
+        Extract ALL voter records from the attached PDF.
+        Return the data as a JSON list of objects.
+        
+        Fields per voter:
+        {
+            "serial_number": "string",
+            "epic_id": "string",
+            "name_malayalam": "string",
+            "relation_name_malayalam": "string",
+            "relation_type": "FATHER/HUSBAND/MOTHER/OTHER",
+            "house_number": "string",
+            "house_name_malayalam": "string",
+            "age": "number",
+            "gender": "MALE/FEMALE"
+        }
+        
+        Important:
+        1. Capture names exactly as they appear in Malayalam.
+        2. Ensure every voter on every page is captured.
+        3. Return ONLY the raw JSON list, no markdown or text.
+        """
+
+        try:
+            with open(pdf_path, 'rb') as f:
+                pdf_data = f.read()
+
+            # Using Gemini 1.5 Flash for speed and high context window
+            response = self.gemini_model.generate_content([
+                prompt,
+                {
+                    "mime_type": "application/pdf",
+                    "data": pdf_data
+                }
+            ])
+            text = response.text.strip()
+            
+            # Clean markdown if AI includes it
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0].strip()
+            
+            return json.loads(text)
+        except Exception as e:
+            print(f"Gemini PDF Extraction Error: {e}")
+            return None
+
     def extract_with_gemini(self, img_np):
         """High-precision extraction using Gemini AI with exponential backoff."""
         if not self.gemini_model:
