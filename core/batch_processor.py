@@ -20,26 +20,44 @@ class BatchProcessor:
         pages = page_range if page_range else [None]
         
         for page in pages:
-            raw_list = self.engine.extract_from_pdf(pdf_path, page_num=page)
+            raw_data = self.engine.extract_from_pdf(pdf_path, page_num=page)
+            if not raw_data:
+                continue
+
+            # --- JSON DEFUSER: Handle wraps like {"voters": [...]} or {"data": [...]} ---
+            raw_list = []
+            if isinstance(raw_data, list):
+                raw_list = raw_data
+            elif isinstance(raw_data, dict):
+                # Try to find the first list-type value in the dictionary
+                for val in raw_data.values():
+                    if isinstance(val, list):
+                        raw_list = val
+                        break
+            
             if not raw_list:
+                logger.warning(f"No voter list found in Gemini response for page {page}")
                 continue
 
             page_results = []
-            for i, entry in enumerate(raw_list):
+            for entry in raw_list:
+                if not isinstance(entry, dict):
+                    continue
+                    
                 voter_id = len(all_standardized) + len(page_results) + 1
                 
                 # Step 1: Map raw Gemini fields to our internal standard
                 parsed_info = {
                     "voter_id": voter_id,
-                    "Full Name": entry.get("name_malayalam", ""),
-                    "Relation Name": entry.get("relation_name_malayalam", ""),
-                    "Relation Type": str(entry.get("relation_type", "")).title(),
-                    "House Name": entry.get("house_name_malayalam", ""),
-                    "House Number": entry.get("house_number", ""),
-                    "Age": str(entry.get("age", "")),
-                    "Gender": str(entry.get("gender", "")).title(),
-                    "EPIC_ID": entry.get("epic_id", ""),
-                    "Serial_OCR": str(entry.get("serial_number", "")),
+                    "Full Name": entry.get("name_malayalam") or entry.get("Full Name", ""),
+                    "Relation Name": entry.get("relation_name_malayalam") or entry.get("Relation Name", ""),
+                    "Relation Type": str(entry.get("relation_type") or entry.get("Relation Type", "")).title(),
+                    "House Name": entry.get("house_name_malayalam") or entry.get("House Name", ""),
+                    "House Number": entry.get("house_number") or entry.get("House Number", ""),
+                    "Age": str(entry.get("age") or entry.get("Age", "")),
+                    "Gender": str(entry.get("gender") or entry.get("Gender", "")).title(),
+                    "EPIC_ID": entry.get("epic_id") or entry.get("EPIC_ID", ""),
+                    "Serial_OCR": str(entry.get("serial_number") or entry.get("Serial_OCR", "")),
                     "Image_Path": f"pdf_page_{page if page else 'all'}",
                     "Filename": os.path.basename(pdf_path)
                 }
