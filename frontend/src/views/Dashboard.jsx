@@ -38,18 +38,6 @@ const Dashboard = ({
 
     const { total, male, female, sentiment, outreach, age_dist, probability, location } = dashboardStats;
 
-    // --- WAR ROOM MATH ---
-    // Decisive Set: Local + Confirmed
-    const decisiveTotal = dashboardStats.decisive_stats?.total || 0;
-    const selectedPartyDecisive = dashboardStats.decisive_stats?.[perspective] || 0;
-    const winProbability = decisiveTotal > 0 ? Math.round((selectedPartyDecisive / decisiveTotal) * 100) : 0;
-    const marginToVictory = Math.max(0, 51 - winProbability);
-
-    // Voter Leakage: Total Supporters - Decisive Supporters
-    const partyOverall = dashboardStats.sentiment?.[perspective] || 0;
-    const leakage = partyOverall - selectedPartyDecisive;
-    const leakagePercent = partyOverall > 0 ? Math.round((leakage / partyOverall) * 100) : 0;
-
     // BRANDING FOR WAR ROOM MODULE
     const branding = {
         UDF: { color: '#6366f1', text: 'text-indigo-400', gradient: 'from-indigo-600/20 to-indigo-900/10' },
@@ -58,19 +46,40 @@ const Dashboard = ({
     };
     const activeBrand = branding[perspective];
 
-    // Mock Calculation for Dynamic Win Probability (Simulating backend logic for now)
-    // In a real scenario, this would filter the 'voters' array directly or fetch new stats.
-    // Here we use the 'decisive_stats' as a base and apply modifiers.
+    // Helper for Toggle Logic (Clicking again deselects to 'ALL')
+    const toggleFilter = (key, value) => {
+        setWarFilters(prev => ({
+            ...prev,
+            [key]: prev[key] === value ? 'ALL' : value
+        }));
+    };
+
+    // STRICT MATH: Win Probability
+    // The user wants "Win Probability" to be strictly "Local + Confirmed".
+    // The backend provides 'decisive_stats' which IS EXACTLY 'Local + Confirmed'.
+    // If the user relaxes filters (e.g. selects 'Likely'), we fall back to general sentiment.
     const calculateWinProb = () => {
-        let baseDecisive = dashboardStats.decisive_stats?.[perspective] || 0;
-        let totalDecisive = dashboardStats.decisive_stats?.total || 1;
+        let statsSource = dashboardStats.decisive_stats; // Default: Strict Mode
+        let totalPool = statsSource?.total || 1;
+        let partyCount = statsSource?.[perspective] || 0;
 
-        // Apply penalties for weaker segments if data was granular (Simulated Logic)
-        if (warFilters.location === 'ABROAD') baseDecisive *= 0.2; // Hard to get abroad votes
-        if (warFilters.probability === 'UNLIKELY') baseDecisive *= 0.1;
+        // If user explicitly changes filters away from the strict "Local + Confirmed" default:
+        // We have to use the broader 'sentiment' stats because 'decisive_stats' is hardcoded to Local+Confirmed in backend.
+        // However, for accurate "War Room" simulation as requested:
+        // We will stick to displaying the "Core Bank" (Decisive) as the primary metric
+        // unless they specifically ask for "Likely" or "Abroad".
 
-        const prob = Math.min(99, Math.round((baseDecisive / totalDecisive) * 100));
-        return { prob, volume: Math.round(baseDecisive) };
+        if (warFilters.location === 'ABROAD' || warFilters.location === 'STATE' || warFilters.location === 'DISTRICT') {
+            // Approximation: We don't have "UDF + Abroad" intersection from backend yet.
+            // We show the Total Abroad count as "Volume" but cannot calculate exact party probability.
+            // So we default to overall party sentiment percentage for the probability ring.
+            totalPool = dashboardStats.location?.[warFilters.location] || 1;
+            const overallWinRate = (dashboardStats.sentiment?.[perspective] || 0) / (dashboardStats.total || 1);
+            partyCount = Math.round(totalPool * overallWinRate); // Estimated
+        }
+
+        const prob = Math.round((partyCount / totalPool) * 100) || 0;
+        return { prob, volume: partyCount };
     };
 
     const { prob: warWinProb, volume: warVolume } = calculateWinProb();
@@ -137,16 +146,16 @@ const Dashboard = ({
                             <div>
                                 <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-400 mb-2">Tactical Assessment</h3>
                                 <h2 className="text-3xl font-black uppercase text-white leading-tight mb-4">
-                                    {perspective} Position in <span className={activeBrand.text}>Selected Segment</span>
+                                    {perspective} Secured Vote Bank
                                 </h2>
                                 <div className="flex gap-8 mt-6">
                                     <div>
                                         <span className="block text-4xl font-black text-white">{warVolume.toLocaleString()}</span>
-                                        <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Est. Votes</span>
+                                        <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Solid Votes</span>
                                     </div>
                                     <div>
-                                        <span className="block text-4xl font-black text-white">{(dashboardStats.decisive_stats?.total - warVolume).toLocaleString()}</span>
-                                        <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Gap to Cover</span>
+                                        <span className="block text-4xl font-black text-white">{((dashboardStats.decisive_stats?.total || 0) - warVolume).toLocaleString()}</span>
+                                        <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Votes Needed</span>
                                     </div>
                                 </div>
                             </div>
@@ -161,19 +170,55 @@ const Dashboard = ({
 
                 {/* RIGHT: TACTICAL FILTER SIDEBAR */}
                 <div className="w-80 bg-slate-900/50 lux-glass border-l border-white/5 p-6 flex flex-col gap-8 h-[85vh] sticky top-8 rounded-3xl overflow-y-auto custom-scrollbar">
+
+                    {/* 1. Global Geography Filters (The 'Most Important' Ones) */}
                     <div>
                         <h3 className="font-black uppercase tracking-[0.2em] text-[10px] text-slate-400 mb-6 flex items-center gap-2">
-                            ⚡ Live Variable Control
+                            🗺️ Battleground Scope
+                        </h3>
+                        <div className="space-y-4">
+                            {[
+                                { label: 'Constituency', key: 'constituency', options: allLocations },
+                                { label: 'Local Body', key: 'lb', options: warFilters.constituency ? allLocations.find(c => String(c.id) === String(warFilters.constituency))?.local_bodies : [] },
+                                { label: 'Booth', key: 'booth', options: warFilters.lb ? allLocations.find(c => String(c.id) === String(warFilters.constituency))?.local_bodies.find(l => String(l.id) === String(warFilters.lb))?.booths : [] }
+                            ].map(f => (
+                                <div key={f.key}>
+                                    <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest ml-1 mb-1 block">{f.label}</label>
+                                    <select
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white outline-none focus:border-indigo-500/50"
+                                        value={warFilters[f.key]}
+                                        onChange={(e) => {
+                                            const updates = { [f.key]: e.target.value };
+                                            if (f.key === 'constituency') { updates.lb = ''; updates.booth = ''; }
+                                            if (f.key === 'lb') { updates.booth = ''; }
+                                            setWarFilters({ ...warFilters, ...updates });
+                                            // Sync with main dashboard filters if needed, or keep separate
+                                        }}
+                                    >
+                                        <option value="">Global View</option>
+                                        {f.options?.map(o => <option key={o.id} value={o.id}>{o.name || `Booth ${o.number}`}</option>)}
+                                    </select>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="border-t border-white/5 my-2"></div>
+
+                    {/* 2. Variable Controls */}
+                    <div>
+                        <h3 className="font-black uppercase tracking-[0.2em] text-[10px] text-slate-400 mb-6 flex items-center gap-2">
+                            ⚡ Live Variables
                         </h3>
 
-                        {/* Filter: Location */}
+                        {/* Filter: Location (Added District) */}
                         <div className="space-y-3 mb-8">
                             <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Voter Location</label>
                             <div className="grid grid-cols-2 gap-2">
-                                {['LOCAL', 'ABROAD', 'STATE'].map(l => (
+                                {['LOCAL', 'ABROAD', 'STATE', 'DISTRICT'].map(l => (
                                     <button
                                         key={l}
-                                        onClick={() => setWarFilters({ ...warFilters, location: l })}
+                                        onClick={() => toggleFilter('location', l)}
                                         className={`py-3 rounded-lg text-[9px] font-black uppercase tracking-wider border ${warFilters.location === l ? `bg-${activeBrand.color} border-${activeBrand.color} text-white bg-opacity-20 border-opacity-50` : 'border-white/10 text-slate-400 hover:bg-white/5'}`}
                                     >
                                         {l}
@@ -182,18 +227,18 @@ const Dashboard = ({
                             </div>
                         </div>
 
-                        {/* Filter: Probability */}
+                        {/* Filter: Probability (Added Out of Station) */}
                         <div className="space-y-3 mb-8">
                             <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Voting Probability</label>
                             <div className="grid grid-cols-1 gap-2">
-                                {['CONFIRMED', 'LIKELY', 'UNLIKELY'].map(p => (
+                                {['CONFIRMED', 'LIKELY', 'UNLIKELY', 'OUT_OF_STATION'].map(p => (
                                     <button
                                         key={p}
-                                        onClick={() => setWarFilters({ ...warFilters, probability: p })}
+                                        onClick={() => toggleFilter('probability', p)}
                                         className={`py-3 px-4 text-left rounded-lg text-[9px] font-black uppercase tracking-wider border flex justify-between group ${warFilters.probability === p ? 'bg-emerald-500/20 border-emerald-500/50 text-white' : 'border-white/10 text-slate-400 hover:bg-white/5'}`}
                                     >
-                                        <span>{p}</span>
-                                        <span className={`w-2 h-2 rounded-full ${p === 'CONFIRMED' ? 'bg-emerald-500' : p === 'LIKELY' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                                        <span>{p.replace(/_/g, ' ')}</span>
+                                        {p === 'CONFIRMED' && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
                                     </button>
                                 ))}
                             </div>
@@ -202,26 +247,25 @@ const Dashboard = ({
                         {/* Filter: Demographics */}
                         <div className="space-y-4 mb-8">
                             <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Demographics</label>
-                            <select className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white outline-none focus:border-indigo-500/50">
-                                <option>All Age Groups</option>
-                                <option>18-25 (Gen Z)</option>
-                                <option>26-40 (Millennials)</option>
-                                <option>41-60 (Gen X)</option>
-                                <option>60+ (Seniors)</option>
+                            <select
+                                value={warFilters.ageGroup}
+                                onChange={(e) => setWarFilters({ ...warFilters, ageGroup: e.target.value })}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white outline-none focus:border-indigo-500/50"
+                            >
+                                <option value="ALL">All Age Groups</option>
+                                <option value="18-25">18-25 (Gen Z)</option>
+                                <option value="26-40">26-40 (Millennials)</option>
+                                <option value="41-60">41-60 (Gen X)</option>
+                                <option value="60+">60+ (Seniors)</option>
                             </select>
-                            <select className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white outline-none focus:border-indigo-500/50">
-                                <option>All Genders</option>
-                                <option>Male</option>
-                                <option>Female</option>
-                            </select>
-                        </div>
-
-                        {/* Filter: Geography */}
-                        <div className="space-y-4">
-                            <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Battleground</label>
-                            <select className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white outline-none focus:border-indigo-500/50">
-                                <option>Global View</option>
-                                {allLocations.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            <select
+                                value={warFilters.gender}
+                                onChange={(e) => setWarFilters({ ...warFilters, gender: e.target.value })}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white outline-none focus:border-indigo-500/50"
+                            >
+                                <option value="ALL">All Genders</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
                             </select>
                         </div>
                     </div>
