@@ -132,26 +132,9 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
             use_gemini = True 
             batch['use_gemini'] = True
             state_manager.set_batch(batch_id, batch)
-            pdf_path = Path(batch['file_path'])
             
-            # --- SLICING SAFETY: Remove first 2 pages (Cover/Index) ---
-            sliced_pdf_path = pdf_path.parent / f"sliced_{pdf_path.name}"
-            try:
-                from PyPDF2 import PdfReader, PdfWriter
-                reader = PdfReader(pdf_path)
-                writer = PdfWriter()
-                # Page index starts at 0, so 2 is the 3rd page
-                if len(reader.pages) > 2:
-                    for i in range(2, len(reader.pages)):
-                        writer.add_page(reader.pages[i])
-                    with open(sliced_pdf_path, "wb") as f:
-                        writer.write(f)
-                    processing_path = str(sliced_pdf_path)
-                else:
-                    processing_path = str(pdf_path)
-            except Exception as e:
-                logger.error(f"Slicing error: {e}")
-                processing_path = str(pdf_path)
+            processing_path = str(batch['file_path'])
+            logger.info(f"Steaming Direct PDF for Batch {batch_id}. Source: {processing_path}")
 
             processor = BatchProcessor()
             
@@ -173,23 +156,14 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
                 current_batch['flagged_count'] = len([r for r in existing_results if r.get('Status') != '✅ OK'])
                 
                 state_manager.set_batch(batch_id, current_batch)
-                logger.info(f"Progress Update: Page {page_num} finished. Total Voters: {len(existing_results)}")
+                logger.info(f"Neural Sync: Page {page_num} -> +{len(page_results)} voters (Total: {len(existing_results)})")
 
-            # Generate target page range (3 to END if sliced, or 1 to END)
+            # Page Range Logic: Skip cover pages (1 & 2) but process the rest
             total_pdf_pages = batch.get('total_pages', 0)
-            if total_pdf_pages > 2:
-                # We sliced off the first 2, so the remaining pages are labeled 3, 4, 5...
-                target_pages = list(range(3, total_pdf_pages + 1))
-            else:
-                target_pages = list(range(1, total_pdf_pages + 1))
+            target_pages = list(range(3, total_pdf_pages + 1)) if total_pdf_pages > 2 else [1]
 
             results = processor.process_pdf_directly(processing_path, page_range=target_pages, callback=update_progress)
             
-            # Clean up sliced temp file
-            if os.path.exists(sliced_pdf_path):
-                try: os.remove(sliced_pdf_path)
-                except: pass
-
             # Final status update
             batch = state_manager.get_batch(batch_id)
             batch['status'] = 'processed'
