@@ -91,9 +91,9 @@ def sync_get_user_info(username):
         }
     return None
 
-def sync_dashboard_wrapper(username, constituency_id=None, booth_id=None):
+def sync_dashboard_wrapper(username, constituency_id=None, lb_id=None, booth_id=None):
     user = User.objects.get(username=username)
-    return get_dashboard_stats(user.profile, constituency_id, booth_id)
+    return get_dashboard_stats(user.profile, constituency_id, lb_id, booth_id)
 
 def sync_strategic_analytics_wrapper(username, constituency_id=None):
     user = User.objects.get(username=username)
@@ -349,10 +349,11 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     }
 
 @app.get("/api/stats")
-async def get_stats(constituency: str = None, booth: str = None, user_info=Depends(get_current_user)):
+async def get_stats(constituency: str = None, lb: str = None, booth: str = None, user_info=Depends(get_current_user)):
     c_id = int(constituency) if constituency and str(constituency).isdigit() else None
+    l_id = int(lb) if lb and str(lb).isdigit() else None
     b_id = int(booth) if booth and str(booth).isdigit() else None
-    return await get_stats_async(user_info['username'], c_id, b_id)
+    return await get_stats_async(user_info['username'], c_id, l_id, b_id)
 
 @app.get("/api/voters")
 async def get_voters_api(

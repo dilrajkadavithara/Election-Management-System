@@ -2,56 +2,137 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+    --lux-bg: #030712;
+    --lux-card: rgba(17, 24, 39, 0.7);
+    --lux-accent-primary: #818cf8;
+    --lux-accent-secondary: #2dd4bf;
+    --lux-accent-gold: #fbbf24;
+    --lux-border: rgba(255, 255, 255, 0.08);
+    --lux-glow: rgba(129, 140, 248, 0.15);
+}
+
+body {
+    background-color: var(--lux-bg);
+    color: #f3f4f6;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+}
+
 @layer components {
-    .gradient-primary {
-        @apply bg-gradient-to-br from-primary-500 to-secondary-500;
+    .lux-glass {
+        background: var(--lux-card);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--lux-border);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
 
-    .gradient-success {
-        @apply bg-gradient-to-br from-green-400 to-emerald-600;
+    .lux-card {
+        @apply lux-glass rounded-[2rem] p-8 transition-all duration-500 hover:border-indigo-500/50;
     }
 
-    .gradient-warning {
-        @apply bg-gradient-to-br from-amber-400 to-orange-500;
+    .lux-card:hover {
+        box-shadow: 0 0 40px rgba(129, 140, 248, 0.15);
     }
 
-    .card-glass {
-        @apply bg-white/95 backdrop-blur-xl border border-white/30 shadow-2xl;
+    .lux-btn-primary {
+        @apply relative overflow-hidden px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all duration-500;
+        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
     }
 
-    .btn-primary {
-        @apply gradient-primary text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none;
+    .lux-btn-primary:hover {
+        @apply -translate-y-1 scale-[1.02];
+        box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.6);
     }
 
-    .btn-secondary {
-        @apply bg-gray-600 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:bg-gray-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300;
+    .lux-text-gradient {
+        @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400;
     }
 
-    .btn-success {
-        @apply gradient-success text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300;
+    .lux-mesh-bg {
+        background-color: #030712;
+        background-image:
+            radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0, transparent 50%),
+            radial-gradient(at 100% 0%, rgba(45, 212, 191, 0.15) 0, transparent 50%),
+            radial-gradient(at 100% 100%, rgba(251, 191, 36, 0.05) 0, transparent 50%),
+            radial-gradient(at 0% 100%, rgba(168, 85, 247, 0.1) 0, transparent 50%);
+    }
+
+    .lux-neon-border {
+        position: relative;
+    }
+
+    .lux-neon-border::after {
+        content: '';
+        position: absolute;
+        inset: -1px;
+        background: linear-gradient(90deg, transparent, #818cf8, transparent);
+        background-size: 200% 100%;
+        animation: lux-border-flow 3s linear infinite;
+        opacity: 0.3;
+        border-radius: inherit;
+        z-index: -1;
     }
 }
 
-@layer utilities {
-    .animate-float {
-        animation: float 20s ease-in-out infinite;
+@keyframes lux-border-flow {
+    0% {
+        background-position: 200% 0;
     }
 
-    @keyframes float {
-
-        0%,
-        100% {
-            transform: translate(0, 0) scale(1);
-        }
-
-        33% {
-            transform: translate(100px, -100px) scale(1.1);
-        }
-
-        66% {
-            transform: translate(-100px, 100px) scale(0.9);
-        }
+    100% {
+        background-position: -200% 0;
     }
+}
+
+@keyframes lux-pulse-glow {
+
+    0%,
+    100% {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+    }
+}
+
+.lux-animate-in {
+    animation: lux-fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes lux-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 @media print {
@@ -61,71 +142,12 @@
 
     body {
         background: white !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    @page {
-        margin: 0;
-        size: auto;
-    }
-
-    main {
-        padding: 0 !important;
-        margin: 0 !important;
-        background: transparent !important;
-    }
-
-    aside {
-        display: none !important;
+        color: black !important;
     }
 
     .print-grid {
         display: grid !important;
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 8mm !important;
-        width: 100% !important;
-        margin: 10mm auto !important;
-        padding: 0 !important;
-    }
-}
-
-/* Dashboard V2: Cosmic Dark Theme */
-@layer components {
-    .v2-bg-obsidian {
-        background-color: #0B0E14;
-    }
-
-    .v2-text-cyan {
-        color: #00F3FF;
-    }
-
-    .v2-border-cyan {
-        border-color: rgba(0, 243, 255, 0.3);
-    }
-
-    .v2-glass {
-        background: rgba(11, 14, 20, 0.8);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
-    }
-
-    .v2-card-glow {
-        box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
-        transition: all 0.3s ease;
-    }
-
-    .v2-card-glow:hover {
-        box-shadow: 0 0 25px rgba(0, 243, 255, 0.2);
-        border-color: rgba(0, 243, 255, 0.5);
-    }
-
-    .v2-scanline {
-        background: linear-gradient(to bottom,
-                transparent 50%,
-                rgba(0, 243, 255, 0.02) 50%);
-        background-size: 100% 4px;
-        pointer-events: none;
     }
 }

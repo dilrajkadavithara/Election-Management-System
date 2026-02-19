@@ -177,9 +177,10 @@ def get_strategic_analytics(user_profile, constituency_id=None):
         "recent_activity": recent_activity
     }
 
-def get_dashboard_stats(user_profile, constituency_id=None, booth_id=None):
+def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id=None):
     voters = user_profile.get_accessible_voters()
     if constituency_id: voters = voters.filter(booth__constituency_id=constituency_id)
+    if lb_id: voters = voters.filter(booth__local_body_id=lb_id)
     if booth_id: voters = voters.filter(booth_id=booth_id)
         
     total = voters.count()

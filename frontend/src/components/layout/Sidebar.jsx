@@ -1,39 +1,43 @@
-import React from 'react';
-
 const Sidebar = ({ view, setView, userRole, username, handleLogout }) => {
     return (
-        <aside className="w-72 bg-slate-900 text-white flex flex-col p-6 sticky top-0 h-screen shrink-0">
-            <div className="flex items-center gap-3 mb-12">
-                <span className="text-3xl">🗳️</span>
+        <aside className="fixed left-6 top-6 bottom-6 w-80 lux-glass rounded-[3rem] p-10 flex flex-col z-50 border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.5)]">
+            <div className="flex items-center gap-5 mb-16 px-2">
+                <div className="w-14 h-14 bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 rounded-[1.25rem] flex items-center justify-center text-3xl shadow-[0_10px_30px_rgba(99,102,241,0.3)] animate-pulse">
+                    🗳️
+                </div>
                 <div>
-                    <h1 className="font-black uppercase text-sm leading-tight">Election Engine</h1>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{username}</p>
+                    <h1 className="font-black uppercase text-[10px] tracking-[0.3em] lux-text-gradient opacity-90">Neural Intelligence</h1>
+                    <p className="text-[12px] text-white font-black uppercase tracking-widest mt-1">{username}</p>
                 </div>
             </div>
-            <nav className="space-y-2 flex-grow">
+
+            <nav className="space-y-4 flex-grow">
                 {[
-                    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-                    ...(userRole !== 'BOOTH_AGENT' ? [{ id: 'engine', label: 'OCR Engine', icon: '⚡' }] : []),
-                    { id: 'voters', label: 'Voter List', icon: '👥' },
-                    { id: 'comm', label: 'Comm Hub', icon: '📡' },
-                    { id: 'design', label: 'Slip Design', icon: '🎨' },
-                    ...(['SUPERUSER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER'].includes(userRole) ? [{ id: 'admin', label: 'System Admin', icon: '🛡️' }] : [])
+                    { id: 'dashboard', label: 'STRATEGIC HUB', icon: '📊' },
+                    ...(userRole !== 'BOOTH_AGENT' ? [{ id: 'engine', label: 'NEURAL AI LAB', icon: '⚡' }] : []),
+                    { id: 'voters', label: 'INTELLIGENCE BASE', icon: '👥' },
+                    { id: 'comm', label: 'STRATEGIC OUTREACH', icon: '📡' },
+                    { id: 'design', label: 'TACTICAL ASSETS', icon: '🎨' },
+                    ...(['SUPERUSER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER'].includes(userRole) ? [{ id: 'admin', label: 'GOVERNANCE LAYER', icon: '🛡️' }] : [])
                 ].map(item => (
                     <button
                         key={item.id}
                         onClick={() => setView(item.id)}
-                        className={`w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-all ${view === item.id ? 'bg-indigo-600 text-white shadow-lg scale-105 font-black' : 'text-slate-400 hover:bg-slate-800 font-bold'}`}
+                        className={`w-full flex items-center gap-5 px-8 py-5 rounded-[1.5rem] transition-all duration-700 group relative overflow-hidden ${view === item.id ? 'bg-indigo-500/10 text-white lux-neon-border' : 'text-slate-500 hover:text-slate-200 hover:bg-white/5'}`}
                     >
-                        <span>{item.icon}</span>
-                        <span className="uppercase text-[11px] tracking-widest">{item.label}</span>
+                        <span className={`text-2xl transition-all duration-700 ${view === item.id ? 'scale-125 rotate-6' : 'grayscale group-hover:grayscale-0 group-hover:scale-110 opacity-40 group-hover:opacity-100'}`}>{item.icon}</span>
+                        <span className="font-black text-[10px] tracking-[0.2em]">{item.label}</span>
+                        {view === item.id && (
+                            <div className="absolute right-6 w-2 h-2 bg-indigo-400 rounded-full shadow-[0_0_15px_#818cf8]" />
+                        )}
                     </button>
                 ))}
             </nav>
-            <div className="mt-auto pt-6 border-t border-slate-800">
-                <button onClick={handleLogout} className="w-full flex items-center gap-4 p-4 rounded-2xl font-black uppercase text-[11px] tracking-widest text-rose-400 hover:bg-rose-950/30 transition-all">
-                    <span>🚪</span> Logout
-                </button>
-            </div>
+
+            <button onClick={handleLogout} className="mt-auto flex items-center gap-5 px-8 py-5 rounded-[1.5rem] text-rose-500 font-black text-[10px] tracking-[0.2em] hover:bg-rose-500/10 transition-all group">
+                <span className="text-2xl group-hover:rotate-12 transition-transform">🚪</span>
+                <span>DEACTIVATE CORE</span>
+            </button>
         </aside>
     );
 };

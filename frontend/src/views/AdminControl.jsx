@@ -1,6 +1,3 @@
-import React from 'react';
-import { PieChart, Pie } from 'recharts';
-
 const AdminControl = ({
     allLocations,
     allUsers,
@@ -28,382 +25,244 @@ const AdminControl = ({
     dashboardStats
 }) => {
     return (
-        <div className="space-y-12 animate-in pb-20">
-            <header className="flex justify-between items-end">
+        <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-12 lux-animate-in pb-32 text-white">
+            <header className="flex justify-between items-end border-b border-white/5 pb-10">
                 <div>
-                    <h1 className="text-4xl font-black tracking-tighter uppercase text-slate-800">System Control</h1>
-                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mt-2">Organizational Governance Layer</p>
+                    <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient">Neural Config Engine</h1>
+                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Elite Organizational Governance Protocol</p>
                 </div>
-                <div className="flex gap-6">
-                    <div className="bg-white px-8 py-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-center">
-                        <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest mb-1">Unassigned Booths</p>
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-2xl font-black text-rose-600">
+                <div className="flex gap-8">
+                    <div className="lux-glass border-rose-500/20 px-10 py-6 rounded-[2rem] text-center shadow-2xl relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-rose-500/5 group-hover:bg-rose-500/10 transition-colors" />
+                        <p className="text-[9px] font-black uppercase text-rose-400 tracking-widest mb-1 relative z-10">Pending Units</p>
+                        <div className="flex items-baseline gap-3 relative z-10">
+                            <span className="text-4xl font-black italic">
                                 {(() => {
                                     const allBoothIds = allLocations.flatMap(c => c.local_bodies.flatMap(lb => lb.booths.map(b => b.id)));
                                     const assignedBoothIds = allUsers.flatMap(u => u.booth_ids || []);
-                                    const unassigned = allBoothIds.filter(id => !assignedBoothIds.includes(id));
-                                    return unassigned.length;
+                                    return allBoothIds.filter(id => !assignedBoothIds.includes(id)).length;
                                 })()}
                             </span>
-                            <span className="text-[10px] font-bold text-slate-400">Records Pending</span>
+                            <span className="text-[10px] font-black uppercase text-slate-500 italic">Unassigned</span>
                         </div>
                     </div>
-                    <div className="bg-white px-8 py-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-center">
-                        <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest mb-1">Human Intelligence</p>
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-2xl font-black text-slate-800">{allUsers.length}</span>
-                            <span className="text-[10px] font-bold text-slate-400">Activated Agents</span>
+                    <div className="lux-glass border-indigo-500/20 px-10 py-6 rounded-[2rem] text-center shadow-2xl relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-indigo-500/5 group-hover:bg-indigo-500/10 transition-colors" />
+                        <p className="text-[9px] font-black uppercase text-indigo-400 tracking-widest mb-1 relative z-10">Activated Agents</p>
+                        <div className="flex items-baseline gap-3 relative z-10">
+                            <span className="text-4xl font-black italic">{allUsers.length}</span>
+                            <span className="text-[10px] font-black uppercase text-slate-500 italic">Units</span>
                         </div>
                     </div>
                 </div>
             </header>
-            <div className="grid grid-cols-2 gap-12">
+
+            <div className="grid grid-cols-12 gap-10">
                 {userRole === 'SUPERUSER' && (
-                    <div className="space-y-8">
-                        <div className="bg-white p-10 rounded-[40px] shadow-xl border border-slate-100 space-y-6">
-                            <h3 className="text-xl font-black uppercase tracking-tight">Geo-Hierarchy Entry</h3>
-                            <div className="flex gap-2">
+                    <div className="col-span-12 lg:col-span-5 space-y-10">
+                        <div className="lux-glass p-12 rounded-[3.5rem] border-white/5 shadow-2xl space-y-10">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 italic">Geo-Hierarchy Synthesis</h3>
+                            <div className="flex gap-4 p-2 bg-black/40 rounded-2xl border border-white/5">
                                 {['const', 'lb', 'booth'].map(t => (
                                     <button
                                         key={t}
                                         onClick={() => setNewLocData({ ...newLocData, type: t })}
-                                        className={`flex-1 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${newLocData.type === t ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400'}`}
+                                        className={`flex-1 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all duration-500 ${newLocData.type === t ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.4)] translate-y-[-2px]' : 'text-slate-500 hover:text-white'}`}
                                     >
                                         {t}
                                     </button>
                                 ))}
                             </div>
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                                 {newLocData.type === 'booth' && (
-                                    <>
+                                    <div className="space-y-4">
                                         <select
                                             value={newLocData.grandParentId}
                                             onChange={(e) => setNewLocData({ ...newLocData, grandParentId: e.target.value, parentId: '' })}
-                                            className="w-full p-4 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold font-xs"
+                                            className="w-full bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 appearance-none transition-all"
                                         >
-                                            <option value="">Select Constituency...</option>
-                                            {allLocations.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            <option value="">SELECT SECTOR</option>
+                                            {allLocations.map(c => <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>)}
                                         </select>
                                         <select
                                             value={newLocData.parentId}
                                             onChange={(e) => setNewLocData({ ...newLocData, parentId: e.target.value })}
-                                            className="w-full p-4 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold font-xs"
+                                            className="w-full bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 appearance-none disabled:opacity-20 transition-all"
                                             disabled={!newLocData.grandParentId}
                                         >
-                                            <option value="">Select Local Body...</option>
-                                            {allLocations.find(c => String(c.id) === String(newLocData.grandParentId))?.local_bodies.map(lb => <option key={lb.id} value={lb.id}>{lb.name}</option>)}
+                                            <option value="">SELECT CORE UNIT</option>
+                                            {allLocations.find(c => String(c.id) === String(newLocData.grandParentId))?.local_bodies.map(lb => <option key={lb.id} value={lb.id} className="bg-slate-900">{lb.name}</option>)}
                                         </select>
                                         <input
                                             type="text"
-                                            placeholder="Booth Num"
+                                            placeholder="SERIAL NUMBER"
                                             value={newLocData.boothNum}
                                             onChange={(e) => setNewLocData({ ...newLocData, boothNum: e.target.value })}
-                                            className="w-full p-4 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold"
+                                            className="w-full bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-700"
                                         />
                                         <div className="grid grid-cols-2 gap-4">
-                                            <input
-                                                type="text"
-                                                placeholder="PS No"
-                                                value={newLocData.psNo}
-                                                onChange={(e) => setNewLocData({ ...newLocData, psNo: e.target.value })}
-                                                className="p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold"
-                                            />
-                                            <input
-                                                type="text"
-                                                placeholder="PS Name"
-                                                value={newLocData.psName}
-                                                onChange={(e) => setNewLocData({ ...newLocData, psName: e.target.value })}
-                                                className="p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold"
-                                            />
+                                            <input type="text" placeholder="PS_NO" value={newLocData.psNo} onChange={(e) => setNewLocData({ ...newLocData, psNo: e.target.value })} className="bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-700" />
+                                            <input type="text" placeholder="PS_NAME" value={newLocData.psName} onChange={(e) => setNewLocData({ ...newLocData, psName: e.target.value })} className="bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-700" />
                                         </div>
-                                    </>
+                                    </div>
                                 )}
                                 {newLocData.type !== 'booth' && (
                                     <input
                                         type="text"
-                                        placeholder={`${newLocData.type.toUpperCase()} Name`}
+                                        placeholder={`${newLocData.type.toUpperCase()} IDENTITY NAME`}
                                         value={newLocData.name}
                                         onChange={(e) => setNewLocData({ ...newLocData, name: e.target.value })}
-                                        className="w-full p-4 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold"
+                                        className="w-full bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-5 text-[11px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-700 shadow-inner"
                                     />
                                 )}
-                                <button onClick={handleAddLocation} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase text-[11px] shadow-xl">Add Location</button>
+                                <button onClick={handleAddLocation} className="w-full lux-btn-primary !py-6 text-[10px] tracking-[0.3em] shadow-[0_0_30px_rgba(99,102,241,0.3)]">Inject Neural Area Block</button>
                             </div>
                         </div>
 
-                        {/* Party Management */}
-                        <div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 space-y-8">
-                            <div className="flex items-center gap-4 border-b border-slate-50 pb-6">
-                                <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 text-xl shadow-inner">🎨</div>
-                                <div>
-                                    <h3 className="text-lg font-black uppercase tracking-tight text-slate-800">Political Brand Control</h3>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Manage Party Identities & Symbols</p>
-                                </div>
-                            </div>
-
+                        <div className="lux-glass p-12 rounded-[3.5rem] border-white/5 shadow-2xl space-y-10">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 italic">Party Brand Synthesis</h3>
                             <div className="space-y-6">
-                                <div className="grid grid-cols-1 gap-5">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black uppercase text-slate-500 px-1">Full Organization Name</label>
-                                        <input type="text" placeholder="e.g. Indian National Congress" value={newPartyData.name} onChange={(e) => setNewPartyData({ ...newPartyData, name: e.target.value })} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-bold text-slate-700 outline-none" />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black uppercase text-slate-500 px-1">Short Label</label>
-                                            <input type="text" placeholder="e.g. INC" value={newPartyData.shortLabel} onChange={(e) => setNewPartyData({ ...newPartyData, shortLabel: e.target.value })} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:bg-white" />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black uppercase text-slate-500 px-1">Quick Presets</label>
-                                            <select
-                                                onChange={(e) => {
-                                                    const p = PARTY_PRESETS.find(pr => pr.label === e.target.value);
-                                                    if (p) setNewPartyData({ ...newPartyData, name: p.label.split(' (')[0], shortLabel: p.short, color: p.color, gradient: p.gradient });
-                                                }}
-                                                className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-600 outline-none cursor-pointer focus:bg-white"
-                                            >
-                                                <option value="">Select Template...</option>
-                                                {PARTY_PRESETS.map(p => <option key={p.label} value={p.label}>{p.label}</option>)}
-                                            </select>
-                                        </div>
-                                    </div>
+                                <div className="space-y-2">
+                                    <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest ml-1">Identity Map</label>
+                                    <select
+                                        onChange={(e) => {
+                                            const p = PARTY_PRESETS.find(pr => pr.label === e.target.value);
+                                            if (p) setNewPartyData({ ...newPartyData, name: p.label.split(' (')[0], shortLabel: p.short, color: p.color, gradient: p.gradient });
+                                        }}
+                                        className="w-full bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 appearance-none transition-all cursor-pointer"
+                                    >
+                                        <option value="">LOAD TEMPLATE...</option>
+                                        {PARTY_PRESETS.map(p => <option key={p.label} value={p.label} className="bg-slate-900">{p.label}</option>)}
+                                    </select>
                                 </div>
-
-                                <div className="p-5 bg-slate-50/50 rounded-2xl border border-slate-100 space-y-4">
-                                    <div className="flex items-center justify-between gap-4">
-                                        <div className="flex-1 space-y-1.5">
-                                            <label className="text-[9px] font-black uppercase text-slate-400">Primary Branding Color</label>
-                                            <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
-                                                <input type="color" value={newPartyData.color} onChange={(e) => setNewPartyData({ ...newPartyData, color: e.target.value })} className="w-10 h-8 bg-transparent border-none rounded cursor-pointer shrink-0" />
-                                                <span className="text-[11px] font-mono font-bold text-slate-500">{newPartyData.color.toUpperCase()}</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex-1 space-y-1.5">
-                                            <label className="text-[9px] font-black uppercase text-slate-400">Identity Gradient</label>
-                                            <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm h-12 flex items-center">
-                                                <input type="text" value={newPartyData.gradient} onChange={(e) => setNewPartyData({ ...newPartyData, gradient: e.target.value })} className="w-full bg-transparent border-none outline-none font-mono text-[9px] text-slate-400 px-2 truncate" />
-                                            </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <input type="text" placeholder="ORG_NAME" value={newPartyData.name} onChange={(e) => setNewPartyData({ ...newPartyData, name: e.target.value })} className="bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-700" />
+                                    <input type="text" placeholder="SHORT_LABEL" value={newPartyData.shortLabel} onChange={(e) => setNewPartyData({ ...newPartyData, shortLabel: e.target.value })} className="bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-700" />
+                                </div>
+                                <div className="flex gap-4 p-4 bg-white/5 border border-white/10 rounded-2xl items-center">
+                                    <div className="flex-1 space-y-2">
+                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Brand Color</p>
+                                        <div className="flex items-center gap-4">
+                                            <input type="color" value={newPartyData.color} onChange={(e) => setNewPartyData({ ...newPartyData, color: e.target.value })} className="w-12 h-10 bg-transparent border-none rounded cursor-pointer shrink-0" />
+                                            <span className="text-[10px] font-mono text-slate-400 font-black">{newPartyData.color.toUpperCase()}</span>
                                         </div>
                                     </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase px-1">Official Symbol Logo</label>
-                                    <div className="relative cursor-pointer group">
-                                        <input type="file" id="party-logo-input" onChange={(e) => setNewPartyFile(e.target.files[0])} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                                        <div className="w-full py-6 bg-white border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-2 group-hover:border-indigo-400 group-hover:bg-indigo-50/10 transition-all">
-                                            <span className="text-2xl">{newPartyFile ? "✅" : "📤"}</span>
-                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{newPartyFile ? newPartyFile.name : "Click to Upload Symbol"}</span>
-                                        </div>
+                                    <div className="flex-[2] space-y-2">
+                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Neural Gradient</p>
+                                        <input type="text" value={newPartyData.gradient} onChange={(e) => setNewPartyData({ ...newPartyData, gradient: e.target.value })} className="w-full bg-transparent text-[9px] font-mono text-indigo-400 outline-none truncate italic" />
                                     </div>
                                 </div>
-
-                                <button onClick={handleAddParty} className="w-full bg-slate-900 text-white py-4 rounded-xl font-black uppercase tracking-[0.1em] text-[11px] shadow-lg shadow-slate-200 active:scale-[0.98] transition-all hover:bg-slate-800">Register Branding</button>
-                            </div>
-
-                            <div className="pt-6 border-t border-slate-50">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">Registered Parties</p>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {allParties.map(p => (
-                                        <div key={p.id} className="bg-white p-3 rounded-2xl flex items-center gap-3 border border-slate-100 shadow-sm hover:translate-y-[-2px] transition-all" style={{ borderLeft: `4px solid ${p.primary_color}` }}>
-                                            <img src={`/api/party-symbol/${p.symbol_image}`} className="w-8 h-8 object-contain rounded-lg bg-slate-50 p-1 border border-slate-100" alt={p.name} />
-                                            <div className="overflow-hidden">
-                                                <span className="text-[10px] font-black uppercase truncate block text-slate-700 leading-tight">{p.name}</span>
-                                                <span className="text-[8px] font-bold text-slate-400 uppercase leading-none">{p.short_label}</span>
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div onClick={() => document.getElementById('party-logo-input').click()} className="group border-2 border-dashed border-white/10 p-10 rounded-3xl flex flex-col items-center gap-3 cursor-pointer hover:bg-white/5 hover:border-indigo-500/30 transition-all relative overflow-hidden">
+                                    <span className="text-3xl group-hover:scale-125 transition-transform duration-500">{newPartyFile ? '✨' : '📤'}</span>
+                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">{newPartyFile ? newPartyFile.name : 'INJECT SYMBOL_PROTOCOL'}</span>
+                                    <input type="file" id="party-logo-input" className="hidden" onChange={(e) => setNewPartyFile(e.target.files[0])} />
                                 </div>
+                                <button onClick={handleAddParty} className="w-full lux-btn-primary !from-indigo-600 !to-purple-600 !py-6 text-[10px] tracking-[0.3em] shadow-[0_0_30px_rgba(139,92,246,0.3)]">Register Neural Party Brand</button>
                             </div>
                         </div>
                     </div>
                 )}
 
-                <div className={`space-y-8 ${userRole !== 'SUPERUSER' ? 'col-span-2' : ''}`}>
-                    <div className="bg-white p-10 rounded-[40px] shadow-xl border border-slate-100 space-y-6">
-                        <h3 className="text-xl font-black uppercase tracking-tight">{editingUser ? `Update ${editingUser.username}` : 'Account Activation'}</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <input type="text" disabled={!!editingUser} placeholder="Username" value={newUserData.username} onChange={(e) => setNewUserData({ ...newUserData, username: e.target.value })} className="p-4 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold" />
-                            {!editingUser && <input type="password" placeholder="Password" value={newUserData.password} onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })} className="p-4 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold" />}
-                            <select value={newUserData.role} onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value, assignments: { constituencies: [], local_bodies: [], booths: [] } })} className="col-span-2 p-4 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold">
-                                <option value="">Select Role...</option>
-                                <option value="BOOTH_AGENT">Booth Agent</option>
-                                <option value="ZONE_COMMANDER">Zone Commander</option>
-                                <option value="LOCAL_BODY_HEAD">Local Body Head</option>
-                                <option value="CONSTITUENCY_ADMIN">Constituency Admin</option>
-                                <option value="MANAGER">Manager</option>
-                                <option value="OPERATOR">Operator</option>
-                                <option value="SUPERUSER">Superuser</option>
-                            </select>
-
-                            <div className="col-span-2 space-y-4 py-2">
-                                <div className="flex items-center gap-2 border-b border-slate-50 pb-2">
-                                    <span className="text-[10px] font-black uppercase text-slate-400">Permission Matrix</span>
+                <div className={`col-span-12 lg:col-span-7 space-y-12 ${userRole !== 'SUPERUSER' ? 'lg:col-span-12' : ''}`}>
+                    <div className="lux-glass p-12 rounded-[3.5rem] border-white/5 shadow-2xl space-y-12">
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-indigo-400 italic">Agent Activation Crypt</h3>
+                        <div className="grid grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Identity Key</label>
+                                <input type="text" disabled={!!editingUser} placeholder="USERNAME" value={newUserData.username} onChange={(e) => setNewUserData({ ...newUserData, username: e.target.value })} className="w-full bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-800 disabled:opacity-20" />
+                            </div>
+                            {!editingUser && (
+                                <div className="space-y-4">
+                                    <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Secure Bypass</label>
+                                    <input type="password" placeholder="PASSWORD" value={newUserData.password} onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })} className="w-full bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-800" />
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
+                            )}
+                            <div className="col-span-2 space-y-4">
+                                <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Tactical Rank</label>
+                                <select value={newUserData.role} onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value, assignments: { constituencies: [], local_bodies: [], booths: [] } })} className="w-full bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-5 text-[11px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 appearance-none transition-all">
+                                    <option value="">SELECT CLEARANCE LEVEL</option>
+                                    <option value="BOOTH_AGENT" className="bg-slate-900">BOOTH AGENT</option>
+                                    <option value="ZONE_COMMANDER" className="bg-slate-900">ZONE COMMANDER</option>
+                                    <option value="LOCAL_BODY_HEAD" className="bg-slate-900">LOCAL BODY HEAD</option>
+                                    <option value="CONSTITUENCY_ADMIN" className="bg-slate-900">CONSTITUENCY ADMIN</option>
+                                    <option value="MANAGER" className="bg-slate-900">GENERAL MANAGER</option>
+                                    <option value="OPERATOR" className="bg-slate-900">SYSTEM OPERATOR</option>
+                                    <option value="SUPERUSER" className="bg-slate-900">SUPERUSER COMMAND</option>
+                                </select>
+                            </div>
+
+                            <div className="col-span-2 p-10 bg-black/40 border border-white/5 rounded-[2.5rem] space-y-10 group">
+                                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] italic flex items-center gap-3">
+                                    <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_10px_#6366f1]" />
+                                    Permission Clearance Matrix
+                                </p>
+                                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
                                     {[
-                                        { key: 'can_download', label: 'Report Export', icon: '📊' },
-                                        { key: 'can_upload', label: 'OCR Engine', icon: '⚡' },
-                                        { key: 'can_verify', label: 'Data Verification', icon: '✅' },
-                                        { key: 'can_edit_voters', label: 'Intelligence Edit', icon: '✏️' },
-                                        { key: 'can_send_broadcasts', label: 'Comms Hub', icon: '📣' },
-                                        { key: 'can_manage_system', label: 'System Admin', icon: '🛡️' },
+                                        { key: 'can_download', label: 'Intel Export', icon: '📊' },
+                                        { key: 'can_upload', label: 'AI Synthesis', icon: '⚡' },
+                                        { key: 'can_verify', label: 'Truth Auth', icon: '✅' },
+                                        { key: 'can_edit_voters', label: 'Core Intel Mod', icon: '✏️' },
+                                        { key: 'can_send_broadcasts', label: 'Propagation', icon: '📣' },
+                                        { key: 'can_manage_system', label: 'Full Governance', icon: '🛡️' },
                                     ].map(perm => (
                                         <button
                                             key={perm.key}
                                             onClick={() => setNewUserData({ ...newUserData, [perm.key]: !newUserData[perm.key] })}
-                                            className={`p-3 rounded-2xl flex items-center gap-3 border transition-all ${newUserData[perm.key] ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 opacity-60'}`}
+                                            className={`p-5 rounded-2xl flex items-center gap-4 border transition-all duration-700 relative overflow-hidden group/btn ${newUserData[perm.key] ? 'border-indigo-500/50 bg-indigo-500/10 shadow-[0_0_20px_rgba(99,102,241,0.1)]' : 'border-white/5 bg-white/5 opacity-40 hover:opacity-100'}`}
                                         >
-                                            <span className="text-sm">{perm.icon}</span>
-                                            <span className="text-[9px] font-black uppercase tracking-tight">{perm.label}</span>
+                                            <span className="text-xl group-hover/btn:scale-125 transition-transform duration-500">{perm.icon}</span>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-white leading-none">{perm.label}</span>
                                         </button>
                                     ))}
                                 </div>
                             </div>
-
-                            {newUserData.role && !['SUPERUSER', 'MANAGER', 'OPERATOR'].includes(newUserData.role) && (
-                                <div className="col-span-2 bg-slate-50 p-6 rounded-3xl space-y-4">
-                                    <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest px-2">Hierarchical Assignment</label>
-                                    <div className="space-y-4">
-                                        {['LOCAL_BODY_HEAD', 'ZONE_COMMANDER', 'BOOTH_AGENT'].includes(newUserData.role) && (
-                                            <select
-                                                value={assignSelection.constId}
-                                                onChange={(e) => setAssignSelection({ ...assignSelection, constId: e.target.value, lbId: '' })}
-                                                className="w-full p-4 bg-white border border-slate-200 rounded-2xl font-bold text-xs"
-                                            >
-                                                <option value="">Select Constituency...</option>
-                                                {allLocations.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            </select>
-                                        )}
-
-                                        {['ZONE_COMMANDER', 'BOOTH_AGENT'].includes(newUserData.role) && assignSelection.constId && (
-                                            <select
-                                                value={assignSelection.lbId}
-                                                onChange={(e) => setAssignSelection({ ...assignSelection, lbId: e.target.value })}
-                                                className="w-full p-4 bg-white border border-slate-200 rounded-2xl font-bold text-xs"
-                                            >
-                                                <option value="">Select Local Body...</option>
-                                                {(allLocations.find(c => String(c.id) === String(assignSelection.constId))?.local_bodies || []).map(lb => (
-                                                    <option key={lb.id} value={lb.id}>{lb.name}</option>
-                                                ))}
-                                            </select>
-                                        )}
-
-                                        <div className="max-h-48 overflow-y-auto space-y-2 border-t pt-4">
-                                            {(() => {
-                                                let items = [];
-                                                let key = '';
-
-                                                if (newUserData.role === 'CONSTITUENCY_ADMIN') {
-                                                    items = allLocations;
-                                                    key = 'constituencies';
-                                                } else if (newUserData.role === 'LOCAL_BODY_HEAD') {
-                                                    items = allLocations.find(c => String(c.id) === String(assignSelection.constId))?.local_bodies || [];
-                                                    key = 'local_bodies';
-                                                } else if (['ZONE_COMMANDER', 'BOOTH_AGENT'].includes(newUserData.role)) {
-                                                    items = (allLocations.find(c => String(c.id) === String(assignSelection.constId))?.local_bodies || []).find(lb => String(lb.id) === String(assignSelection.lbId))?.booths || [];
-                                                    key = 'booths';
-                                                }
-
-                                                if (items.length === 0 && !['CONSTITUENCY_ADMIN'].includes(newUserData.role)) {
-                                                    return <p className="text-[10px] text-slate-400 font-bold italic text-center py-4">Please select parent area first</p>;
-                                                }
-
-                                                return items.map(item => {
-                                                    const isAssigned = newUserData.assignments[key]?.includes(item.id);
-                                                    const isTaken = allUsers.some(u =>
-                                                        u.id !== editingUser?.id && (
-                                                            (key === 'booths' && u.booth_ids?.includes(item.id)) ||
-                                                            (key === 'local_bodies' && u.local_body_ids?.includes(item.id)) ||
-                                                            (key === 'constituencies' && u.constituency_ids?.includes(item.id))
-                                                        )
-                                                    );
-
-                                                    return (
-                                                        <button
-                                                            key={item.id}
-                                                            disabled={isTaken && !isAssigned}
-                                                            onClick={() => {
-                                                                const current = newUserData.assignments[key] || [];
-                                                                const updated = isAssigned ? current.filter(id => id !== item.id) : [...current, item.id];
-                                                                setNewUserData({ ...newUserData, assignments: { ...newUserData.assignments, [key]: updated } });
-                                                            }}
-                                                            className={`w-full text-left p-3 rounded-xl text-[10px] font-black uppercase tracking-tight flex justify-between items-center transition-all ${isAssigned ? 'bg-indigo-600 text-white shadow-md' :
-                                                                isTaken ? 'bg-slate-100 text-slate-300 cursor-not-allowed opacity-50' :
-                                                                    'bg-white hover:bg-slate-200 text-slate-600 shadow-sm'
-                                                                }`}
-                                                        >
-                                                            <div className="flex flex-col">
-                                                                <span>{item.name || `Booth ${item.number}`}</span>
-                                                                {isTaken && !isAssigned && <span className="text-[7px] font-bold text-rose-400">Already Active</span>}
-                                                            </div>
-                                                            <span>{isAssigned ? '✅' : isTaken ? '🔒' : '+'}</span>
-                                                        </button>
-                                                    );
-                                                });
-                                            })()}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
-                        <div className="flex gap-4">
+
+                        <div className="flex gap-6">
                             {editingUser && (
-                                <button onClick={() => {
-                                    setEditingUser(null);
-                                    setNewUserData({ username: '', password: '', role: 'BOOTH_AGENT', assignments: { constituencies: [], local_bodies: [], booths: [] } });
-                                }} className="flex-1 bg-slate-100 text-slate-400 py-5 rounded-3xl font-black uppercase tracking-widest text-[11px]">Cancel</button>
+                                <button onClick={() => { setEditingUser(null); setNewUserData({ username: '', password: '', role: 'BOOTH_AGENT', assignments: { constituencies: [], local_bodies: [], booths: [] } }); }} className="flex-1 lux-glass border-white/10 py-6 rounded-3xl font-black uppercase tracking-widest text-[11px] hover:bg-white/5 transition-all">Abadon Modification</button>
                             )}
-                            <button onClick={editingUser ? handleUpdateUser : handleCreateUser} className="flex-[2] bg-indigo-600 text-white py-5 rounded-3xl font-black uppercase shadow-xl hover:bg-indigo-700 transition-all">
-                                {editingUser ? 'Save Updates' : 'Activate Account'}
+                            <button onClick={editingUser ? handleUpdateUser : handleCreateUser} className="flex-[2] lux-btn-primary !py-8 text-sm tracking-[0.4em] shadow-[0_0_40px_rgba(99,102,241,0.3)]">
+                                {editingUser ? 'Commit Agent Logic' : 'Initiate Agent Activation'}
                             </button>
                         </div>
                     </div>
 
-                    <div className="space-y-6">
-                        <div className="flex justify-between items-center px-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-1.5 h-6 bg-indigo-500 rounded-full"></div>
-                                <h3 className="text-xl font-black uppercase tracking-tight text-slate-800">Active Intelligence Network</h3>
+                    <div className="space-y-10">
+                        <div className="flex justify-between items-end px-6">
+                            <div>
+                                <h3 className="text-2xl font-black uppercase tracking-tighter text-white italic">Active Node Network</h3>
+                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mt-1">Live Agents Online: {allUsers.length}</p>
                             </div>
-                            <div className="bg-slate-100 px-3 py-1 rounded-full text-[10px] font-black text-slate-400 uppercase tracking-widest">{allUsers.length} Agents</div>
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="grid grid-cols-1 gap-6">
                             {allUsers.map(u => (
-                                <div key={u.id} className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 flex items-center justify-between hover:border-indigo-200 hover:shadow-md transition-all group">
-                                    <div className="flex items-center gap-5 flex-1 min-w-0">
-                                        <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-slate-400 text-xs shadow-inner uppercase shrink-0">
+                                <div key={u.id} className="lux-glass !bg-white/5 border-white/5 p-10 rounded-[3rem] flex items-center justify-between hover:bg-white/10 hover:border-indigo-500/30 transition-all duration-700 group relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <div className="flex items-center gap-8 relative z-10 flex-1">
+                                        <div className="w-16 h-16 rounded-[1.5rem] bg-indigo-500/10 border border-white/10 flex items-center justify-center font-black text-indigo-400 text-xl shadow-inner uppercase italic">
                                             {u.username.substring(0, 2)}
                                         </div>
-                                        <div className="min-w-0">
-                                            <div className="flex items-center gap-3 mb-1">
-                                                <h4 className="font-black uppercase text-sm text-slate-800 tracking-tight truncate">{u.username}</h4>
-                                                <span className="px-2 py-0.5 bg-slate-900 text-white rounded-md text-[8px] font-black uppercase tracking-[0.1em] shrink-0">{u.role}</span>
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-4">
+                                                <h4 className="text-xl font-black uppercase text-white tracking-tight italic">{u.username}</h4>
+                                                <span className="px-3 py-1 bg-white text-black rounded-lg text-[9px] font-black uppercase tracking-widest italic">{u.role}</span>
                                             </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {(u.constituencies || []).map(n => <span key={n} className="text-[9px] font-bold text-blue-500 uppercase bg-blue-50 px-2 py-0.5 rounded border border-blue-100/50">Const: {n}</span>)}
-                                                {(u.local_bodies || []).map(n => <span key={n} className="text-[9px] font-bold text-emerald-500 uppercase bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100/50">LB: {n}</span>)}
-                                                {(u.booths || []).map(n => <span key={n} className="text-[9px] font-bold text-slate-500 uppercase bg-slate-50 px-2 py-0.5 rounded border border-slate-200">Booth {n}</span>)}
-                                                {!(u.constituencies?.length || u.local_bodies?.length || u.booths?.length) && <span className="text-[9px] italic text-slate-300 font-bold uppercase tracking-widest">Awaiting Assignment</span>}
+                                            <div className="flex flex-wrap gap-3">
+                                                {(u.constituencies || []).map(n => <span key={n} className="text-[9px] font-black text-indigo-400 uppercase bg-indigo-500/5 px-3 py-1 rounded-lg border border-indigo-500/20 italic">Sector: {n}</span>)}
+                                                {(u.local_bodies || []).map(n => <span key={n} className="text-[9px] font-black text-emerald-400 uppercase bg-emerald-500/5 px-3 py-1 rounded-lg border border-emerald-500/20 italic">Unit: {n}</span>)}
+                                                {(u.booths || []).map(n => <span key={n} className="text-[9px] font-black text-slate-400 uppercase bg-white/5 px-3 py-1 rounded-lg border border-white/10 italic">Core: {n}</span>)}
                                             </div>
                                         </div>
                                     </div>
-
-                                    <div className="flex items-center gap-3 pl-6 border-l border-slate-50 ml-6 shrink-0">
-                                        <button
-                                            onClick={() => startEditUser(u)}
-                                            className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all active:scale-95 shadow-sm"
-                                        >
-                                            Modify
+                                    <div className="flex items-center gap-4 pl-10 border-l border-white/5 relative z-10">
+                                        <button onClick={() => startEditUser(u)} className="p-4 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-white hover:text-black transition-all group/btn">
+                                            <span className="text-[10px] font-black uppercase tracking-widest">MOD_NODE</span>
                                         </button>
                                         {(userRole === 'SUPERUSER' || userRole === 'MANAGER') && (
-                                            <button
-                                                onClick={() => handleDeleteUser(u.id)}
-                                                className="px-5 py-2.5 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all active:scale-95 shadow-sm"
-                                            >
-                                                Revoke
+                                            <button onClick={() => handleDeleteUser(u.id)} className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-all">
+                                                <span className="text-[10px] font-black uppercase tracking-widest italic">DEACTIVATE</span>
                                             </button>
                                         )}
                                     </div>

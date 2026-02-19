@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=voter_db
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=secretpassword
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  app:
+    build: .
+    restart: always
+    expose:
+      - "8000"
+    environment:
+      - DATABASE_URL=postgres://admin:secretpassword@db:5432/voter_db
+      - REDIS_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=voter_vault.settings
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - .:/app
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    build: .
+    restart: always
+    # Use -P solo to avoid forking overhead on low-RAM servers
+    # Add --max-tasks-per-child to prevent memory leaks over time
+    command: celery -A backend.celery_app worker --loglevel=info -P solo --max-tasks-per-child=5
+    environment:
+      - DATABASE_URL=postgres://admin:secretpassword@db:5432/voter_db
+      - REDIS_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=voter_vault.settings
+      - PYTHONPATH=/app/voter_vault
+      - OMP_THREAD_LIMIT=1 # Limit Tesseract threads
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - .:/app
+    depends_on:
+      - db
+      - redis
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - app
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on:
+      - nginx
+
+volumes:
+  postgres_data:
+  redis_data:

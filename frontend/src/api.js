@@ -132,8 +132,8 @@ const api = {
             }).catch(e => alert("Access Denied or Download Error: " + (e.response?.status === 403 ? "Restricted for Employees" : e.message)));
     },
 
-    getStats: async (constituency = null, booth = null) => {
-        const response = await client.get('/api/stats', { params: { constituency, booth } });
+    getStats: async (constituency = null, lb = null, booth = null) => {
+        const response = await client.get('/api/stats', { params: { constituency, lb, booth } });
         return response.data;
     },
 

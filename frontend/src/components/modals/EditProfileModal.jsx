@@ -112,6 +112,16 @@ const EditProfileModal = ({
                             <option value="ABROAD">Abroad</option>
                         </select>
                     </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Voting Probability</label>
+                        <select value={editData.voting_probability || ''} onChange={(e) => setEditData({ ...editData, voting_probability: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold uppercase text-xs">
+                            <option value="">Select Probability</option>
+                            <option value="CONFIRMED">🎯 Confirmed</option>
+                            <option value="LIKELY">📈 Likely</option>
+                            <option value="UNLIKELY">📉 Unlikely</option>
+                            <option value="OUT_OF_STATION">🚪 Out of Station</option>
+                        </select>
+                    </div>
                     <div className="space-y-1 col-span-2">
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Phone Number</label>
                         <input type="text" value={editData.phone_no || ''} onChange={(e) => setEditData({ ...editData, phone_no: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold" placeholder="e.g. +91 9876543210" />

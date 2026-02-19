@@ -75,9 +75,8 @@ def run_extraction_task(batch_id: str, dpi: int, direct_pdf: bool = False):
 
         if direct_pdf:
             # --- STRATEGIC SHORTCUT (Safe Mode) ---
-            # Explicitly persist the direct_pdf flag for the next phase
             batch['direct_pdf'] = True
-            batch['pages_processed'] = batch.get('total_pages', 0)
+            batch['pages_processed'] = 0 # Reset for the next step progress tracking
             batch['status'] = 'extracted'
             state_manager.set_batch(batch_id, batch)
             logger.info(f"Batch {batch_id} ready for Strategic AI extraction.")
@@ -138,20 +137,28 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
 
             processor = BatchProcessor()
             
-            # --- PROGRESS CALLBACK SYSTEM ---
+            completed_pages = set() # Track unique finished pages
             def update_progress(page_num, page_results):
                 current_batch = state_manager.get_batch(batch_id)
                 if not current_batch: return
                 
-                # Append new results to the master list
+                completed_pages.add(page_num)
                 existing_results = current_batch.get('results', [])
+                
+                # Critical Fix: Assign temporary tracer IDs to results so API doesn't crash on missing 'voter_id'
+                start_id = len(existing_results) + 1
+                for i, r in enumerate(page_results):
+                    r['voter_id'] = f"tmp_{page_num}_{start_id + i}"
+                    # Basic status check if not already present
+                    if 'Status' not in r: r['Status'] = '✅ OK'
+                
                 existing_results.extend(page_results)
                 
                 # Update counters
                 current_batch['results'] = existing_results
                 current_batch['total_voters'] = len(existing_results)
                 current_batch['voters_processed'] = len(existing_results)
-                current_batch['pages_processed'] = page_num if page_num else current_batch.get('total_pages', 0)
+                current_batch['pages_processed'] = len(completed_pages)
                 current_batch['clean_count'] = len([r for r in existing_results if r.get('Status') == '✅ OK'])
                 current_batch['flagged_count'] = len([r for r in existing_results if r.get('Status') != '✅ OK'])
                 
@@ -164,10 +171,16 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
 
             results = processor.process_pdf_directly(processing_path, page_range=target_pages, callback=update_progress)
             
-            # Final status update
+            # Final status update: Save the perfectly ORDERED results
             batch = state_manager.get_batch(batch_id)
-            batch['status'] = 'processed'
-            state_manager.set_batch(batch_id, batch)
+            if batch:
+                batch['results'] = results
+                batch['total_voters'] = len(results)
+                batch['voters_processed'] = len(results)
+                batch['pages_processed'] = batch.get('total_pages', 0)
+                batch['status'] = 'processed'
+                state_manager.set_batch(batch_id, batch)
+                logger.info(f"Parallel Extraction Complete for {batch_id}: {len(results)} voters saved.")
             return
 
         # --- LEGACY IMAGE-BASED FLOW ---

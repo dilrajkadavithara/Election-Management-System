@@ -13,64 +13,80 @@ class BatchProcessor:
         self.results = []
 
     def process_pdf_directly(self, pdf_path, page_range=None, callback=None):
-        """Strategic Streaming Upgrade: Pulls data page-by-page to avoid AI output limits and show live progress."""
+        """Neural Parallel Upgrade: Processes multiple pages simultaneously using Gemini."""
+        import concurrent.futures
         all_standardized = []
         
-        # If no range provided, we fallback to one-shot (not recommended for large lists)
         pages = page_range if page_range else [None]
         
-        for page in pages:
-            raw_data = self.engine.extract_from_pdf(pdf_path, page_num=page)
-            if not raw_data:
-                continue
+        def process_page(page_num):
+            try:
+                raw_data = self.engine.extract_from_pdf(pdf_path, page_num=page_num)
+                if not raw_data:
+                    return page_num, []
 
-            # --- JSON DEFUSER: Handle wraps like {"voters": [...]} or {"data": [...]} ---
-            raw_list = []
-            if isinstance(raw_data, list):
-                raw_list = raw_data
-            elif isinstance(raw_data, dict):
-                # Try to find the first list-type value in the dictionary
-                for val in raw_data.values():
-                    if isinstance(val, list):
-                        raw_list = val
-                        break
-            
-            if not raw_list:
-                logger.warning(f"No voter list found in Gemini response for page {page}")
-                continue
-
-            page_results = []
-            for entry in raw_list:
-                if not isinstance(entry, dict):
-                    continue
-                    
-                voter_id = len(all_standardized) + len(page_results) + 1
+                raw_list = []
+                if isinstance(raw_data, list):
+                    raw_list = raw_data
+                elif isinstance(raw_data, dict):
+                    for val in raw_data.values():
+                        if isinstance(val, list):
+                            raw_list = val
+                            break
                 
-                # Step 1: Map raw Gemini fields to our internal standard
-                parsed_info = {
-                    "voter_id": voter_id,
-                    "Full Name": entry.get("name_malayalam") or entry.get("Full Name", ""),
-                    "Relation Name": entry.get("relation_name_malayalam") or entry.get("Relation Name", ""),
-                    "Relation Type": str(entry.get("relation_type") or entry.get("Relation Type", "")).title(),
-                    "House Name": entry.get("house_name_malayalam") or entry.get("House Name", ""),
-                    "House Number": entry.get("house_number") or entry.get("House Number", ""),
-                    "Age": str(entry.get("age") or entry.get("Age", "")),
-                    "Gender": str(entry.get("gender") or entry.get("Gender", "")).title(),
-                    "EPIC_ID": entry.get("epic_id") or entry.get("EPIC_ID", ""),
-                    "Serial_OCR": str(entry.get("serial_number") or entry.get("Serial_OCR", "")),
-                    "Image_Path": f"pdf_page_{page if page else 'all'}",
-                    "Filename": os.path.basename(pdf_path)
-                }
+                if not raw_list:
+                    return page_num, []
 
-                # Step 2: Apply our "Integrity Shield" (Healing and Validation)
-                self._apply_standardization(parsed_info, voter_id)
-                page_results.append(parsed_info)
+                page_results = []
+                for entry in raw_list:
+                    if not isinstance(entry, dict): continue
+                    
+                    parsed_info = {
+                        "Full Name": entry.get("name_malayalam") or entry.get("Full Name", ""),
+                        "Relation Name": entry.get("relation_name_malayalam") or entry.get("Relation Name", ""),
+                        "Relation Type": str(entry.get("relation_type") or entry.get("Relation Type", "")).title(),
+                        "House Name": entry.get("house_name_malayalam") or entry.get("House Name", ""),
+                        "House Number": entry.get("house_number") or entry.get("House Number", ""),
+                        "Age": str(entry.get("age") or entry.get("Age", "")),
+                        "Gender": str(entry.get("gender") or entry.get("Gender", "")).title(),
+                        "EPIC_ID": entry.get("epic_id") or entry.get("EPIC_ID", ""),
+                        "Serial_OCR": str(entry.get("serial_number") or entry.get("Serial_OCR", "")),
+                        "Image_Path": f"pdf_page_{page_num if page_num else 'all'}",
+                        "Filename": os.path.basename(pdf_path)
+                    }
+                    page_results.append(parsed_info)
+                return page_num, page_results
+            except Exception as e:
+                logging.error(f"Thread Error on Page {page_num}: {e}")
+                return page_num, []
+
+        # Safe parallelism level for Gemini Flash Free Tier (Limit 15 RPM)
+        # We use 5 workers to be safe and avoid 429 errors.
+        max_workers = 5 
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Map the processing function across all target pages
+            future_to_page = {executor.submit(process_page, p): p for p in pages}
             
-            all_standardized.extend(page_results)
+            # Temporary storage to maintain order after parallel execution
+            ordered_results = {}
             
-            # Live Progress Hand-off: Notify the system that a page is finished
-            if callback:
-                callback(page, page_results)
+            for future in concurrent.futures.as_completed(future_to_page):
+                page, results = future.result()
+                ordered_results[page] = results
+                
+                # Signal progress and results as they arrive
+                if callback and results:
+                    callback(page, results)
+
+            # Reconstruct the final list in correct page order
+            for p in pages:
+                if p in ordered_results:
+                    for i, voter in enumerate(ordered_results[p]):
+                        # Global IDs are assigned here to ensure continuity
+                        voter["voter_id"] = len(all_standardized) + 1
+                        self._apply_standardization(voter, voter["voter_id"])
+                        all_standardized.append(voter)
 
         return all_standardized
 
@@ -108,7 +124,19 @@ class BatchProcessor:
             elif "$" in val or "9$" in val:
                 flags.append(f"OCR Hallucination in {field}")
 
-        epic_val = str(parsed_info.get("EPIC_ID", "")).strip()
+        # --- EPIC ID AUTO-RECOVERY ---
+        # Fix for "JGQ" series being read as "GQ" (Missing leading J)
+        # This addresses specific OCR drop issues observed in 2025 rolls.
+        raw_epic = str(parsed_info.get("EPIC_ID", "")).strip().upper()
+        if len(raw_epic) == 9 and raw_epic.startswith("GQ"):
+            # Auto-prepend 'J'
+            raw_epic = "J" + raw_epic
+            parsed_info["EPIC_ID"] = raw_epic
+            # We mark as healed so status reflects automated intervention if needed,
+            # though for now we treat it as a standard correction.
+            is_healed = True
+        
+        epic_val = raw_epic
         if len(epic_val) >= 7 and len(epic_val) <= 9:
             flags.append(f"Truncated EPIC ({len(epic_val)})")
         elif not re.match(r'^[A-Z]{3}[0-9]{7}$', epic_val) and epic_val != "":
