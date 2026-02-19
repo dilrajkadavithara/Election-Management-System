@@ -47,106 +47,189 @@ const Dashboard = ({
     };
     const activeBrand = branding[perspective];
 
-    // --- WAR ROOM VIEW ---
+    // --- WAR ROOM LOGIC ---
+    const [warFilters, setWarFilters] = useState({
+        ageGroup: 'ALL',
+        gender: 'ALL',
+        location: 'LOCAL', // Default: Focus on LOCAL
+        probability: 'CONFIRMED', // Default: Focus on CONFIRMED
+        constituency: '',
+        lb: '',
+        booth: ''
+    });
+
+    // Mock Calculation for Dynamic Win Probability (Simulating backend logic for now)
+    // In a real scenario, this would filter the 'voters' array directly or fetch new stats.
+    // Here we use the 'decisive_stats' as a base and apply modifiers.
+    const calculateWinProb = () => {
+        let baseDecisive = dashboardStats.decisive_stats?.[perspective] || 0;
+        let totalDecisive = dashboardStats.decisive_stats?.total || 1;
+
+        // Apply penalties for weaker segments if data was granular (Simulated Logic)
+        if (warFilters.location === 'ABROAD') baseDecisive *= 0.2; // Hard to get abroad votes
+        if (warFilters.probability === 'UNLIKELY') baseDecisive *= 0.1;
+
+        const prob = Math.min(99, Math.round((baseDecisive / totalDecisive) * 100));
+        return { prob, volume: Math.round(baseDecisive) };
+    };
+
+    const { prob: warWinProb, volume: warVolume } = calculateWinProb();
+
     if (viewMode === 'WAR_ROOM') {
         return (
-            <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-12 lux-animate-in pb-32">
-                <header className="flex justify-between items-center border-b border-white/5 pb-12 relative z-20">
-                    <div>
-                        <button onClick={() => setViewMode('CLASSIC')} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white mb-4 flex items-center gap-2">
-                            ← Back to Dashboard
-                        </button>
-                        <h1 className="text-7xl font-black tracking-tighter uppercase leading-none">
-                            War <span className="lux-text-gradient">Room</span>
-                        </h1>
-                    </div>
-                </header>
+            <div className="min-h-screen lux-mesh-bg p-8 pl-96 flex gap-6 lux-animate-in">
 
-                <div className={`mt-8 border-t border-white/5 pt-12 ${activeBrand.gradient} rounded-[3rem] p-10 transition-all duration-1000`}>
-                    <div className="flex justify-between items-start mb-12">
+                {/* LEFT: TACTICAL MAIN DISPLAY */}
+                <div className="flex-grow space-y-8">
+                    <header className="flex justify-between items-center border-b border-white/5 pb-8">
                         <div>
-                            <h2 className="text-4xl font-black uppercase tracking-tighter leading-tight flex items-center gap-4">
-                                Tactical Operations Center
-                            </h2>
-                            <p className={`font-black uppercase tracking-[0.3em] text-[10px] ${activeBrand.text} mt-4`}>{perspective} Mode Active</p>
+                            <button onClick={() => setViewMode('CLASSIC')} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white mb-2 flex items-center gap-2 transition-colors">
+                                ← AI Dashboard
+                            </button>
+                            <h1 className="text-6xl font-black tracking-tighter uppercase leading-none">
+                                War <span className="lux-text-gradient">Room</span>
+                            </h1>
                         </div>
-
-                        {/* Perspective Toggle */}
-                        <div className="flex bg-black/40 backdrop-blur-md p-1 rounded-xl border border-white/10">
+                        {/* Perspective Toggle (Top Right) */}
+                        <div className="bg-slate-900/80 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 flex gap-1">
                             {Object.keys(branding).map(p => (
                                 <button
                                     key={p}
                                     onClick={() => setPerspective(p)}
-                                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all duration-500 ${perspective === p ? 'bg-white text-black shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                                    className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${perspective === p ? 'bg-white text-black shadow-lg scale-105' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
                                 >
                                     {p}
                                 </button>
                             ))}
                         </div>
-                    </div>
+                    </header>
 
-                    <div className="grid grid-cols-12 gap-8">
-                        {/* 1. Victory Probability Ring */}
-                        <div className="col-span-3 flex flex-col justify-center items-center bg-black/20 rounded-3xl p-8 border border-white/5 group hover:border-white/10 transition-all">
-                            <div className="relative w-48 h-48 flex items-center justify-center">
+                    {/* MAIN HUD */}
+                    <div className={`grid grid-cols-12 gap-6 ${activeBrand.gradient} p-8 rounded-[3rem] border border-white/5 shadow-2xl transition-all duration-1000`}>
+
+                        {/* Victory Ring */}
+                        <div className="col-span-4 flex flex-col items-center justify-center bg-black/20 rounded-3xl p-6 border border-white/5 relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="relative w-56 h-56 flex items-center justify-center">
                                 <svg className="w-full h-full transform -rotate-90">
-                                    <circle className="text-white/5" strokeWidth="12" stroke="currentColor" fill="none" r="70" cx="96" cy="96" />
+                                    <circle className="text-black/40" strokeWidth="16" stroke="currentColor" fill="none" r="80" cx="112" cy="112" />
                                     <circle
                                         className="transition-all duration-1000 ease-out"
-                                        strokeWidth="12"
-                                        strokeDasharray={2 * Math.PI * 70}
-                                        strokeDashoffset={2 * Math.PI * 70 * (1 - winProbability / 100)}
+                                        strokeWidth="16"
+                                        strokeDasharray={2 * Math.PI * 80}
+                                        strokeDashoffset={2 * Math.PI * 80 * (1 - warWinProb / 100)}
                                         strokeLinecap="round"
                                         stroke={activeBrand.color}
                                         fill="none"
-                                        r="70" cx="96" cy="96"
-                                        style={{ filter: `drop-shadow(0 0 15px ${activeBrand.color}60)` }}
+                                        r="80" cx="112" cy="112"
+                                        style={{ filter: `drop-shadow(0 0 20px ${activeBrand.color}80)` }}
                                     />
                                 </svg>
                                 <div className="absolute text-center">
-                                    <span className="text-5xl font-black tracking-tighter block">{winProbability}%</span>
-                                    <span className={`text-[8px] font-black uppercase tracking-widest ${activeBrand.text}`}>Win Prob.</span>
+                                    <span className="text-6xl font-black tracking-tighter block text-white drop-shadow-md">{warWinProb}%</span>
+                                    <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${activeBrand.text}`}>Probability</span>
                                 </div>
-                            </div>
-                            <div className="w-full mt-6 text-center">
-                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Decisive Volume: <span className="text-white">{selectedPartyDecisive}</span></p>
                             </div>
                         </div>
 
-                        {/* 2. Decisive Segment (Neutrals) */}
-                        <div className="col-span-5 bg-black/20 rounded-3xl p-8 border border-white/5 flex flex-col justify-between">
+                        {/* Strategy Info */}
+                        <div className="col-span-8 bg-black/20 rounded-3xl p-8 border border-white/5 flex flex-col justify-between">
                             <div>
-                                <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-emerald-500 mb-4">Target: Decisive Neutrals</h3>
-                                <div className="flex items-baseline gap-4">
-                                    <span className="text-5xl font-black text-emerald-500">{dashboardStats.decisive_stats?.NEUTRAL || 0}</span>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest max-w-[120px]">Voters are Local & Confirmed</span>
+                                <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-400 mb-2">Tactical Assessment</h3>
+                                <h2 className="text-3xl font-black uppercase text-white leading-tight mb-4">
+                                    {perspective} Position in <span className={activeBrand.text}>Selected Segment</span>
+                                </h2>
+                                <div className="flex gap-8 mt-6">
+                                    <div>
+                                        <span className="block text-4xl font-black text-white">{warVolume.toLocaleString()}</span>
+                                        <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Est. Votes</span>
+                                    </div>
+                                    <div>
+                                        <span className="block text-4xl font-black text-white">{(dashboardStats.decisive_stats?.total - warVolume).toLocaleString()}</span>
+                                        <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Gap to Cover</span>
+                                    </div>
                                 </div>
-                                <p className="text-[10px] font-medium text-slate-400 mt-4 leading-relaxed">
-                                    Need {marginToVictory}% more for majority. Converting 5% of this segment bridges the gap.
-                                </p>
                             </div>
-                            <div className="flex gap-4 mt-6">
-                                <button onClick={() => { setListFilters({ ...listFilters, leaning: 'NEUTRAL', location: 'LOCAL' }); setView('voters'); }} className="bg-emerald-500 hover:bg-emerald-600 text-black px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest w-full transition-all">Extract List</button>
+                            <div className="mt-8">
+                                <button className={`w-full py-4 rounded-xl font-black text-[11px] uppercase tracking-[0.2em] bg-white text-black hover:bg-${perspective === 'UDF' ? 'indigo' : perspective === 'LDF' ? 'rose' : 'amber'}-500 hover:text-white transition-all shadow-lg`}>
+                                    Generate Strategy Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* RIGHT: TACTICAL FILTER SIDEBAR */}
+                <div className="w-80 bg-slate-900/50 lux-glass border-l border-white/5 p-6 flex flex-col gap-8 h-[85vh] sticky top-8 rounded-3xl overflow-y-auto custom-scrollbar">
+                    <div>
+                        <h3 className="font-black uppercase tracking-[0.2em] text-[10px] text-slate-400 mb-6 flex items-center gap-2">
+                            ⚡ Live Variable Control
+                        </h3>
+
+                        {/* Filter: Location */}
+                        <div className="space-y-3 mb-8">
+                            <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Voter Location</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {['LOCAL', 'ABROAD', 'STATE'].map(l => (
+                                    <button
+                                        key={l}
+                                        onClick={() => setWarFilters({ ...warFilters, location: l })}
+                                        className={`py-3 rounded-lg text-[9px] font-black uppercase tracking-wider border ${warFilters.location === l ? `bg-${activeBrand.color} border-${activeBrand.color} text-white bg-opacity-20 border-opacity-50` : 'border-white/10 text-slate-400 hover:bg-white/5'}`}
+                                    >
+                                        {l}
+                                    </button>
+                                ))}
                             </div>
                         </div>
 
-                        {/* 3. Logistical Status (Mini) */}
-                        <div className="col-span-4 bg-black/20 rounded-3xl p-8 border border-white/5 space-y-4">
-                            <h4 className="text-[9px] font-black uppercase text-slate-500 tracking-widest border-b border-white/5 pb-2">Logistical Status</h4>
-                            {['LOCAL', 'ABROAD', 'STATE'].map(loc => (
-                                <div key={loc} className="flex justify-between items-center bg-white/5 p-2 px-3 rounded-lg">
-                                    <span className={`text-[9px] font-black uppercase ${loc === 'LOCAL' ? 'text-emerald-400' : 'text-slate-400'}`}>{loc}</span>
-                                    <span className="text-xs font-bold text-white">{dashboardStats.location?.[loc] || 0}</span>
-                                </div>
-                            ))}
-                            <h4 className="text-[9px] font-black uppercase text-slate-500 tracking-widest border-b border-white/5 pb-2 pt-2">Voting Pulse</h4>
-                            {['CONFIRMED', 'LIKELY'].map(prob => (
-                                <div key={prob} className="flex justify-between items-center bg-white/5 p-2 px-3 rounded-lg">
-                                    <span className={`text-[9px] font-black uppercase ${prob === 'CONFIRMED' ? 'text-emerald-400' : 'text-slate-400'}`}>{prob}</span>
-                                    <span className="text-xs font-bold text-white">{dashboardStats.probability?.[prob] || 0}</span>
-                                </div>
-                            ))}
+                        {/* Filter: Probability */}
+                        <div className="space-y-3 mb-8">
+                            <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Voting Probability</label>
+                            <div className="grid grid-cols-1 gap-2">
+                                {['CONFIRMED', 'LIKELY', 'UNLIKELY'].map(p => (
+                                    <button
+                                        key={p}
+                                        onClick={() => setWarFilters({ ...warFilters, probability: p })}
+                                        className={`py-3 px-4 text-left rounded-lg text-[9px] font-black uppercase tracking-wider border flex justify-between group ${warFilters.probability === p ? 'bg-emerald-500/20 border-emerald-500/50 text-white' : 'border-white/10 text-slate-400 hover:bg-white/5'}`}
+                                    >
+                                        <span>{p}</span>
+                                        <span className={`w-2 h-2 rounded-full ${p === 'CONFIRMED' ? 'bg-emerald-500' : p === 'LIKELY' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                                    </button>
+                                ))}
+                            </div>
                         </div>
+
+                        {/* Filter: Demographics */}
+                        <div className="space-y-4 mb-8">
+                            <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Demographics</label>
+                            <select className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white outline-none focus:border-indigo-500/50">
+                                <option>All Age Groups</option>
+                                <option>18-25 (Gen Z)</option>
+                                <option>26-40 (Millennials)</option>
+                                <option>41-60 (Gen X)</option>
+                                <option>60+ (Seniors)</option>
+                            </select>
+                            <select className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white outline-none focus:border-indigo-500/50">
+                                <option>All Genders</option>
+                                <option>Male</option>
+                                <option>Female</option>
+                            </select>
+                        </div>
+
+                        {/* Filter: Geography */}
+                        <div className="space-y-4">
+                            <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Battleground</label>
+                            <select className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white outline-none focus:border-indigo-500/50">
+                                <option>Global View</option>
+                                {allLocations.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="mt-auto pt-6 border-t border-white/5">
+                        <button onClick={() => setView('voters')} className="w-full bg-white text-black py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:scale-[1.02] transition-transform shadow-xl">
+                            Deploy Agents
+                        </button>
                     </div>
                 </div>
             </div>

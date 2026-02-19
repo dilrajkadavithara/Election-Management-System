@@ -13,7 +13,7 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout }) => {
 
             <nav className="space-y-4 flex-grow">
                 {[
-                    { id: 'dashboard', label: 'WAR ROOM', icon: '📊' },
+                    { id: 'dashboard', label: 'AI Dashboard', icon: '📊' },
                     ...(userRole !== 'BOOTH_AGENT' ? [{ id: 'engine', label: 'AI Processor', icon: '⚡' }] : []),
                     { id: 'voters', label: 'Voters Base', icon: '👥' },
                     { id: 'comm', label: 'Reachout to Voters', icon: '📡' },
@@ -38,7 +38,7 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout }) => {
                 <span className="text-2xl group-hover:rotate-12 transition-transform">🚪</span>
                 <span>DEACTIVATE CORE</span>
             </button>
-        </aside>
+        </aside >
     );
 };
 
