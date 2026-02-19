@@ -62,6 +62,6 @@ def test_gemini_ocr(api_key, image_path):
             continue
 
 if __name__ == "__main__":
-    key = "AIzaSyBPC_dM6MJGCkDwgfXgy-2zCQb2BQ7eFaE"
+    key = os.getenv("GOOGLE_API_KEY")
     sample_path = r"c:\Users\dilra\OneDrive\Desktop\Voterslist\data\voter_crops\03c1bb2f\voter_0000_pg003_box00.png"
     test_gemini_ocr(key, sample_path)

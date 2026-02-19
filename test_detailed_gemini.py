@@ -59,6 +59,6 @@ def test_gemini_ocr_detailed(api_key, image_path):
         print(f"❌ Error: {str(e)}")
 
 if __name__ == "__main__":
-    key = "AIzaSyBPC_dM6MJGCkDwgfXgy-2zCQb2BQ7eFaE"
+    key = os.getenv("GOOGLE_API_KEY")
     sample_path = r"c:\Users\dilra\OneDrive\Desktop\Voterslist\data\voter_crops\03c1bb2f\voter_0000_pg003_box00.png"
     test_gemini_ocr_detailed(key, sample_path)

@@ -29,6 +29,9 @@ package-lock.json
 scripts/test_creds/
 
 # Project Specific Data (Should stay local or in S3)
+test_*.py
+debug_*.py
+diagnostics.py
 data/
 PAGES/
 output/

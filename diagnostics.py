@@ -7,33 +7,33 @@ BASE_DIR = Path(__file__).resolve().parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
-def run_diagnostics():
-    print("=== FINAL NEURAL AUDIT ===")
-    from backend.state_manager import state_manager
+def test_neural_page():
+    print("=== NEURAL PAGE TEST ===")
+    from core.ocr_engine import OCREngine
     from core.batch_processor import BatchProcessor
     
-    batches = state_manager.list_all_batches()
-    if not batches:
-        print("No batches found.")
+    # Target one of the PDFs found in diagnostics
+    pdf_dir = BASE_DIR / "data" / "raw_pdf"
+    pdfs = list(pdf_dir.glob("*.pdf"))
+    if not pdfs:
+        print("No PDFs found for test.")
         return
-
-    # Sort by ID or just take the last one
-    latest = batches[-1]
-    print(f"LATEST BATCH: {latest.get('id')}")
-    print(f"Status: {latest.get('status')}")
-    print(f"Total Pages: {latest.get('total_pages')}")
-    print(f"Processed Pages: {latest.get('pages_processed')}")
-    print(f"Total Voters: {latest.get('total_voters')}")
-    print(f"Results Count: {len(latest.get('results', []))}")
-    print(f"Direct PDF Toggle: {latest.get('direct_pdf')}")
-    print(f"Use Gemini Toggle: {latest.get('use_gemini')}")
-
-    # Trial Initialization
-    try:
-        p = BatchProcessor()
-        print("[PASS] BatchProcessor initialized.")
-    except Exception as e:
-        print(f"[FAIL] BatchProcessor Init Error: {e}")
+        
+    test_pdf = str(pdfs[0])
+    print(f"Testing with PDF: {test_pdf}")
+    
+    engine = OCREngine()
+    # Test single page extraction
+    print("Attempting to extract Page 3...")
+    res = engine.extract_from_pdf(test_pdf, page_num=3)
+    
+    print(f"Result Type: {type(res)}")
+    print(f"Result Content: {res}")
+    
+    if res:
+        print("[PASS] Neural Extraction returned data.")
+    else:
+        print("[FAIL] Neural Extraction returned nothing.")
 
 if __name__ == "__main__":
-    run_diagnostics()
+    test_neural_page()

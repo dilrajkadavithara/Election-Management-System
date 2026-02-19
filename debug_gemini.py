@@ -6,7 +6,7 @@ import traceback
 
 def main():
     try:
-        api_key = "AIzaSyBPC_dM6MJGCkDwgfXgy-2zCQb2BQ7eFaE"
+        api_key = os.getenv("GOOGLE_API_KEY")
         image_path = r"c:\Users\dilra\OneDrive\Desktop\Voterslist\data\voter_crops\03c1bb2f\voter_0000_pg003_box00.png"
         
         if not os.path.exists(image_path):
