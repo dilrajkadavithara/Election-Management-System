@@ -189,13 +189,12 @@ def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id
     male = voters.filter(gender__iexact='Male').count()
     female = voters.filter(gender__iexact='Female').count()
     
-    # 2. Voter Sentiment (Leaning) - Keys must match App.jsx exactly
+    # 2. Voter Sentiment (Leaning)
     sentiment = {
         "UDF": voters.filter(voter_leaning='UDF').count(),
         "LDF": voters.filter(voter_leaning='LDF').count(),
         "NDA": voters.filter(voter_leaning='NDA').count(),
-        "Neutral": voters.filter(voter_leaning='NEUTRAL').count(),
-        "neutral": voters.filter(voter_leaning='NEUTRAL').count(), # Fallback for some components
+        "NEUTRAL": voters.filter(voter_leaning='NEUTRAL').count(),
     }
     
     # 3. Outreach (Data Readiness)
@@ -205,29 +204,48 @@ def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id
     
     # 4. Age Distribution
     age_dist = {
-        "18_25": voters.filter(age__gte=18, age__lte=25).count(),
-        "26_40": voters.filter(age__gte=26, age__lte=40).count(),
-        "41_60": voters.filter(age__gte=41, age__lte=60).count(),
-        "60_plus": voters.filter(age__gt=60).count(),
+        "18-25": voters.filter(age__gte=18, age__lte=25).count(),
+        "26-40": voters.filter(age__gte=26, age__lte=40).count(),
+        "41-60": voters.filter(age__gte=41, age__lte=60).count(),
+        "60+": voters.filter(age__gt=60).count(),
     }
 
-    # 5. Geographical Logistics
+    # 5. Geographical Logistics (Location)
     location = {
-        "local": voters.filter(current_location='LOCAL').count(),
-        "abroad": voters.filter(current_location='ABROAD').count(),
-        "state": voters.filter(current_location='STATE').count(),
-        "district": voters.filter(current_location='DISTRICT').count(),
+        "LOCAL": voters.filter(current_location='LOCAL').count(),
+        "ABROAD": voters.filter(current_location='ABROAD').count(),
+        "STATE": voters.filter(current_location='STATE').count(),
+        "DISTRICT": voters.filter(current_location='DISTRICT').count(),
+    }
+
+    # 6. Voting Probability (Political Pulse)
+    probability = {
+        "CONFIRMED": voters.filter(voting_probability='CONFIRMED').count(),
+        "LIKELY": voters.filter(voting_probability='LIKELY').count(),
+        "UNLIKELY": voters.filter(voting_probability='UNLIKELY').count(),
+        "OUT_OF_STATION": voters.filter(voting_probability='OUT_OF_STATION').count(),
+    }
+
+    # 7. Decisive Set (Local + Confirmed Presence) - The basis for Win Probability
+    decisive_voters = voters.filter(current_location='LOCAL', voting_probability='CONFIRMED')
+    decisive_stats = {
+        "total": decisive_voters.count(),
+        "UDF": decisive_voters.filter(voter_leaning='UDF').count(),
+        "LDF": decisive_voters.filter(voter_leaning='LDF').count(),
+        "NDA": decisive_voters.filter(voter_leaning='NDA').count(),
+        "NEUTRAL": decisive_voters.filter(voter_leaning='NEUTRAL').count(),
     }
     
     return {
         "total": total, 
-        "male": male, 
-        "female": female, 
+        "gender": {"male": male, "female": female},
         "sentiment": sentiment, 
         "outreach": outreach,
         "age_dist": age_dist,
         "location": location,
-        "tagging_progress": voters.filter(status='VERIFIED').count()
+        "probability": probability,
+        "decisive_stats": decisive_stats,
+        "tagging_progress": voters.count() # Simplified for dashboard
     }
 
 def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None, serial_from=None, serial_to=None, location=None):
