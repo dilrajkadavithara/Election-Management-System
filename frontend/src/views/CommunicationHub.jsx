@@ -52,7 +52,7 @@ const CommunicationHub = ({
         <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-12 lux-animate-in pb-32">
             <header className="flex justify-between items-end border-b border-white/5 pb-10">
                 <div>
-                    <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient">Propagation Hub</h1>
+                    <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient">Reachout to Voters</h1>
                     <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Strategic Awareness Deployment Center</p>
                 </div>
                 <div className="lux-glass border-indigo-500/20 px-8 py-5 rounded-[2rem] text-center shadow-2xl relative overflow-hidden group">

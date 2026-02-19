@@ -19,7 +19,7 @@ const VoterList = ({
         <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-12 lux-animate-in">
             <header className="flex justify-between items-end border-b border-white/5 pb-10">
                 <div>
-                    <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient">Intelligence Base</h1>
+                    <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient">Voters Base</h1>
                     <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Live Database: {voterTotal} Synchronized Profiles</p>
                 </div>
                 <div className="flex gap-6 items-center">

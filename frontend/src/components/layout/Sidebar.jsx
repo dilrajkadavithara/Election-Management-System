@@ -6,18 +6,18 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout }) => {
                     🗳️
                 </div>
                 <div>
-                    <h1 className="font-black uppercase text-[10px] tracking-[0.3em] lux-text-gradient opacity-90">Neural Intelligence</h1>
+                    <h1 className="font-black uppercase text-[10px] tracking-[0.3em] lux-text-gradient opacity-90">AI driven Campaign</h1>
                     <p className="text-[12px] text-white font-black uppercase tracking-widest mt-1">{username}</p>
                 </div>
             </div>
 
             <nav className="space-y-4 flex-grow">
                 {[
-                    { id: 'dashboard', label: 'STRATEGIC HUB', icon: '📊' },
-                    ...(userRole !== 'BOOTH_AGENT' ? [{ id: 'engine', label: 'NEURAL AI LAB', icon: '⚡' }] : []),
-                    { id: 'voters', label: 'INTELLIGENCE BASE', icon: '👥' },
-                    { id: 'comm', label: 'STRATEGIC OUTREACH', icon: '📡' },
-                    { id: 'design', label: 'TACTICAL ASSETS', icon: '🎨' },
+                    { id: 'dashboard', label: 'AI Dashboard', icon: '📊' },
+                    ...(userRole !== 'BOOTH_AGENT' ? [{ id: 'engine', label: 'AI Processor', icon: '⚡' }] : []),
+                    { id: 'voters', label: 'Voters Base', icon: '👥' },
+                    { id: 'comm', label: 'Reachout to Voters', icon: '📡' },
+                    { id: 'design', label: 'AI driven Voter slips', icon: '🎨' },
                     ...(['SUPERUSER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER'].includes(userRole) ? [{ id: 'admin', label: 'GOVERNANCE LAYER', icon: '🛡️' }] : [])
                 ].map(item => (
                     <button
