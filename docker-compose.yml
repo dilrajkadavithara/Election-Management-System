@@ -33,8 +33,8 @@ services:
     env_file:
       - .env
     volumes:
+      - ./data:/app/data
       - .:/app
-      - /app/node_modules # Precaution if any node_modules exist in root
     depends_on:
       - db
       - redis
@@ -54,6 +54,7 @@ services:
     env_file:
       - .env
     volumes:
+      - ./data:/app/data
       - .:/app
     depends_on:
       - db
