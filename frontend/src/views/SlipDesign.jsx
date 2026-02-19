@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import VoterSlip from '../components/engine/VoterSlip';
 
 const SlipDesign = ({
     activePrintParty,
