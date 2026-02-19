@@ -1,3 +1,5 @@
+import React, { useState } from 'react';
+
 const AdminControl = ({
     allLocations,
     allUsers,
@@ -29,7 +31,7 @@ const AdminControl = ({
             <header className="flex justify-between items-end border-b border-white/5 pb-10">
                 <div>
                     <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient">Neural Config Engine</h1>
-                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Elite Organizational Governance Protocol</p>
+                    <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Elite Organizational Governance Protocol</p>
                 </div>
                 <div className="flex gap-8">
                     <div className="lux-glass border-rose-500/20 px-10 py-6 rounded-[2rem] text-center shadow-2xl relative overflow-hidden group">
@@ -43,7 +45,7 @@ const AdminControl = ({
                                     return allBoothIds.filter(id => !assignedBoothIds.includes(id)).length;
                                 })()}
                             </span>
-                            <span className="text-[10px] font-black uppercase text-slate-500 italic">Unassigned</span>
+                            <span className="text-[10px] font-black uppercase text-slate-300 italic">Unassigned</span>
                         </div>
                     </div>
                     <div className="lux-glass border-indigo-500/20 px-10 py-6 rounded-[2rem] text-center shadow-2xl relative overflow-hidden group">
@@ -51,7 +53,7 @@ const AdminControl = ({
                         <p className="text-[9px] font-black uppercase text-indigo-400 tracking-widest mb-1 relative z-10">Activated Agents</p>
                         <div className="flex items-baseline gap-3 relative z-10">
                             <span className="text-4xl font-black italic">{allUsers.length}</span>
-                            <span className="text-[10px] font-black uppercase text-slate-500 italic">Units</span>
+                            <span className="text-[10px] font-black uppercase text-slate-300 italic">Units</span>
                         </div>
                     </div>
                 </div>
@@ -67,7 +69,7 @@ const AdminControl = ({
                                     <button
                                         key={t}
                                         onClick={() => setNewLocData({ ...newLocData, type: t })}
-                                        className={`flex-1 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all duration-500 ${newLocData.type === t ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.4)] translate-y-[-2px]' : 'text-slate-500 hover:text-white'}`}
+                                        className={`flex-1 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all duration-500 ${newLocData.type === t ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.4)] translate-y-[-2px]' : 'text-slate-300 hover:text-white'}`}
                                     >
                                         {t}
                                     </button>
@@ -123,7 +125,7 @@ const AdminControl = ({
                             <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 italic">Party Brand Synthesis</h3>
                             <div className="space-y-6">
                                 <div className="space-y-2">
-                                    <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest ml-1">Identity Map</label>
+                                    <label className="text-[8px] font-black uppercase text-slate-300 tracking-widest ml-1">Identity Map</label>
                                     <select
                                         onChange={(e) => {
                                             const p = PARTY_PRESETS.find(pr => pr.label === e.target.value);
@@ -141,20 +143,20 @@ const AdminControl = ({
                                 </div>
                                 <div className="flex gap-4 p-4 bg-white/5 border border-white/10 rounded-2xl items-center">
                                     <div className="flex-1 space-y-2">
-                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Brand Color</p>
+                                        <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Brand Color</p>
                                         <div className="flex items-center gap-4">
                                             <input type="color" value={newPartyData.color} onChange={(e) => setNewPartyData({ ...newPartyData, color: e.target.value })} className="w-12 h-10 bg-transparent border-none rounded cursor-pointer shrink-0" />
                                             <span className="text-[10px] font-mono text-slate-400 font-black">{newPartyData.color.toUpperCase()}</span>
                                         </div>
                                     </div>
                                     <div className="flex-[2] space-y-2">
-                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Neural Gradient</p>
+                                        <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Neural Gradient</p>
                                         <input type="text" value={newPartyData.gradient} onChange={(e) => setNewPartyData({ ...newPartyData, gradient: e.target.value })} className="w-full bg-transparent text-[9px] font-mono text-indigo-400 outline-none truncate italic" />
                                     </div>
                                 </div>
                                 <div onClick={() => document.getElementById('party-logo-input').click()} className="group border-2 border-dashed border-white/10 p-10 rounded-3xl flex flex-col items-center gap-3 cursor-pointer hover:bg-white/5 hover:border-indigo-500/30 transition-all relative overflow-hidden">
                                     <span className="text-3xl group-hover:scale-125 transition-transform duration-500">{newPartyFile ? '✨' : '📤'}</span>
-                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">{newPartyFile ? newPartyFile.name : 'INJECT SYMBOL_PROTOCOL'}</span>
+                                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em]">{newPartyFile ? newPartyFile.name : 'INJECT SYMBOL_PROTOCOL'}</span>
                                     <input type="file" id="party-logo-input" className="hidden" onChange={(e) => setNewPartyFile(e.target.files[0])} />
                                 </div>
                                 <button onClick={handleAddParty} className="w-full lux-btn-primary !from-indigo-600 !to-purple-600 !py-6 text-[10px] tracking-[0.3em] shadow-[0_0_30px_rgba(139,92,246,0.3)]">Register Neural Party Brand</button>
@@ -168,17 +170,17 @@ const AdminControl = ({
                         <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-indigo-400 italic">Agent Activation Crypt</h3>
                         <div className="grid grid-cols-2 gap-8">
                             <div className="space-y-4">
-                                <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Identity Key</label>
+                                <label className="text-[8px] font-black text-slate-300 uppercase tracking-widest ml-1">Identity Key</label>
                                 <input type="text" disabled={!!editingUser} placeholder="USERNAME" value={newUserData.username} onChange={(e) => setNewUserData({ ...newUserData, username: e.target.value })} className="w-full bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-800 disabled:opacity-20" />
                             </div>
                             {!editingUser && (
                                 <div className="space-y-4">
-                                    <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Secure Bypass</label>
+                                    <label className="text-[8px] font-black text-slate-300 uppercase tracking-widest ml-1">Secure Bypass</label>
                                     <input type="password" placeholder="PASSWORD" value={newUserData.password} onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })} className="w-full bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-800" />
                                 </div>
                             )}
                             <div className="col-span-2 space-y-4">
-                                <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Tactical Rank</label>
+                                <label className="text-[8px] font-black text-slate-300 uppercase tracking-widest ml-1">Tactical Rank</label>
                                 <select value={newUserData.role} onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value, assignments: { constituencies: [], local_bodies: [], booths: [] } })} className="w-full bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-5 text-[11px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 appearance-none transition-all">
                                     <option value="">SELECT CLEARANCE LEVEL</option>
                                     <option value="BOOTH_AGENT" className="bg-slate-900">BOOTH AGENT</option>
@@ -232,7 +234,7 @@ const AdminControl = ({
                         <div className="flex justify-between items-end px-6">
                             <div>
                                 <h3 className="text-2xl font-black uppercase tracking-tighter text-white italic">Active Node Network</h3>
-                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mt-1">Live Agents Online: {allUsers.length}</p>
+                                <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.4em] mt-1">Live Agents Online: {allUsers.length}</p>
                             </div>
                         </div>
 

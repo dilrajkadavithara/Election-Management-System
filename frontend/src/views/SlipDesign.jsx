@@ -1,3 +1,5 @@
+import React, { useEffect } from 'react';
+
 const SlipDesign = ({
     activePrintParty,
     setActivePrintParty,
@@ -28,7 +30,7 @@ const SlipDesign = ({
             <header className="flex justify-between items-end border-b border-white/5 pb-10 no-print">
                 <div>
                     <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient">Asset Synthesis Lab</h1>
-                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Autonomous Distribution & Precision Logistics</p>
+                    <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Autonomous Distribution & Precision Logistics</p>
                 </div>
                 <div className="flex gap-6 items-center">
                     <button
@@ -67,7 +69,7 @@ const SlipDesign = ({
                     </div>
                     <div className="flex gap-4">
                         <button onClick={loadVoters} className="lux-btn-primary !px-10 !py-4 text-[10px] tracking-widest shadow-xl">INITIATE_FETCH</button>
-                        <button onClick={handleReset} className="bg-white/5 text-slate-500 px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">SYSTEM_RESET</button>
+                        <button onClick={handleReset} className="bg-white/5 text-slate-300 px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">SYSTEM_RESET</button>
                     </div>
                 </div>
             </div>
@@ -102,7 +104,7 @@ const SlipDesign = ({
                         <div className="w-32 h-32 bg-indigo-500/5 rounded-full flex items-center justify-center text-6xl shadow-inner animate-bounce">📥</div>
                         <div className="text-center space-y-4">
                             <h3 className="text-2xl font-black uppercase text-indigo-400 tracking-widest">Awaiting Logistics Data</h3>
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Configure Matrix Parameters Above to Synthesize Assets</p>
+                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Configure Matrix Parameters Above to Synthesize Assets</p>
                         </div>
                     </div>
                 )}

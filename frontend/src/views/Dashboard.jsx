@@ -20,7 +20,7 @@ const Dashboard = ({
             <header className="flex justify-between items-end border-b border-white/5 pb-10">
                 <div>
                     <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient">Strategic Hub</h1>
-                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Autonomous Campaign Command</p>
+                    <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Autonomous Campaign Command</p>
                 </div>
                 <div className="flex gap-6 mb-1">
                     {[
@@ -29,7 +29,7 @@ const Dashboard = ({
                         { label: 'Booth Unit', key: 'booth', width: 'w-40', options: dashFilters.lb ? allLocations.find(c => String(c.id) === String(dashFilters.constituency))?.local_bodies.find(l => String(l.id) === String(dashFilters.lb))?.booths : [] }
                     ].map((f) => (
                         <div key={f.key} className="flex flex-col gap-2">
-                            <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest ml-1">{f.label}</label>
+                            <label className="text-[9px] font-black uppercase text-slate-300 tracking-widest ml-1">{f.label}</label>
                             <select
                                 className={`${f.width} lux-glass rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest focus:border-indigo-500/50 shadow-sm transition-all cursor-pointer outline-none text-slate-300`}
                                 value={dashFilters[f.key]}
@@ -65,7 +65,7 @@ const Dashboard = ({
 
             <div className="grid grid-cols-12 gap-10">
                 <div className="col-span-4 lux-card flex flex-col h-[500px]">
-                    <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-500 mb-8 border-b border-white/5 pb-6">Sentiment Analysis</h3>
+                    <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-300 mb-8 border-b border-white/5 pb-6">Sentiment Analysis</h3>
                     <div className="flex-1 relative flex items-center justify-center">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
@@ -91,7 +91,7 @@ const Dashboard = ({
                         </ResponsiveContainer>
                         <div className="absolute flex flex-col items-center justify-center">
                             <span className="text-4xl font-black tracking-tighter">{dashboardStats.total}</span>
-                            <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Profiles</span>
+                            <span className="text-[9px] font-black uppercase text-slate-300 tracking-widest">Profiles</span>
                         </div>
                     </div>
                     <div className="grid grid-cols-4 gap-4 mt-10">
@@ -103,7 +103,7 @@ const Dashboard = ({
                         ].map(s => (
                             <div key={s.l} className="text-center group-hover:scale-110 transition-transform duration-500">
                                 <div className={`w-1.5 h-1.5 rounded-full mx-auto mb-2 ${s.c} shadow-[0_0_10px_rgba(255,255,255,0.2)]`}></div>
-                                <p className="text-[9px] font-black text-slate-500 uppercase">{s.l}</p>
+                                <p className="text-[9px] font-black text-slate-300 uppercase">{s.l}</p>
                                 <p className="text-sm font-black text-slate-200">{s.v}</p>
                             </div>
                         ))}
@@ -111,7 +111,7 @@ const Dashboard = ({
                 </div>
 
                 <div className="col-span-8 lux-card flex flex-col h-[500px]">
-                    <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-500 mb-8 border-b border-white/5 pb-6">Operational Readiness Heatmap</h3>
+                    <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-300 mb-8 border-b border-white/5 pb-6">Operational Readiness Heatmap</h3>
                     <div className="flex-1">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={dashboardStats?.age_dist ? Object.entries(dashboardStats.age_dist).map(([label, count]) => ({ name: label.replace('_', '-'), voters: count })) : []}>
@@ -145,7 +145,7 @@ const Dashboard = ({
                 </div>
 
                 <div className="lux-card flex flex-col justify-between h-[300px]">
-                    <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-500 border-b border-white/5 pb-4">Digital Saturation</h3>
+                    <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-300 border-b border-white/5 pb-4">Digital Saturation</h3>
                     <div className="flex-1 flex flex-col justify-center">
                         <div className="flex items-baseline gap-3 mb-2">
                             <span className="text-5xl font-black tracking-tighter lux-text-gradient">{Math.round(((dashboardStats.outreach?.with_phone || 0) / (dashboardStats.total || 1)) * 100)}%</span>
@@ -155,7 +155,7 @@ const Dashboard = ({
                             <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000" style={{ width: `${((dashboardStats.outreach?.with_phone || 0) / (dashboardStats.total || 1)) * 100}%` }}></div>
                         </div>
                     </div>
-                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em]">Verified Assets Recorded: {dashboardStats.outreach?.with_phone || 0}</p>
+                    <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.2em]">Verified Assets Recorded: {dashboardStats.outreach?.with_phone || 0}</p>
                 </div>
 
                 <div className="lux-card flex flex-col justify-between h-[300px] border-indigo-500/30">

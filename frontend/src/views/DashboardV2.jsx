@@ -39,7 +39,7 @@ const DashboardV2 = ({
                     </h1>
                     <div className="flex items-center gap-3 mt-4">
                         <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]" />
-                        <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px]">
+                        <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px]">
                             {activeArea} Analysis Live
                         </p>
                     </div>
@@ -65,7 +65,7 @@ const DashboardV2 = ({
                             <h2 className="text-4xl font-black uppercase tracking-tighter">Strategic Grid</h2>
                         </div>
                         <div className="text-right">
-                            <p className="text-[10px] font-black text-slate-500 tracking-[0.2em] mb-1 uppercase">Operational Load</p>
+                            <p className="text-[10px] font-black text-slate-300 tracking-[0.2em] mb-1 uppercase">Operational Load</p>
                             <p className="text-2xl font-black">{strategicStats.booth_stats?.length || 0} Sectors</p>
                         </div>
                     </div>
@@ -76,7 +76,7 @@ const DashboardV2 = ({
                                 <span className="text-[9px] font-black px-3 py-1 bg-white/5 text-slate-400 rounded-full mb-4 inline-block group-hover:bg-indigo-500 group-hover:text-white transition-all capitalize">Booth {booth.number}</span>
                                 <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-200 line-clamp-1 mb-6 group-hover:text-indigo-400">{booth.name}</h4>
                                 <div className="space-y-3">
-                                    <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-slate-500">
+                                    <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-slate-300">
                                         <span>Intel Sync</span>
                                         <span>{booth.coverage}%</span>
                                     </div>
@@ -87,7 +87,7 @@ const DashboardV2 = ({
                             </div>
                         ))}
                         {(!strategicStats.booth_stats || strategicStats.booth_stats.length === 0) && (
-                            <div className="col-span-full h-full flex flex-col items-center justify-center text-slate-500 gap-4 group opacity-50">
+                            <div className="col-span-full h-full flex flex-col items-center justify-center text-slate-300 gap-4 group opacity-50">
                                 <div className="text-4xl filter grayscale group-hover:grayscale-0 transition-all">🔍</div>
                                 <p className="font-black uppercase tracking-widest text-[10px]">Awaiting Sector Selection</p>
                             </div>
@@ -110,11 +110,11 @@ const DashboardV2 = ({
                         </div>
                         <div className="grid grid-cols-2 gap-8 w-full mt-12 border-t border-white/5 pt-8">
                             <div className="text-center border-r border-white/5">
-                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Confirmed</p>
+                                <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Confirmed</p>
                                 <p className="text-xl font-black">{currentUDF}</p>
                             </div>
                             <div className="text-center">
-                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Target</p>
+                                <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Target</p>
                                 <p className="text-xl font-black text-indigo-400">{votesNeeded}</p>
                             </div>
                         </div>
@@ -158,7 +158,7 @@ const DashboardV2 = ({
                     <div key={i} className="lux-card flex items-center gap-6 group hover:-translate-y-2 shadow-2xl border-white/5">
                         <div className="text-4xl group-hover:scale-125 transition-transform duration-500">{s.i}</div>
                         <div>
-                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">{s.l}</p>
+                            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">{s.l}</p>
                             <p className={`text-4xl font-black tracking-tighter ${s.c}`}>{s.v}</p>
                         </div>
                     </div>

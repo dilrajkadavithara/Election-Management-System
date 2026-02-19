@@ -1,3 +1,5 @@
+import React, { useState, useEffect } from 'react';
+
 const OCREngine = ({
     ocrBatch,
     setOcrBatch,
@@ -23,13 +25,13 @@ const OCREngine = ({
     useDirectPdf,
     setUseDirectPdf
 }) => {
-    const [isAddingConst, setIsAddingConst] = React.useState(false);
-    const [isAddingLB, setIsAddingLB] = React.useState(false);
-    const [isAddingBooth, setIsAddingBooth] = React.useState(false);
-    const [newLocName, setNewLocName] = React.useState('');
-    const [newLBType, setNewLBType] = React.useState('PANCHAYAT');
+    const [isAddingConst, setIsAddingConst] = useState(false);
+    const [isAddingLB, setIsAddingLB] = useState(false);
+    const [isAddingBooth, setIsAddingBooth] = useState(false);
+    const [newLocName, setNewLocName] = useState('');
+    const [newLBType, setNewLBType] = useState('PANCHAYAT');
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (!allLocations || allLocations.length === 0) {
             loadAdminData();
         }
@@ -74,7 +76,7 @@ const OCREngine = ({
             <header className="flex justify-between items-end border-b border-white/5 pb-10">
                 <div>
                     <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient">Neural AI Lab</h1>
-                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Autonomous Intelligence Synthesis Core</p>
+                    <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Autonomous Intelligence Synthesis Core</p>
                 </div>
                 {!ocrBatch && (
                     <div className="flex gap-6 items-end">
@@ -85,7 +87,7 @@ const OCREngine = ({
                         ].map(f => (
                             <div key={f.key} className="flex flex-col gap-2">
                                 <div className="flex justify-between items-center px-1">
-                                    <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">{f.label}</label>
+                                    <label className="text-[9px] font-black uppercase text-slate-300 tracking-widest">{f.label}</label>
                                     <button disabled={f.disabled} onClick={() => f.add(!f.state)} className="text-[9px] font-black text-indigo-400 hover:text-white transition-colors disabled:opacity-0">{f.state ? 'CANCEL' : '+ NEW'}</button>
                                 </div>
                                 {f.state ? (
@@ -116,7 +118,7 @@ const OCREngine = ({
                     <div className="w-32 h-32 bg-indigo-500/10 rounded-[2.5rem] flex items-center justify-center text-5xl shadow-inner group-hover:scale-110 transition-all duration-700 group-hover:shadow-[0_0_30px_rgba(99,102,241,0.2)] border border-white/5">📄</div>
                     <div className="text-center space-y-4 relative z-10">
                         <h2 className="text-4xl font-black uppercase tracking-tighter lux-text-gradient">Inject Source Matrix</h2>
-                        <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px]">Optimized for Neural Parallel Extraction Protocol</p>
+                        <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px]">Optimized for Neural Parallel Extraction Protocol</p>
                     </div>
                     <input type="file" ref={ocrRef} className="hidden" accept="application/pdf" onChange={handleFileUpload} />
                     <div className="v2-scanline absolute inset-0 opacity-20 pointer-events-none" />
@@ -148,7 +150,7 @@ const OCREngine = ({
                                                 {isDone ? '✅' : s.icon}
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className={`text-[11px] font-black uppercase tracking-widest ${isActive ? 'text-white' : 'text-slate-500'}`}>{s.label}</span>
+                                                <span className={`text-[11px] font-black uppercase tracking-widest ${isActive ? 'text-white' : 'text-slate-300'}`}>{s.label}</span>
                                                 {isActive && <div className="h-1 w-12 bg-indigo-500 mt-2 animate-pulse rounded-full" />}
                                             </div>
                                         </div>

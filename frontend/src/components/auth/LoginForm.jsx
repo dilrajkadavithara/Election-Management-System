@@ -18,7 +18,7 @@ const LoginForm = ({
                 <div className="text-center space-y-4">
                     <div className="w-24 h-24 bg-indigo-500/10 rounded-[2rem] border border-white/10 flex items-center justify-center text-5xl mx-auto shadow-2xl animate-float">🛡️</div>
                     <h1 className="text-7xl font-black uppercase tracking-tighter lux-text-gradient leading-none">Neural Access</h1>
-                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px]">Secure Intelligence Core Uplink</p>
+                    <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px]">Secure Intelligence Core Uplink</p>
                 </div>
 
                 <div className="lux-glass !bg-white/5 border-white/10 p-16 rounded-[4rem] shadow-[0_0_100px_rgba(0,0,0,0.5)] space-y-10 group">
@@ -34,7 +34,7 @@ const LoginForm = ({
 
                         <div className="space-y-6">
                             <div className="relative group/field">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1 italic group-focus-within/field:text-indigo-400 transition-colors">Identity Identification</label>
+                                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1 italic group-focus-within/field:text-indigo-400 transition-colors">Identity Identification</label>
                                 <input
                                     type="text"
                                     placeholder="ENTER_UID"
@@ -47,7 +47,7 @@ const LoginForm = ({
                             </div>
 
                             <div className="relative group/field">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1 italic group-focus-within/field:text-indigo-400 transition-colors">Security Bypass</label>
+                                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1 italic group-focus-within/field:text-indigo-400 transition-colors">Security Bypass</label>
                                 <input
                                     type="password"
                                     placeholder="••••••••"

@@ -1,3 +1,5 @@
+import React from 'react';
+
 const VoterList = ({
     voterList,
     voterTotal,
@@ -18,7 +20,7 @@ const VoterList = ({
             <header className="flex justify-between items-end border-b border-white/5 pb-10">
                 <div>
                     <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient">Intelligence Base</h1>
-                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Live Database: {voterTotal} Synchronized Profiles</p>
+                    <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Live Database: {voterTotal} Synchronized Profiles</p>
                 </div>
                 <div className="flex gap-6 items-center">
                     <button
@@ -46,7 +48,7 @@ const VoterList = ({
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
-                        <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-500 group-hover:text-indigo-400 transition-colors">🔍</div>
+                        <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 group-hover:text-indigo-400 transition-colors">🔍</div>
                     </div>
                 </div>
             </header>
@@ -62,7 +64,7 @@ const VoterList = ({
                         { label: 'Location', key: 'location', type: 'select', options: [{ id: 'LOCAL', name: 'LOCAL' }, { id: 'ABROAD', name: 'ABROAD' }, { id: 'STATE', name: 'OTHER STATE' }, { id: 'DISTRICT', name: 'OTHER DIST' }] }
                     ].map(f => (
                         <div key={f.key} className="flex-1 min-w-[150px] space-y-2">
-                            <label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.2em] ml-1">{f.label}</label>
+                            <label className="text-[9px] font-black uppercase text-slate-300 tracking-[0.2em] ml-1">{f.label}</label>
                             <select
                                 disabled={f.disabled}
                                 className="w-full bg-slate-900/50 text-slate-300 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all disabled:opacity-30 appearance-none"
@@ -81,7 +83,7 @@ const VoterList = ({
                     ))}
                     <div className="flex gap-4 min-w-fit">
                         <button onClick={() => { loadVoters(); loadAdminData(); }} className="bg-white text-black px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-400 hover:text-white transition-all shadow-lg">Load Intelligence</button>
-                        <button onClick={() => { setListFilters({ constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '', serialFrom: '', serialTo: '', location: '' }); setSearchQuery(''); }} className="bg-white/5 text-slate-500 px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Reset</button>
+                        <button onClick={() => { setListFilters({ constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '', serialFrom: '', serialTo: '', location: '' }); setSearchQuery(''); }} className="bg-white/5 text-slate-300 px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Reset</button>
                     </div>
                 </div>
             </div>
@@ -89,7 +91,7 @@ const VoterList = ({
             <div className="lux-glass rounded-[2.5rem] border-white/5 shadow-2xl overflow-hidden">
                 <table className="w-full text-left border-collapse">
                     <thead>
-                        <tr className="border-b border-white/5 text-[9px] font-black uppercase text-slate-500 tracking-[0.2em]">
+                        <tr className="border-b border-white/5 text-[9px] font-black uppercase text-slate-300 tracking-[0.2em]">
                             <th className="pl-10 py-6">Sl</th>
                             <th className="px-6 py-6 min-w-[200px]">Strategic Asset</th>
                             <th className="px-6 py-6 w-[120px]">EPIC ID</th>
@@ -106,7 +108,7 @@ const VoterList = ({
                                 <td className="px-6 py-5">
                                     <div className="flex flex-col">
                                         <span className="text-white font-black text-[12px] uppercase tracking-widest group-hover:text-indigo-400 transition-colors">{v.full_name}</span>
-                                        <span className="text-slate-500 text-[9px] font-bold mt-1 uppercase leading-none">{v.local_body} Unit</span>
+                                        <span className="text-slate-300 text-[9px] font-bold mt-1 uppercase leading-none">{v.local_body} Unit</span>
                                     </div>
                                 </td>
                                 <td className="px-6 py-5">
@@ -121,7 +123,7 @@ const VoterList = ({
                                 <td className="px-6 py-5 text-center">
                                     <div className="flex flex-col">
                                         <span className="text-[11px] font-black text-white">{v.gender?.charAt(0)}</span>
-                                        <span className="text-[9px] font-black text-slate-500">{v.age} YRS</span>
+                                        <span className="text-[9px] font-black text-slate-300">{v.age} YRS</span>
                                     </div>
                                 </td>
                                 <td className="px-6 py-5">
@@ -130,7 +132,7 @@ const VoterList = ({
                                             <button
                                                 key={l}
                                                 onClick={() => handleUpdateIntel(v.id, { voter_leaning: l })}
-                                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black transition-all border ${v.voter_leaning === l ? (l === 'UDF' ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_10px_#6366f1]' : l === 'LDF' ? 'bg-rose-600 border-rose-400 text-white shadow-[0_0_10px_#f43f5e]' : l === 'NDA' ? 'bg-amber-600 border-amber-400 text-white shadow-[0_0_10px_#f59e0b]' : 'bg-slate-600 border-slate-400 text-white shadow-[0_0_10px_#475569]') : 'bg-transparent border-white/10 text-slate-500 hover:border-white/30'}`}
+                                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black transition-all border ${v.voter_leaning === l ? (l === 'UDF' ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_10px_#6366f1]' : l === 'LDF' ? 'bg-rose-600 border-rose-400 text-white shadow-[0_0_10px_#f43f5e]' : l === 'NDA' ? 'bg-amber-600 border-amber-400 text-white shadow-[0_0_10px_#f59e0b]' : 'bg-slate-600 border-slate-400 text-white shadow-[0_0_10px_#475569]') : 'bg-transparent border-white/10 text-slate-300 hover:border-white/30'}`}
                                             >
                                                 {l}
                                             </button>

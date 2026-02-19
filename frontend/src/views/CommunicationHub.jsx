@@ -1,3 +1,5 @@
+import React, { useState, useRef } from 'react';
+
 const CommunicationHub = ({
     commType,
     setCommType,
@@ -12,9 +14,9 @@ const CommunicationHub = ({
     setListFilters,
     loadVoters
 }) => {
-    const [heading, setHeading] = React.useState('');
-    const [selectedImage, setSelectedImage] = React.useState(null);
-    const fileRef = React.useRef();
+    const [heading, setHeading] = useState('');
+    const [selectedImage, setSelectedImage] = useState(null);
+    const fileRef = useRef();
 
     const getAudienceSummary = () => {
         let summary = `${voterTotal} Synchronized Assets`;
@@ -51,7 +53,7 @@ const CommunicationHub = ({
             <header className="flex justify-between items-end border-b border-white/5 pb-10">
                 <div>
                     <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient">Propagation Hub</h1>
-                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Strategic Awareness Deployment Center</p>
+                    <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Strategic Awareness Deployment Center</p>
                 </div>
                 <div className="lux-glass border-indigo-500/20 px-8 py-5 rounded-[2rem] text-center shadow-2xl relative overflow-hidden group">
                     <div className="absolute inset-0 bg-indigo-500/5 group-hover:bg-indigo-500/10 transition-colors" />
@@ -72,7 +74,7 @@ const CommunicationHub = ({
                             { label: 'Leaning Bias', key: 'leaning', options: [{ id: 'LDF', name: 'LDF' }, { id: 'UDF', name: 'UDF' }, { id: 'NDA', name: 'NDA' }, { id: 'NEUTRAL', name: 'NEUTRAL' }] }
                         ].map(f => (
                             <div key={f.key} className="space-y-2">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">{f.label}</label>
+                                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">{f.label}</label>
                                 <select
                                     className="w-full bg-slate-900/50 text-slate-300 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all disabled:opacity-20 appearance-none"
                                     value={listFilters[f.key]}
@@ -106,7 +108,7 @@ const CommunicationHub = ({
                                     <span className="text-4xl group-hover:scale-125 transition-transform duration-500">{t.icon}</span>
                                     <div className="text-center">
                                         <h3 className="font-black text-[12px] uppercase tracking-widest text-white">{t.name}</h3>
-                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">{t.desc}</p>
+                                        <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest mt-1">{t.desc}</p>
                                     </div>
                                     {commType === t.id && <div className="w-12 h-1 bg-indigo-500 rounded-full animate-pulse" />}
                                 </button>
@@ -115,11 +117,11 @@ const CommunicationHub = ({
 
                         <div className="lux-glass p-10 rounded-[2.5rem] border-white/5 space-y-8">
                             <div className="space-y-3">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Message Header</label>
+                                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Message Header</label>
                                 <input type="text" value={heading} onChange={e => setHeading(e.target.value)} placeholder="ENTER PROTOCOL TOPIC" className="w-full bg-slate-900/50 text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-700" />
                             </div>
                             <div className="space-y-3">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Multimedia Asset</label>
+                                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Multimedia Asset</label>
                                 <div onClick={() => fileRef.current.click()} className={`w-full p-6 border-2 border-dashed rounded-2xl flex items-center justify-center gap-4 cursor-pointer transition-all duration-700 ${selectedImage ? 'bg-indigo-500/10 border-indigo-500 shadow-inner' : 'bg-white/5 border-white/5 hover:border-white/20'}`}>
                                     <span className="text-xl">{selectedImage ? '✨' : '📎'}</span>
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 truncate max-w-[200px]">{selectedImage ? selectedImage.name : "Inject Media Block"}</span>
