@@ -2,45 +2,38 @@ import os
 import sys
 from pathlib import Path
 
-# Setup paths (same as tasks.py)
+# Setup paths
 BASE_DIR = Path(__file__).resolve().parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
 def run_diagnostics():
-    print("=== ELECTION ENGINE BIRD'S-EYE AUDIT ===")
+    print("=== FINAL NEURAL AUDIT ===")
+    from backend.state_manager import state_manager
+    from core.batch_processor import BatchProcessor
     
-    # 1. Check Imports
-    try:
-        from core.batch_processor import BatchProcessor
-        from backend.state_manager import state_manager
-        print("[PASS] Core modules imported successfully.")
-    except Exception as e:
-        print(f"[FAIL] Import Error: {e}")
+    batches = state_manager.list_all_batches()
+    if not batches:
+        print("No batches found.")
         return
 
-    # 2. Check Class Integrity
-    p = BatchProcessor()
-    if hasattr(p, 'process_pdf_directly'):
-        print("[PASS] BatchProcessor has 'process_pdf_directly' method.")
-    else:
-        print("[FAIL] BatchProcessor MISSING 'process_pdf_directly' method.")
+    # Sort by ID or just take the last one
+    latest = batches[-1]
+    print(f"LATEST BATCH: {latest.get('id')}")
+    print(f"Status: {latest.get('status')}")
+    print(f"Total Pages: {latest.get('total_pages')}")
+    print(f"Processed Pages: {latest.get('pages_processed')}")
+    print(f"Total Voters: {latest.get('total_voters')}")
+    print(f"Results Count: {len(latest.get('results', []))}")
+    print(f"Direct PDF Toggle: {latest.get('direct_pdf')}")
+    print(f"Use Gemini Toggle: {latest.get('use_gemini')}")
 
-    # 3. Check Persistence (Redis)
-    batches = state_manager.list_all_batches()
-    print(f"[INFO] Active Batches in Redis: {len(batches)}")
-    for b in batches:
-        print(f"       -> ID: {b.get('id')} | Status: {b.get('status')} | Direct: {b.get('direct_pdf')}")
-
-    # 4. Check Shared Filesystem
-    raw_pdf_dir = BASE_DIR / "data" / "raw_pdf"
-    if raw_pdf_dir.exists():
-        files = list(raw_pdf_dir.glob("*.pdf"))
-        print(f"[PASS] Shared PDF Directory found. Files: {len(files)}")
-        for f in files[:3]: # Show first 3
-            print(f"       -> {f.name}")
-    else:
-        print("[FAIL] Shared PDF Directory MISSING at /app/data/raw_pdf")
+    # Trial Initialization
+    try:
+        p = BatchProcessor()
+        print("[PASS] BatchProcessor initialized.")
+    except Exception as e:
+        print(f"[FAIL] BatchProcessor Init Error: {e}")
 
 if __name__ == "__main__":
     run_diagnostics()
