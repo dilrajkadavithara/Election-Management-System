@@ -309,10 +309,12 @@ const OCREngine = ({
                                                 </div>
                                             </div>
                                             <button
-                                                onClick={() => setUseGemini(!useGemini)}
-                                                className={`w-12 h-6 rounded-full transition-all relative ${useGemini ? 'bg-indigo-500' : 'bg-slate-700'}`}
+                                                onClick={() => {
+                                                    if (!ocrBatch?.direct_pdf) setUseGemini(!useGemini);
+                                                }}
+                                                className={`w-12 h-6 rounded-full transition-all relative ${useGemini || ocrBatch?.direct_pdf ? 'bg-indigo-500' : 'bg-slate-700'}`}
                                             >
-                                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${useGemini ? 'right-1' : 'left-1'}`} />
+                                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${useGemini || ocrBatch?.direct_pdf ? 'right-1' : 'left-1'}`} />
                                             </button>
                                         </div>
                                         <button onClick={startOcr} className="w-full bg-indigo-500 text-white py-5 rounded-3xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-indigo-500/20">
@@ -385,6 +387,35 @@ const OCREngine = ({
                                     <p className="text-[9px] font-black uppercase text-amber-500 tracking-widest mb-1">Flagged for Review</p>
                                     <p className="text-3xl font-black text-amber-900 leading-none">{ocrBatch.flagged_count || 0}</p>
                                 </div>
+
+                                {ocrBatch.status === 'extracted' && (
+                                    <>
+                                        <div className="bg-slate-900 p-6 rounded-3xl">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1">
+                                                {ocrBatch.direct_pdf ? 'Stream Integrity' : 'Integrity Score'}
+                                            </p>
+                                            <p className="text-3xl font-black text-white">
+                                                {ocrBatch.direct_pdf ? 'READY' : `${ocrBatch.integrity_score || 0}%`}
+                                            </p>
+                                        </div>
+                                        <div className="relative bg-slate-900 rounded-3xl p-8 border border-white/10 mb-8 overflow-hidden group">
+                                            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-100 transition-all">
+                                                <span className="text-4xl">⚡</span>
+                                            </div>
+                                            <div className="relative z-10">
+                                                <h3 className="text-4xl font-black text-white mb-2 uppercase tracking-tighter">
+                                                    {ocrBatch.direct_pdf ? 'STRATEGIC STREAM READY' : 'OPTICAL SEARCH COMPLETE'}
+                                                </h3>
+                                                <p className="text-slate-400 font-bold max-w-md">
+                                                    {ocrBatch.direct_pdf
+                                                        ? 'The document has been securely streamed. The Neural Core is ready for deep extraction.'
+                                                        : 'Voter boxes have been successfully isolated. You can now proceed to high-precision OCR.'
+                                                    }
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
 
                                 {ocrBatch.status === 'processed' && ocrBatch.error_stats && Object.keys(ocrBatch.error_stats).length > 0 && (
                                     <div className="bg-rose-50/50 border border-rose-100 rounded-3xl p-6 mt-2 space-y-3">

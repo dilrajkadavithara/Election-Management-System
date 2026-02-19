@@ -77,6 +77,7 @@ def run_extraction_task(batch_id: str, dpi: int, direct_pdf: bool = False):
         if direct_pdf:
             # --- STRATEGIC SHORTCUT ---
             # Skip heavy image conversion to save RAM
+            batch['pages_processed'] = batch.get('total_pages', 0)
             batch['status'] = 'extracted'
             state_manager.set_batch(batch_id, batch)
             return
