@@ -646,10 +646,11 @@ async def start_process(batch_id: str, background_tasks: BackgroundTasks, data: 
     if not batch: raise HTTPException(404)
     
     use_gemini = data.get('use_gemini', False)
-    direct_pdf = batch.get('direct_pdf', False) # Inherit from extraction phase
+    direct_pdf = data.get('direct_pdf', batch.get('direct_pdf', False)) # Use current preference or session memory
     
     batch['status'] = 'processing'
     batch['use_gemini'] = use_gemini
+    batch['direct_pdf'] = direct_pdf
     state_manager.set_batch(batch_id, batch)
     
     if state_manager.use_redis:

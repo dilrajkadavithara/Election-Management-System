@@ -61,8 +61,8 @@ def run_extraction_task(batch_id: str, dpi: int, direct_pdf: bool = False):
         pdf_path = batch['file_path']
         p_dir = PAGES_DIR / batch_id
         c_dir = CROPS_DIR / batch_id
-        p_dir.mkdir(exist_ok=True, parents=True)
-        c_dir.mkdir(exist_ok=True, parents=True)
+        # 0. Bird's-Eye Synchronization: Prefer database state over passed arguments
+        direct_pdf = batch.get('direct_pdf', direct_pdf)
 
         # 1. Page Count (Using PyPDF2)
         try:
@@ -70,16 +70,17 @@ def run_extraction_task(batch_id: str, dpi: int, direct_pdf: bool = False):
             with open(pdf_path, 'rb') as f:
                 reader = PdfReader(f)
                 batch['total_pages'] = len(reader.pages)
-        except: pass
-        
-        state_manager.set_batch(batch_id, batch)
+        except Exception as e:
+            logger.error(f"Page count failure: {e}")
 
         if direct_pdf:
-            # --- STRATEGIC SHORTCUT ---
-            # Skip heavy image conversion to save RAM
+            # --- STRATEGIC SHORTCUT (Safe Mode) ---
+            # Explicitly persist the direct_pdf flag for the next phase
+            batch['direct_pdf'] = True
             batch['pages_processed'] = batch.get('total_pages', 0)
             batch['status'] = 'extracted'
             state_manager.set_batch(batch_id, batch)
+            logger.info(f"Batch {batch_id} ready for Strategic AI extraction.")
             return
 
         # 2. Conversion & Processing (Legacy Mode)
@@ -119,12 +120,18 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
         batch = state_manager.get_batch(batch_id)
         if not batch: return
         
-        batch['use_gemini'] = use_gemini
+        # Bird's-Eye Synchronization: Ensure we know if we are in Safe Mode
+        direct_pdf = batch.get('direct_pdf', direct_pdf)
+        use_gemini = batch.get('use_gemini', use_gemini)
+        
+        batch['status'] = 'processing'
         state_manager.set_batch(batch_id, batch)
 
-        if direct_pdf and use_gemini:
-            # --- STRATEGIC DIRECT AI FLOW ---
-            processor = BatchProcessor()
+        if direct_pdf:
+            # Force Gemini for Direct PDF mode as Tesseract can't process raw PDFs
+            use_gemini = True 
+            batch['use_gemini'] = True
+            state_manager.set_batch(batch_id, batch)
             pdf_path = Path(batch['file_path'])
             
             # --- SLICING SAFETY: Remove first 2 pages (Cover/Index) ---
