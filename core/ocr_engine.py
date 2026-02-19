@@ -90,7 +90,22 @@ class OCREngine:
             elif "```" in text:
                 text = text.split("```")[1].split("```")[0].strip()
             
-            return json.loads(text)
+            # Option B: Robust Streaming Decoder (Ignores footer text)
+            try:
+                start_index = text.find('[')
+                if start_index == -1:
+                    start_index = text.find('{')
+                
+                if start_index != -1:
+                    # raw_decode parses ONE valid object and stops, ignoring the rest
+                    parsed_json, _ = json.JSONDecoder().raw_decode(text[start_index:])
+                    return parsed_json
+                else:
+                    # Fallback for pure JSON
+                    return json.loads(text)
+            except Exception:
+                # Last resort: Try standard load if finding bracket failed logic
+                return json.loads(text)
         except Exception as e:
             print(f"Gemini PDF Extraction Error: {e}")
             return None
