@@ -153,6 +153,7 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
                 logger.error(f"Slicing error: {e}")
                 processing_path = str(pdf_path)
 
+            processor = BatchProcessor()
             results = processor.process_pdf_directly(processing_path)
             
             # Clean up sliced temp file
