@@ -16,6 +16,17 @@ const Dashboard = ({
     const [viewMode, setViewMode] = useState('CLASSIC'); // CLASSIC or WAR_ROOM
     const [perspective, setPerspective] = useState('UDF'); // Default Perspective
 
+    // --- WAR ROOM LOGIC ---
+    const [warFilters, setWarFilters] = useState({
+        ageGroup: 'ALL',
+        gender: 'ALL',
+        location: 'LOCAL', // Default: Focus on LOCAL
+        probability: 'CONFIRMED', // Default: Focus on CONFIRMED
+        constituency: '',
+        lb: '',
+        booth: ''
+    });
+
     if (!dashboardStats) return (
         <div className="min-h-screen lux-mesh-bg flex items-center justify-center">
             <div className="flex flex-col items-center animate-pulse">
@@ -46,17 +57,6 @@ const Dashboard = ({
         NDA: { color: '#f59e0b', text: 'text-amber-400', gradient: 'from-amber-600/20 to-amber-900/10' }
     };
     const activeBrand = branding[perspective];
-
-    // --- WAR ROOM LOGIC ---
-    const [warFilters, setWarFilters] = useState({
-        ageGroup: 'ALL',
-        gender: 'ALL',
-        location: 'LOCAL', // Default: Focus on LOCAL
-        probability: 'CONFIRMED', // Default: Focus on CONFIRMED
-        constituency: '',
-        lb: '',
-        booth: ''
-    });
 
     // Mock Calculation for Dynamic Win Probability (Simulating backend logic for now)
     // In a real scenario, this would filter the 'voters' array directly or fetch new stats.
