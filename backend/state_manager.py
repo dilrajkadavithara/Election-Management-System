@@ -55,11 +55,17 @@ class StateManager:
             self._save_to_disk()
 
     def list_all_batches(self):
-        # Useful for debugging/admin
+        # Professional Bird's-Eye View: Returns full objects for deep analysis
         if self.use_redis:
             keys = self.redis.keys("batch:*")
-            return [batch_id.split(":")[1] for batch_id in keys]
-        return list(self._local_storage.keys())
+            all_batches = []
+            for k in keys:
+                data = self.redis.get(k)
+                if data:
+                    try: all_batches.append(json.loads(data))
+                    except: pass
+            return all_batches
+        return list(self._local_storage.values())
 
     def is_cancelled(self, batch_id):
         if self.use_redis:
