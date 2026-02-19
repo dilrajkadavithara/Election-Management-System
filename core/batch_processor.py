@@ -12,39 +12,49 @@ class BatchProcessor:
         self.parser = VoterParser()
         self.results = []
 
-    def process_pdf_directly(self, pdf_path):
-        """Strategic Upgrade: Sends PDF to Gemini and parses the results into our standard format."""
-        raw_list = self.engine.extract_from_pdf(pdf_path)
-        if not raw_list:
-            return []
-
-        standardized_results = []
-        for i, entry in enumerate(raw_list):
-            voter_id = i + 1
-            # Step 1: Map raw Gemini fields to our internal standard
-            parsed_info = {
-                "Full Name": entry.get("name_malayalam", ""),
-                "Relation Name": entry.get("relation_name_malayalam", ""),
-                "Relation Type": str(entry.get("relation_type", "")).title(),
-                "House Name": entry.get("house_name_malayalam", ""),
-                "House Number": entry.get("house_number", ""),
-                "Age": str(entry.get("age", "")),
-                "Gender": str(entry.get("gender", "")).title(),
-                "EPIC_ID": entry.get("epic_id", ""),
-                "Serial_OCR": str(entry.get("serial_number", ""))
-            }
-
-            # Step 2: Apply our "Integrity Shield" (Healing and Validation)
-            self._apply_standardization(parsed_info, voter_id)
-            
-            # Step 3: Add metadata
-            parsed_info["voter_id"] = voter_id
-            parsed_info["Image_Path"] = "pdf_source" # Marker showing this came from Direct Mode
-            parsed_info["Filename"] = os.path.basename(pdf_path)
-            
-            standardized_results.append(parsed_info)
+    def process_pdf_directly(self, pdf_path, page_range=None, callback=None):
+        """Strategic Streaming Upgrade: Pulls data page-by-page to avoid AI output limits and show live progress."""
+        all_standardized = []
         
-        return standardized_results
+        # If no range provided, we fallback to one-shot (not recommended for large lists)
+        pages = page_range if page_range else [None]
+        
+        for page in pages:
+            raw_list = self.engine.extract_from_pdf(pdf_path, page_num=page)
+            if not raw_list:
+                continue
+
+            page_results = []
+            for i, entry in enumerate(raw_list):
+                voter_id = len(all_standardized) + len(page_results) + 1
+                
+                # Step 1: Map raw Gemini fields to our internal standard
+                parsed_info = {
+                    "voter_id": voter_id,
+                    "Full Name": entry.get("name_malayalam", ""),
+                    "Relation Name": entry.get("relation_name_malayalam", ""),
+                    "Relation Type": str(entry.get("relation_type", "")).title(),
+                    "House Name": entry.get("house_name_malayalam", ""),
+                    "House Number": entry.get("house_number", ""),
+                    "Age": str(entry.get("age", "")),
+                    "Gender": str(entry.get("gender", "")).title(),
+                    "EPIC_ID": entry.get("epic_id", ""),
+                    "Serial_OCR": str(entry.get("serial_number", "")),
+                    "Image_Path": f"pdf_page_{page if page else 'all'}",
+                    "Filename": os.path.basename(pdf_path)
+                }
+
+                # Step 2: Apply our "Integrity Shield" (Healing and Validation)
+                self._apply_standardization(parsed_info, voter_id)
+                page_results.append(parsed_info)
+            
+            all_standardized.extend(page_results)
+            
+            # Live Progress Hand-off: Notify the system that a page is finished
+            if callback:
+                callback(page, page_results)
+
+        return all_standardized
 
     def _apply_standardization(self, parsed_info, expected_serial):
         """Unified data cleaning and validation engine."""

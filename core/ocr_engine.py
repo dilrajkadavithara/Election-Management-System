@@ -40,18 +40,20 @@ class OCREngine:
         else:
             self.gemini_model = None
 
-    def extract_from_pdf(self, pdf_path):
-        """Processes an entire PDF directly using Gemini Vision. Bypasses local rendering."""
+    def extract_from_pdf(self, pdf_path, page_num=None):
+        """Processes specific pages or entire PDF using Gemini. Targeted extraction avoids token limits."""
         if not self.gemini_model:
             return None
 
-        prompt = """
+        target_instruction = f"Extract ALL voter records from PAGE {page_num} of this PDF." if page_num else "Extract ALL voter records from this PDF."
+        
+        prompt = f"""
         You are a highly accurate OCR system for Indian Voter Lists (Malayalam).
-        Extract ALL voter records from the attached PDF.
+        {target_instruction}
         Return the data as a JSON list of objects.
         
-        Fields per voter:
-        {
+        JSON Structure:
+        {{
             "serial_number": "string",
             "epic_id": "string",
             "name_malayalam": "string",
@@ -61,19 +63,18 @@ class OCREngine:
             "house_name_malayalam": "string",
             "age": "number",
             "gender": "MALE/FEMALE"
-        }
+        }}
         
-        Important:
-        1. Capture names exactly as they appear in Malayalam.
-        2. Ensure every voter on every page is captured.
-        3. Return ONLY the raw JSON list, no markdown or text.
+        Strict Rules:
+        1. Capture Malayalam text exactly.
+        2. If multiple voters exist on the page, return all of them.
+        3. Return ONLY raw JSON. No conversational text.
         """
 
         try:
             with open(pdf_path, 'rb') as f:
                 pdf_data = f.read()
 
-            # Using Gemini 1.5 Flash for speed and high context window
             response = self.gemini_model.generate_content([
                 prompt,
                 {
@@ -83,7 +84,7 @@ class OCREngine:
             ])
             text = response.text.strip()
             
-            # Clean markdown if AI includes it
+            # Clean markdown
             if "```json" in text:
                 text = text.split("```json")[1].split("```")[0].strip()
             elif "```" in text:

@@ -154,18 +154,44 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
                 processing_path = str(pdf_path)
 
             processor = BatchProcessor()
-            results = processor.process_pdf_directly(processing_path)
+            
+            # --- PROGRESS CALLBACK SYSTEM ---
+            def update_progress(page_num, page_results):
+                current_batch = state_manager.get_batch(batch_id)
+                if not current_batch: return
+                
+                # Append new results to the master list
+                existing_results = current_batch.get('results', [])
+                existing_results.extend(page_results)
+                
+                # Update counters
+                current_batch['results'] = existing_results
+                current_batch['total_voters'] = len(existing_results)
+                current_batch['voters_processed'] = len(existing_results)
+                current_batch['pages_processed'] = page_num if page_num else current_batch.get('total_pages', 0)
+                current_batch['clean_count'] = len([r for r in existing_results if r.get('Status') == '✅ OK'])
+                current_batch['flagged_count'] = len([r for r in existing_results if r.get('Status') != '✅ OK'])
+                
+                state_manager.set_batch(batch_id, current_batch)
+                logger.info(f"Progress Update: Page {page_num} finished. Total Voters: {len(existing_results)}")
+
+            # Generate target page range (3 to END if sliced, or 1 to END)
+            total_pdf_pages = batch.get('total_pages', 0)
+            if total_pdf_pages > 2:
+                # We sliced off the first 2, so the remaining pages are labeled 3, 4, 5...
+                target_pages = list(range(3, total_pdf_pages + 1))
+            else:
+                target_pages = list(range(1, total_pdf_pages + 1))
+
+            results = processor.process_pdf_directly(processing_path, page_range=target_pages, callback=update_progress)
             
             # Clean up sliced temp file
             if os.path.exists(sliced_pdf_path):
                 try: os.remove(sliced_pdf_path)
                 except: pass
 
-            batch['results'] = results
-            batch['total_voters'] = len(results)
-            batch['voters_processed'] = len(results)
-            batch['clean_count'] = len([r for r in results if r.get('Status') == '✅ OK'])
-            batch['flagged_count'] = len([r for r in results if r.get('Status') != '✅ OK'])
+            # Final status update
+            batch = state_manager.get_batch(batch_id)
             batch['status'] = 'processed'
             state_manager.set_batch(batch_id, batch)
             return
