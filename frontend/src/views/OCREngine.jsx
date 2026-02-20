@@ -131,16 +131,8 @@ const OCREngine = ({
     };
 
     return (
-        <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-16 lux-animate-in pb-32" style={{ fontFamily: '"Inter", sans-serif' }}>
-            <header className="space-y-12">
-                {/* Header Section: Cybernetic Identity */}
-                <div className="flex justify-between items-end border-b border-indigo-500/20 pb-10">
-                    <div className="space-y-2">
-                        <h1 className="text-8xl font-black tracking-tighter uppercase lux-text-gradient leading-none" style={{ fontFamily: '"Rajdhani", sans-serif' }}>AI Processor</h1>
-                        <p className="text-indigo-500/60 font-black uppercase tracking-[0.8em] text-[10px] ml-2">Secure Link Active // Tactical Overlay v5.3</p>
-                    </div>
-                </div>
-
+        <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-12 lux-animate-in pb-32" style={{ fontFamily: '"Inter", sans-serif' }}>
+            <header className="space-y-10">
                 {/* Tactical Location Grid: Logical 2-Row Design */}
                 <div className="lux-glass bg-slate-900/80 p-12 rounded-[2rem] border border-white/5 shadow-2xl space-y-12 relative overflow-hidden lux-tactical-border">
                     <div className="lux-tactical-corner-tl" />
@@ -270,7 +262,7 @@ const OCREngine = ({
             )}
 
             {!ocrBatch && (
-                <div onClick={triggerUpload} className="group max-w-5xl mx-auto p-32 rounded-[3.5rem] bg-slate-900/60 border border-white/5 flex flex-col items-center justify-center gap-12 cursor-pointer hover:bg-indigo-500/5 hover:border-indigo-500/40 transition-all duration-700 shadow-2xl relative overflow-hidden backdrop-blur-3xl lux-tactical-border">
+                <div onClick={triggerUpload} className="group max-w-5xl mx-auto p-12 rounded-[3rem] bg-slate-900/60 border border-white/5 flex flex-col items-center justify-center gap-8 cursor-pointer hover:bg-indigo-500/5 hover:border-indigo-500/40 transition-all duration-700 shadow-2xl relative overflow-hidden backdrop-blur-3xl lux-tactical-border">
                     <div className="lux-tactical-corner-tl" />
                     <div className="lux-tactical-corner-tr" />
                     <div className="lux-tactical-corner-bl" />
@@ -280,18 +272,17 @@ const OCREngine = ({
 
                     {/* Futuristic Document Core with Scanner Line */}
                     <div className="relative">
-                        <div className="w-56 h-56 bg-indigo-500/5 rounded-[3rem] flex items-center justify-center text-8xl shadow-[inset_0_0_50px_rgba(99,102,241,0.1)] group-hover:scale-110 group-hover:shadow-[0_0_80px_rgba(99,102,241,0.4)] transition-all duration-1000 border border-white/5 relative overflow-hidden">
-                            <span className="relative z-10 transition-transform duration-700 group-hover:-translate-y-2">📄</span>
-                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-indigo-500/40 to-transparent h-12 w-full animate-scanner opacity-0 group-hover:opacity-100" />
+                        <div className="w-32 h-32 bg-indigo-500/5 rounded-[2rem] flex items-center justify-center text-6xl shadow-[inset_0_0_30px_rgba(99,102,241,0.1)] group-hover:scale-110 group-hover:shadow-[0_0_50px_rgba(99,102,241,0.3)] transition-all duration-1000 border border-white/5 relative overflow-hidden">
+                            <span className="relative z-10 transition-transform duration-700 group-hover:-translate-y-1">📄</span>
+                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-indigo-500/40 to-transparent h-8 w-full animate-scanner opacity-0 group-hover:opacity-100" />
                         </div>
-                        <div className="absolute -inset-4 border-2 border-indigo-500/10 rounded-[3.5rem] scale-95 group-hover:scale-105 group-hover:border-indigo-500/30 transition-all duration-1000" />
                     </div>
 
-                    <div className="text-center space-y-6 relative z-10">
-                        <h2 className="text-7xl font-black uppercase tracking-tighter italic text-white group-hover:text-indigo-400 transition-colors duration-500" style={{ fontFamily: '"Rajdhani", sans-serif' }}>Initialize Data Matrix</h2>
-                        <div className="flex flex-col items-center gap-4">
-                            <p className="lux-tech-label tracking-[0.5em] text-slate-400">DRAG & DROP CSV/PDF TO INITIATE PARSING // SECURE LINK ACTIVE</p>
-                            <div className="h-[2px] w-48 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
+                    <div className="text-center space-y-4 relative z-10">
+                        <h2 className="text-5xl font-black uppercase tracking-tighter italic text-white group-hover:text-indigo-400 transition-colors duration-500" style={{ fontFamily: '"Rajdhani", sans-serif' }}>UPLOAD YOUR DOC</h2>
+                        <div className="flex flex-col items-center gap-3">
+                            <p className="lux-tech-label tracking-[0.4em] text-slate-400 !text-[8px]">DRAG & DROP CSV/PDF TO INITIATE PARSING // SECURE LINK ACTIVE</p>
+                            <div className="h-[1px] w-32 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
                         </div>
                     </div>
 
