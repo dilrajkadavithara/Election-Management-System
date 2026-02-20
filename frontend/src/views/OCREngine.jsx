@@ -130,6 +130,8 @@ const OCREngine = ({
         return Math.min(100, Math.round((ocrBatch.pages_processed / total) * 100));
     };
 
+    const isLocationValid = !!(ocrTargetLoc.constId && ocrTargetLoc.lbId && (ocrTargetLoc.boothId || ocrTargetLoc.boothNo) && ocrTargetLoc.psNo && ocrTargetLoc.psName);
+
     return (
         <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-8 lux-animate-in pb-32" style={{ fontFamily: '"Inter", sans-serif' }}>
             <header className="space-y-6">
@@ -260,7 +262,10 @@ const OCREngine = ({
             )}
 
             {!ocrBatch && (
-                <div onClick={triggerUpload} className="group max-w-5xl mx-auto p-6 rounded-[2rem] bg-slate-900/60 border border-white/5 flex flex-col items-center justify-center gap-6 cursor-pointer hover:bg-indigo-500/5 hover:border-indigo-500/40 transition-all duration-700 shadow-2xl relative overflow-hidden backdrop-blur-3xl">
+                <div
+                    onClick={isLocationValid ? triggerUpload : () => setValidationTriggered(true)}
+                    className={`group max-w-5xl mx-auto p-12 rounded-[2rem] border flex flex-col items-center justify-center gap-6 cursor-pointer transition-all duration-700 shadow-2xl relative overflow-hidden backdrop-blur-3xl ${!isLocationValid ? 'bg-slate-900/40 border-white/5 opacity-80' : 'bg-slate-900/60 border-white/5 hover:bg-indigo-500/5 hover:border-indigo-500/40'}`}
+                >
                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
 
                     {/* Futuristic Document Core with Scanner Line */}
@@ -386,11 +391,36 @@ const OCREngine = ({
                         </div>
 
                         <div className="flex gap-8 mt-10">
-                            {ocrBatch.status === 'uploaded' && <button onClick={startExtraction} className="lux-btn-primary flex-1 !py-8 text-sm tracking-[0.3em] !font-bold" style={{ fontFamily: '"Rajdhani", sans-serif' }}>Initialize Matrix Extraction Protocol</button>}
-                            {ocrBatch.status === 'extracted' && <button onClick={startOcr} className="lux-btn-primary flex-1 !py-8 text-sm tracking-[0.3em] !font-bold !from-indigo-600 !to-purple-600 shadow-[0_0_30px_rgba(99,102,241,0.5)]" style={{ fontFamily: '"Rajdhani", sans-serif' }}>Deploy Neural AI Core ⚡</button>}
+                            {ocrBatch.status === 'uploaded' && (
+                                <button
+                                    onClick={startExtraction}
+                                    disabled={!isLocationValid}
+                                    className={`lux-btn-primary flex-1 !py-8 text-sm tracking-[0.3em] !font-bold disabled:opacity-30 disabled:cursor-not-allowed`}
+                                    style={{ fontFamily: '"Rajdhani", sans-serif' }}
+                                >
+                                    Initialize Matrix Extraction Protocol
+                                </button>
+                            )}
+                            {ocrBatch.status === 'extracted' && (
+                                <button
+                                    onClick={startOcr}
+                                    disabled={!isLocationValid}
+                                    className={`lux-btn-primary flex-1 !py-8 text-sm tracking-[0.3em] !font-bold !from-indigo-600 !to-purple-600 shadow-[0_0_30px_rgba(99,102,241,0.5)] disabled:opacity-30 disabled:cursor-not-allowed`}
+                                    style={{ fontFamily: '"Rajdhani", sans-serif' }}
+                                >
+                                    Deploy Neural AI Core ⚡
+                                </button>
+                            )}
                             {ocrBatch.status === 'processed' && (
                                 <div className="flex-1 flex gap-6">
-                                    <button onClick={handleSaveBatch} className="flex-1 bg-white text-black py-8 rounded-2xl font-bold uppercase text-[11px] tracking-[0.2em] shadow-2xl hover:bg-indigo-400 hover:text-white transition-all" style={{ fontFamily: '"Rajdhani", sans-serif' }}>Commit Intelligence to DB</button>
+                                    <button
+                                        onClick={handleSaveBatch}
+                                        disabled={!isLocationValid}
+                                        className={`flex-1 bg-white text-black py-8 rounded-2xl font-bold uppercase text-[11px] tracking-[0.2em] shadow-2xl hover:bg-indigo-400 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed`}
+                                        style={{ fontFamily: '"Rajdhani", sans-serif' }}
+                                    >
+                                        Commit Intelligence to DB
+                                    </button>
                                     <button onClick={() => api.exportBatchCSV(ocrBatch.id)} className="px-12 lux-glass rounded-2xl font-bold text-white text-[11px] uppercase tracking-widest border-white/10 hover:bg-white/10" style={{ fontFamily: '"Rajdhani", sans-serif' }}>Export Result</button>
                                 </div>
                             )}

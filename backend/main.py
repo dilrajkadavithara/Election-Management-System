@@ -517,29 +517,35 @@ def sync_save_batch_wrapper(payload_dict, user_id):
     batch = state_manager.get_batch(batch_id)
     if not batch: return False, "Batch session expired or not found"
     
-    # Resolve IDs to Names (Frontend sends IDs, Backend Bridge expects Names)
-    try:
-        c_obj = Constituency.objects.get(id=int(payload_dict['constituency']))
-        c_name = c_obj.name
-    except: c_name = payload_dict['constituency']
+    # Resolve IDs to Names (Frontend sends IDs OR Names)
+    def resolve_val(val, model_class, field_name='name'):
+        if not val: return ""
+        try:
+            # If it's a numeric ID, try to get the object
+            obj = model_class.objects.get(id=int(val))
+            return getattr(obj, field_name)
+        except (ValueError, model_class.DoesNotExist, TypeError):
+            # If it's a string name or ID doesn't exist, use raw value
+            return str(val)
+
+    c_name = resolve_val(payload_dict.get('constituency'), Constituency)
+    lb_name = resolve_val(payload_dict.get('lgb_name'), LocalBody)
     
+    # Special handling for Booth number (we want it as a string)
+    b_num = resolve_val(payload_dict.get('booth'), Booth, 'number')
+    if b_num.isdigit():
+        b_num = b_num.zfill(3)
+
+    # Resolve LB Type
     try:
-        lb_obj = LocalBody.objects.get(id=int(payload_dict['lgb_name']))
-        lb_name = lb_obj.name
+        lb_obj = LocalBody.objects.get(name=lb_name)
         lb_type = lb_obj.body_type
     except:
-        lb_name = payload_dict['lgb_name']
         lb_type = payload_dict.get('lgb_type') or "PANCHAYAT"
-        
-    try:
-        b_obj = Booth.objects.get(id=int(payload_dict['booth']))
-        b_num = str(b_obj.number).zfill(3)
-    except: 
-        b_num = str(payload_dict['booth']).zfill(3)
-    
+
     return save_booth_data(
-        c_name, lb_type, lb_name, b_num, 
-        batch['results'], batch['filename'], 
+        c_name, lb_type, lb_name, b_num,
+        batch['results'], batch['filename'],
         payload_dict.get('ps_no', ""), payload_dict.get('ps_name', ""), user_id
     )
 

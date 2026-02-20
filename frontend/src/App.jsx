@@ -213,16 +213,32 @@ const App = () => {
     const handleSaveBatch = async () => {
         if (!ocrBatch) return;
         setOcrLoading(true);
+        setOcrError(null);
         try {
-            await api.saveToDB(ocrBatch.id, ocrTargetLoc.constId, '', ocrTargetLoc.lbId, ocrTargetLoc.boothId, ocrTargetLoc.psNo, ocrTargetLoc.psName);
-            setShowSuccess(true);
-            setTimeout(() => {
-                setShowSuccess(false);
-                setOcrBatch(null);
-                loadStats();
-                setView('dashboard');
-            }, 2000);
-        } catch (e) { setOcrError(e.message); }
+            const res = await api.saveToDB(
+                ocrBatch.id,
+                ocrTargetLoc.constId || ocrTargetLoc.constName,
+                '',
+                ocrTargetLoc.lbId || ocrTargetLoc.lbName,
+                ocrTargetLoc.boothId || ocrTargetLoc.boothNo,
+                ocrTargetLoc.psNo,
+                ocrTargetLoc.psName
+            );
+            if (res.success) {
+                setShowSuccess(true);
+                setTimeout(() => {
+                    setShowSuccess(false);
+                    setOcrBatch(null);
+                    loadStats();
+                    setView('dashboard');
+                }, 2000);
+            } else {
+                setOcrError(res.message || "Failed to commit data to Intelligence Engine.");
+            }
+        } catch (e) {
+            const msg = e.response?.data?.detail || e.message;
+            setOcrError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+        }
         finally { setOcrLoading(false); }
     };
 
