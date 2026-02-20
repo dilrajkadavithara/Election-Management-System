@@ -75,6 +75,78 @@ body {
         border-radius: inherit;
         z-index: -1;
     }
+
+    .lux-tech-label {
+        @apply text-[9px] font-bold uppercase tracking-[0.3em] text-indigo-400/80;
+        font-family: 'Rajdhani', sans-serif;
+    }
+
+    .lux-data-field {
+        @apply bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-medium text-white transition-all focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 outline-none;
+        font-family: 'Roboto Mono', monospace;
+    }
+}
+
+@keyframes scanner {
+    0% {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+}
+
+.animate-scanner {
+    animation: scanner 2s linear infinite;
+}
+
+.lux-tactical-border {
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.lux-tactical-border::before,
+.lux-tactical-border::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-color: rgba(129, 140, 248, 0.4);
+}
+
+.lux-tactical-corner-tl {
+    border-top: 2px solid;
+    border-left: 2px solid;
+    top: -1px;
+    left: -1px;
+}
+
+.lux-tactical-corner-tr {
+    border-top: 2px solid;
+    border-right: 2px solid;
+    top: -1px;
+    right: -1px;
+}
+
+.lux-tactical-corner-bl {
+    border-bottom: 2px solid;
+    border-left: 2px solid;
+    bottom: -1px;
+    left: -1px;
+}
+
+.lux-tactical-corner-br {
+    border-bottom: 2px solid;
+    border-right: 2px solid;
+    bottom: -1px;
+    right: -1px;
 }
 
 @keyframes lux-border-flow {
