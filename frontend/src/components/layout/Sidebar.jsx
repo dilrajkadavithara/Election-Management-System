@@ -1,6 +1,6 @@
 const Sidebar = ({ view, setView, userRole, username, handleLogout }) => {
     return (
-        <aside className="fixed left-6 top-6 bottom-6 w-80 lux-glass rounded-[3rem] p-10 flex flex-col z-50 border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-y-auto custom-scrollbar">
+        <aside className="fixed left-6 top-6 bottom-6 w-80 lux-glass rounded-[3rem] p-10 flex flex-col z-[1000] border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-y-auto custom-scrollbar">
             <div className="flex items-center gap-5 mb-16 px-2 flex-shrink-0">
                 <div className="w-14 h-14 bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 rounded-[1.25rem] flex items-center justify-center text-3xl shadow-[0_10px_30px_rgba(99,102,241,0.3)] animate-pulse">
                     🗳️

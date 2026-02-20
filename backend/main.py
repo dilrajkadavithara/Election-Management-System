@@ -282,17 +282,20 @@ async def admin_get_locations(user_info=Depends(get_current_user)):
 
 @app.post("/api/admin/add-const")
 async def admin_add_const(data: dict, user_info=Depends(get_current_user)):
-    if user_info['role'] != 'SUPERUSER': raise HTTPException(403)
+    allowed = ['SUPERUSER', 'CONSTITUENCY_ADMIN', 'MANAGER', 'OPERATOR']
+    if user_info['role'] not in allowed: raise HTTPException(403, "Access Denied: High-level privilege required")
     return await add_const_async(data['name'])
 
 @app.post("/api/admin/add-lb")
 async def admin_add_lb(data: dict, user_info=Depends(get_current_user)):
-    if user_info['role'] != 'SUPERUSER': raise HTTPException(403)
+    allowed = ['SUPERUSER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'MANAGER', 'OPERATOR']
+    if user_info['role'] not in allowed: raise HTTPException(403, "Access Denied: High-level privilege required")
     return await add_lb_async(data['const_id'], data['name'], data['type'])
 
 @app.post("/api/admin/add-booth")
 async def admin_add_booth(data: dict, user_info=Depends(get_current_user)):
-    if user_info['role'] != 'SUPERUSER': raise HTTPException(403)
+    allowed = ['SUPERUSER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER', 'MANAGER', 'OPERATOR']
+    if user_info['role'] not in allowed: raise HTTPException(403, "Access Denied: High-level privilege required")
     return await add_booth_async(data['const_id'], data['lb_id'], data['number'], data.get('ps_name', ''), data.get('ps_no', ''))
 
 @app.get("/api/admin/users")
@@ -354,6 +357,30 @@ async def get_stats(constituency: str = None, lb: str = None, booth: str = None,
     l_id = int(lb) if lb and str(lb).isdigit() else None
     b_id = int(booth) if booth and str(booth).isdigit() else None
     return await get_stats_async(user_info['username'], c_id, l_id, b_id)
+
+@app.get("/api/war-room/stats")
+async def get_war_stats(
+    constituency: str = None, lb: str = None, booth: str = None,
+    gender: str = None, age_group: str = None, 
+    location: str = None, probability: str = None,
+    perspective: str = 'UDF',
+    user_info=Depends(get_current_user)
+):
+    c_id = int(constituency) if constituency and str(constituency).isdigit() else None
+    l_id = int(lb) if lb and str(lb).isdigit() else None
+    b_id = int(booth) if booth and str(booth).isdigit() else None
+    
+    # We need a sync wrapper here because it's a new function
+    def sync_war_wrapper():
+        from core.db_bridge import get_filtered_war_stats
+        from django.contrib.auth.models import User
+        user = User.objects.get(username=user_info['username'])
+        return get_filtered_war_stats(
+            user.profile, c_id, l_id, b_id, 
+            gender, age_group, location, probability, perspective
+        )
+        
+    return await sync_to_async(sync_war_wrapper, thread_sensitive=True)()
 
 @app.get("/api/voters")
 async def get_voters_api(
@@ -745,12 +772,18 @@ async def create_party(
     
     return await add_party_async(name, sym_name, short_label, primary_color, accent_gradient)
 
-@app.get("/api/party-symbol/{image_name}")
+@app.get("/api/party-symbol/{image_name:path}")
 async def get_party_symbol(image_name: str):
-    path = SYMBOLS_DIR / image_name
+    # Strip any leading 'party_symbols/' prefix to avoid double directory
+    clean_name = image_name.replace("party_symbols/", "").lstrip("/")
+    path = SYMBOLS_DIR / clean_name
+    # Security: prevent path traversal
+    if not str(path).startswith(str(SYMBOLS_DIR)):
+        raise HTTPException(403)
     if not path.exists():
         raise HTTPException(404)
     return FileResponse(path)
+
 
 @app.post("/api/clear-session/{batch_id}")
 async def clear_session(batch_id: str, user_info=Depends(get_current_user)):

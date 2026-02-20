@@ -400,3 +400,65 @@ def create_comm_log(voter_id, template_id, channel, status='SENT'):
         status=status
     )
     return log.id
+
+def get_filtered_war_stats(user_profile, constituency_id=None, lb_id=None, booth_id=None, 
+                          gender=None, age_group=None, location=None, probability=None, perspective='UDF'):
+    """
+    Get highly specific War Room stats using dynamic filtering.
+    Returns EXACT counts from the database, not approximations.
+    """
+    voters = user_profile.get_accessible_voters()
+    
+    # 1. Geography Filters - Hierarchical Priority
+    if booth_id:
+        voters = voters.filter(booth_id=booth_id)
+    elif lb_id:
+        voters = voters.filter(booth__local_body_id=lb_id)
+    elif constituency_id:
+        voters = voters.filter(booth__constituency_id=constituency_id)
+    
+    # 2. Demographic & Strategic Filters
+    if gender and gender != 'ALL':
+        voters = voters.filter(gender__iexact=gender)
+        
+    if age_group and age_group != 'ALL':
+        if age_group == '18-25':
+            voters = voters.filter(age__gte=18, age__lte=25)
+        elif age_group == '26-40':
+            voters = voters.filter(age__gte=26, age__lte=40)
+        elif age_group == '41-60':
+            voters = voters.filter(age__gte=41, age__lte=60)
+        elif age_group == '60+':
+            voters = voters.filter(age__gt=60)
+            
+    if location and location != 'ALL':
+        # Special logic: 'LOCAL' is usually strict, others are broad
+        voters = voters.filter(current_location=location)
+        
+    if probability and probability != 'ALL':
+        voters = voters.filter(voting_probability=probability)
+    else:
+        # DEFAULT BASE: Only CONFIRMED voters count in the effective pool.
+        # This excludes: undigitized (NULL), LIKELY, UNLIKELY, OUT_OF_STATION voters.
+        # CONFIRMED = field-verified participation guarantee.
+        voters = voters.filter(voting_probability='CONFIRMED')
+        
+    # 3. Calculate Metrics
+    # Total voters matching ALL the criteria (The Denominator)
+    total_matching_voters = voters.count()
+    
+    # Supporters within this specific group (The Numerator)
+    # Note: If perspective is 'UDF', we count UDF supporters in this group
+    supporter_count = voters.filter(voter_leaning=perspective).count()
+    
+    # Calculate simple probability
+    prob = 0
+    if total_matching_voters > 0:
+        prob = round((supporter_count / total_matching_voters) * 100)
+        
+    return {
+        "total_pool": total_matching_voters,
+        "supporter_count": supporter_count,
+        "probability": prob
+    }
+

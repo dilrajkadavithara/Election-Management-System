@@ -16,6 +16,22 @@ client.interceptors.request.use((config) => {
     return config;
 });
 
+// Add Interceptor for Responses (401 Handling)
+client.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            console.warn("Session Expired - Auto Logout Triggered");
+            localStorage.removeItem('voter_token');
+            localStorage.removeItem('voter_role');
+            localStorage.removeItem('voter_user');
+            // Force reload to clear React state
+            window.location.reload();
+        }
+        return Promise.reject(error);
+    }
+);
+
 const api = {
     login: async (username, password) => {
         const formData = new URLSearchParams();
@@ -139,6 +155,11 @@ const api = {
 
     getStrategicAnalytics: async (constituencyId = null) => {
         const response = await client.get('/api/analytics/strategic', { params: { constituency_id: constituencyId } });
+        return response.data;
+    },
+
+    getWarRoomStats: async (filters) => {
+        const response = await client.get('/api/war-room/stats', { params: filters });
         return response.data;
     },
 

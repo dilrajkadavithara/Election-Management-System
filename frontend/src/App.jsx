@@ -418,16 +418,6 @@ const App = () => {
             <main className={`flex-1 flex flex-col overflow-y-auto ${view === 'design' ? 'bg-slate-200 p-0' : (isV2 && view === 'dashboard' ? 'p-0' : 'p-12')}`}>
                 {view === 'dashboard' && (
                     <div className="relative">
-                        <button
-                            onClick={() => setIsV2(!isV2)}
-                            className={`fixed top-6 right-12 z-[100] px-5 py-2 rounded-full font-black text-[10px] uppercase tracking-[0.2em] transition-all duration-500 shadow-2xl border ${isV2
-                                ? 'bg-white/10 text-white border-white/20 hover:bg-white/20 backdrop-blur-md'
-                                : 'bg-slate-900 text-white border-transparent hover:scale-105'
-                                }`}
-                        >
-                            {isV2 ? 'Back to Classic' : 'Switch to Command Center V2'}
-                        </button>
-
                         {isV2 ? (
                             <DashboardV2
                                 dashboardStats={dashboardStats}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../api';
 
 const OCREngine = ({
     ocrBatch,
@@ -39,27 +40,43 @@ const OCREngine = ({
 
     const handleQuickAdd = async (type) => {
         if (!newLocName) return;
+
+        // Frontend Validation to prevent 500s
+        if (type === 'lb' && !ocrTargetLoc.constId) {
+            setOcrError("Please select a Constituency first before adding a Local Body.");
+            return;
+        }
+        if (type === 'booth' && (!ocrTargetLoc.constId || !ocrTargetLoc.lbId)) {
+            setOcrError("Please select Constituency and Local Body first before adding a Booth.");
+            return;
+        }
+
         setOcrLoading(true);
         try {
             let res;
             if (type === 'const') {
                 res = await api.addConst(newLocName);
                 await loadAdminData();
-                setOcrTargetLoc({ ...ocrTargetLoc, constId: res.id, lbId: '', boothId: '' });
+                setOcrTargetLoc({ ...ocrTargetLoc, constId: String(res.id), lbId: '', boothId: '' });
                 setIsAddingConst(false);
             } else if (type === 'lb') {
                 res = await api.addLB(ocrTargetLoc.constId, newLocName, newLBType);
                 await loadAdminData();
-                setOcrTargetLoc({ ...ocrTargetLoc, lbId: res.id, boothId: '' });
+                setOcrTargetLoc({ ...ocrTargetLoc, lbId: String(res.id), boothId: '' });
                 setIsAddingLB(false);
             } else if (type === 'booth') {
                 res = await api.addBooth(ocrTargetLoc.constId, ocrTargetLoc.lbId, newLocName, ocrTargetLoc.psName, ocrTargetLoc.psNo);
                 await loadAdminData();
-                setOcrTargetLoc({ ...ocrTargetLoc, boothId: res.id });
+                setOcrTargetLoc({ ...ocrTargetLoc, boothId: String(res.id) });
                 setIsAddingBooth(false);
             }
             setNewLocName('');
-        } catch (e) { setOcrError(e.message); }
+        } catch (e) {
+            console.error("Quick Add Error:", e);
+            const errorMsg = e.response?.data?.detail;
+            const finalMsg = typeof errorMsg === 'string' ? errorMsg : (JSON.stringify(errorMsg) || e.message);
+            setOcrError(finalMsg);
+        }
         finally { setOcrLoading(false); }
     };
 
@@ -83,7 +100,7 @@ const OCREngine = ({
                         {[
                             { label: 'Constituency', key: 'constId', add: setIsAddingConst, state: isAddingConst, options: allLocations },
                             { label: 'Local Body', key: 'lbId', add: setIsAddingLB, state: isAddingLB, options: allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies, disabled: !ocrTargetLoc.constId },
-                            { label: 'Booth Unit', key: 'boothId', add: setIsAddingBooth, state: isAddingBooth, options: allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies.find(lb => String(lb.id) === String(ocrTargetLoc.lbId))?.booths, disabled: !ocrTargetLoc.lbId }
+                            { label: 'Booth Unit', key: 'boothId', add: setIsAddingBooth, state: isAddingBooth, options: allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies?.find(lb => String(lb.id) === String(ocrTargetLoc.lbId))?.booths, disabled: !ocrTargetLoc.lbId }
                         ].map(f => (
                             <div key={f.key} className="flex flex-col gap-2">
                                 <div className="flex justify-between items-center px-1">
@@ -93,7 +110,13 @@ const OCREngine = ({
                                 {f.state ? (
                                     <div className="flex gap-2">
                                         <input autoFocus placeholder="Name..." value={newLocName} onChange={e => setNewLocName(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none w-32 text-white" />
-                                        <button onClick={() => handleQuickAdd(f.key.replace('Id', ''))} className="bg-indigo-600 text-white px-4 rounded-xl font-black text-[9px] uppercase tracking-widest">ADD</button>
+                                        <button
+                                            disabled={ocrLoading}
+                                            onClick={() => handleQuickAdd(f.key.replace('Id', ''))}
+                                            className={`bg-indigo-600 text-white px-4 rounded-xl font-black text-[9px] uppercase tracking-widest ${ocrLoading ? 'opacity-50 animate-pulse' : 'hover:bg-indigo-500'}`}
+                                        >
+                                            {ocrLoading ? '...' : 'ADD'}
+                                        </button>
                                     </div>
                                 ) : (
                                     <select
@@ -111,6 +134,16 @@ const OCREngine = ({
                     </div>
                 )}
             </header>
+
+            {ocrError && (
+                <div className="bg-rose-500/10 border border-rose-500/20 p-6 rounded-3xl flex items-center justify-between animate-shake">
+                    <div className="flex items-center gap-4">
+                        <span className="text-2xl">⚠️</span>
+                        <p className="text-rose-400 font-black uppercase text-[11px] tracking-widest">{ocrError}</p>
+                    </div>
+                    <button onClick={() => setOcrError(null)} className="text-rose-400 hover:text-white font-black uppercase text-[9px] tracking-widest">Dismiss</button>
+                </div>
+            )}
 
             {!ocrBatch && (
                 <div onClick={() => ocrRef.current.click()} className="lux-glass group p-32 rounded-[4rem] border-white/5 flex flex-col items-center justify-center gap-10 cursor-pointer hover:bg-white/5 hover:border-indigo-500/30 transition-all shadow-2xl relative overflow-hidden">
