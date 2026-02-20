@@ -4,12 +4,10 @@ import json
 import logging
 import re
 from core.ocr_engine import OCREngine
-from core.parser import VoterParser
 
 class BatchProcessor:
     def __init__(self, tesseract_cmd=None):
         self.engine = OCREngine(tesseract_cmd=tesseract_cmd)
-        self.parser = VoterParser()
         self.results = []
 
     def process_pdf_directly(self, pdf_path, page_range=None, callback=None):
@@ -178,36 +176,19 @@ class BatchProcessor:
                 use_gemini = False
 
         if not use_gemini:
-            # --- LEGACY TESSERACT FLOW ---
-            raw_data = self.engine.extract_raw_data(img)
-            parsed_info = self.parser.parse_text_block(raw_data["C_TEXT"])
-            
-            # Age Recovery
-            if (parsed_info.get("Age") == "N/A" or not parsed_info.get("Age")) and raw_data.get("D_AGE_GENDER"):
-                magnified_parse = self.parser.parse_text_block(raw_data["D_AGE_GENDER"])
-                if magnified_parse.get("Age") != "N/A":
-                    parsed_info["Age"] = magnified_parse["Age"]
-                    if parsed_info.get("Gender") == "N/A":
-                        parsed_info["Gender"] = magnified_parse["Gender"]
-
-            serial_raw = raw_data["A_SERIAL"]
-            serial_digits = re.findall(r'\d+', serial_raw)
-            parsed_info["Serial_OCR"] = serial_digits[-1] if serial_digits else ""
-            
-            # EPIC HEALING
-            raw_epic = re.sub(r'[^A-Z0-9]', '', raw_data["B_EPIC"].upper())
-            clean_epic = raw_epic[:10]
-            if len(clean_epic) >= 8:
-                # Prefix logic...
-                prefix = clean_epic[:3]
-                suffix = clean_epic[3:]
-                alpha_map = {'0': 'O', '1': 'I', '2': 'Z', '3': 'J', '4': 'A', '5': 'S', '6': 'G', '8': 'B', '9': 'G'}
-                healed_prefix = "".join([alpha_map.get(c, c) if c.isdigit() else c for c in prefix])
-                num_map = {'O': '0', 'U': '0', 'Q': '0', 'D': '0', 'I': '1', 'L': '1', 'Z': '2', 'S': '5', 'B': '8', 'G': '6', 'A': '4'}
-                healed_suffix = "".join([num_map.get(c.upper(), c) if c.isalpha() else c for c in suffix])
-                parsed_info["EPIC_ID"] = healed_prefix + healed_suffix
-            else:
-                parsed_info["EPIC_ID"] = clean_epic
+            # Legacy Tesseract flow has been removed
+            # Falling back to empty structure to prevent crashes if use_gemini is bypassed
+            parsed_info = {
+                "Full Name": "N/A",
+                "Relation Name": "N/A",
+                "Relation Type": "N/A",
+                "House Name": "N/A",
+                "House Number": "N/A",
+                "Age": "N/A",
+                "Gender": "N/A",
+                "EPIC_ID": "",
+                "Serial_OCR": ""
+            }
 
         parsed_info["Image_Path"] = img_path
         parsed_info["Filename"] = os.path.basename(img_path)
