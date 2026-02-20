@@ -131,14 +131,12 @@ const OCREngine = ({
     };
 
     return (
-        <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-12 lux-animate-in pb-32" style={{ fontFamily: '"Inter", sans-serif' }}>
-            <header className="space-y-10">
+        <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-8 lux-animate-in pb-32" style={{ fontFamily: '"Inter", sans-serif' }}>
+            <header className="space-y-6">
+                <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient leading-none" style={{ fontFamily: '"Rajdhani", sans-serif' }}>AI Processor</h1>
+
                 {/* Tactical Location Grid: Logical 2-Row Design */}
-                <div className="lux-glass bg-slate-900/80 p-12 rounded-[2rem] border border-white/5 shadow-2xl space-y-12 relative overflow-hidden lux-tactical-border">
-                    <div className="lux-tactical-corner-tl" />
-                    <div className="lux-tactical-corner-tr" />
-                    <div className="lux-tactical-corner-bl" />
-                    <div className="lux-tactical-corner-br" />
+                <div className="lux-glass bg-slate-900/80 p-10 rounded-[2rem] border border-white/5 shadow-2xl space-y-10 relative overflow-hidden">
 
                     {/* Row 1: High-Width Modules */}
                     <div className="grid grid-cols-2 gap-16 relative z-10">
@@ -262,27 +260,22 @@ const OCREngine = ({
             )}
 
             {!ocrBatch && (
-                <div onClick={triggerUpload} className="group max-w-5xl mx-auto p-12 rounded-[3rem] bg-slate-900/60 border border-white/5 flex flex-col items-center justify-center gap-8 cursor-pointer hover:bg-indigo-500/5 hover:border-indigo-500/40 transition-all duration-700 shadow-2xl relative overflow-hidden backdrop-blur-3xl lux-tactical-border">
-                    <div className="lux-tactical-corner-tl" />
-                    <div className="lux-tactical-corner-tr" />
-                    <div className="lux-tactical-corner-bl" />
-                    <div className="lux-tactical-corner-br" />
-
+                <div onClick={triggerUpload} className="group max-w-5xl mx-auto p-6 rounded-[2rem] bg-slate-900/60 border border-white/5 flex flex-col items-center justify-center gap-6 cursor-pointer hover:bg-indigo-500/5 hover:border-indigo-500/40 transition-all duration-700 shadow-2xl relative overflow-hidden backdrop-blur-3xl">
                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
 
                     {/* Futuristic Document Core with Scanner Line */}
                     <div className="relative">
-                        <div className="w-32 h-32 bg-indigo-500/5 rounded-[2rem] flex items-center justify-center text-6xl shadow-[inset_0_0_30px_rgba(99,102,241,0.1)] group-hover:scale-110 group-hover:shadow-[0_0_50px_rgba(99,102,241,0.3)] transition-all duration-1000 border border-white/5 relative overflow-hidden">
+                        <div className="w-24 h-24 bg-indigo-500/5 rounded-2xl flex items-center justify-center text-5xl shadow-[inset_0_0_20px_rgba(99,102,241,0.1)] group-hover:scale-110 group-hover:shadow-[0_0_40px_rgba(99,102,241,0.3)] transition-all duration-1000 border border-white/5 relative overflow-hidden">
                             <span className="relative z-10 transition-transform duration-700 group-hover:-translate-y-1">📄</span>
-                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-indigo-500/40 to-transparent h-8 w-full animate-scanner opacity-0 group-hover:opacity-100" />
+                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-indigo-500/40 to-transparent h-6 w-full animate-scanner opacity-0 group-hover:opacity-100" />
                         </div>
                     </div>
 
-                    <div className="text-center space-y-4 relative z-10">
-                        <h2 className="text-5xl font-black uppercase tracking-tighter italic text-white group-hover:text-indigo-400 transition-colors duration-500" style={{ fontFamily: '"Rajdhani", sans-serif' }}>UPLOAD YOUR DOC</h2>
-                        <div className="flex flex-col items-center gap-3">
-                            <p className="lux-tech-label tracking-[0.4em] text-slate-400 !text-[8px]">DRAG & DROP CSV/PDF TO INITIATE PARSING // SECURE LINK ACTIVE</p>
-                            <div className="h-[1px] w-32 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
+                    <div className="text-center space-y-3 relative z-10">
+                        <h2 className="text-4xl font-black uppercase tracking-tighter italic text-white group-hover:text-indigo-400 transition-colors duration-500" style={{ fontFamily: '"Rajdhani", sans-serif' }}>UPLOAD YOUR DOC</h2>
+                        <div className="flex flex-col items-center gap-2">
+                            <p className="lux-tech-label tracking-[0.4em] text-slate-400 !text-[7px]">DRAG & DROP CSV/PDF TO INITIATE PARSING // SECURE LINK ACTIVE</p>
+                            <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
                         </div>
                     </div>
 
