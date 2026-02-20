@@ -113,12 +113,13 @@ const OCREngine = ({
 
     return (
         <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-12 lux-animate-in pb-32">
-            <header className="flex justify-between items-end border-b border-white/5 pb-10">
-                <div>
-                    <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient">AI Processor</h1>
-                    <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Autonomous Intelligence Synthesis Core</p>
-                </div>
-                {!ocrBatch && (
+            <header className="flex flex-col gap-10">
+                <div className="flex justify-between items-start">
+                    <div className="space-y-4">
+                        <h1 className="text-7xl font-black tracking-tighter uppercase lux-text-gradient">AI Processor</h1>
+                        <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Autonomous Intelligence Synthesis Core</p>
+                    </div>
+
                     <div className="flex flex-col gap-6 items-end">
                         <div className="flex gap-6 items-end">
                             {[
@@ -129,7 +130,7 @@ const OCREngine = ({
                                 <div key={f.key} className="flex flex-col gap-2">
                                     <div className="flex justify-between items-center px-1">
                                         <label className="text-[9px] font-black uppercase text-slate-300 tracking-widest">{f.label}</label>
-                                        <button disabled={f.disabled} onClick={() => f.add(!f.state)} className="text-[9px] font-black text-indigo-400 hover:text-white transition-colors disabled:opacity-0">{f.state ? 'CANCEL' : '+ NEW'}</button>
+                                        <button disabled={f.state ? false : f.disabled} onClick={() => f.add(!f.state)} className="text-[9px] font-black text-indigo-400 hover:text-white transition-colors disabled:opacity-0">{f.state ? 'CANCEL' : '+ NEW'}</button>
                                     </div>
                                     {f.state ? (
                                         <div className="flex flex-col gap-3">
@@ -189,7 +190,7 @@ const OCREngine = ({
                                     <input
                                         value={ocrTargetLoc.psNo}
                                         onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, psNo: e.target.value })}
-                                        className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none w-20 text-white"
+                                        className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none w-20 text-white focus:border-indigo-500/50"
                                     />
                                 </div>
                                 <div className="flex flex-col gap-2">
@@ -197,13 +198,13 @@ const OCREngine = ({
                                     <input
                                         value={ocrTargetLoc.psName}
                                         onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, psName: e.target.value })}
-                                        className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-6 py-3 text-[10px] font-black uppercase outline-none text-white w-96"
+                                        className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-6 py-3 text-[10px] font-black uppercase outline-none text-white w-96 focus:border-indigo-500/50"
                                     />
                                 </div>
                             </div>
                         )}
                     </div>
-                )}
+                </div>
             </header>
 
             {ocrError && (
