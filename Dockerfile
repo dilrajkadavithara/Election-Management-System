@@ -1,12 +1,4 @@
-# --- Stage 1: Build Frontend ---
-FROM node:20-slim AS frontend-builder
-WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm install
-COPY frontend/ ./
-RUN npm run build
-
-# --- Stage 2: Final Backend Image ---
+# --- Production Image ---
 FROM python:3.10-slim
 WORKDIR /app
 
@@ -35,8 +27,8 @@ COPY assets/ ./assets/
 COPY scripts/ ./scripts/
 COPY server.py .
 
-# Copy built frontend from Stage 1
-COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
+# Copy pre-built frontend (Built in CI)
+COPY frontend/dist ./frontend/dist
 
 # Create necessary directories for runtime
 RUN mkdir -p data/raw_pdf data/page_images data/voter_crops data/party_symbols
