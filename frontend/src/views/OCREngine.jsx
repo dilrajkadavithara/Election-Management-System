@@ -31,6 +31,8 @@ const OCREngine = ({
     const [isAddingBooth, setIsAddingBooth] = useState(false);
     const [newLocName, setNewLocName] = useState('');
     const [newLBType, setNewLBType] = useState('PANCHAYAT');
+    const [newPSName, setNewPSName] = useState('');
+    const [newPSNo, setNewPSNo] = useState('');
 
     useEffect(() => {
         if (!allLocations || allLocations.length === 0) {
@@ -65,12 +67,14 @@ const OCREngine = ({
                 setOcrTargetLoc({ ...ocrTargetLoc, lbId: String(res.id), boothId: '' });
                 setIsAddingLB(false);
             } else if (type === 'booth') {
-                res = await api.addBooth(ocrTargetLoc.constId, ocrTargetLoc.lbId, newLocName, ocrTargetLoc.psName, ocrTargetLoc.psNo);
+                res = await api.addBooth(ocrTargetLoc.constId, ocrTargetLoc.lbId, newLocName, newPSName, newPSNo);
                 await loadAdminData();
                 setOcrTargetLoc({ ...ocrTargetLoc, boothId: String(res.id) });
                 setIsAddingBooth(false);
             }
             setNewLocName('');
+            setNewPSName('');
+            setNewPSNo('');
         } catch (e) {
             console.error("Quick Add Error:", e);
             const errorMsg = e.response?.data?.detail;
@@ -108,15 +112,41 @@ const OCREngine = ({
                                     <button disabled={f.disabled} onClick={() => f.add(!f.state)} className="text-[9px] font-black text-indigo-400 hover:text-white transition-colors disabled:opacity-0">{f.state ? 'CANCEL' : '+ NEW'}</button>
                                 </div>
                                 {f.state ? (
-                                    <div className="flex gap-2">
-                                        <input autoFocus placeholder="Name..." value={newLocName} onChange={e => setNewLocName(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none w-32 text-white" />
-                                        <button
-                                            disabled={ocrLoading}
-                                            onClick={() => handleQuickAdd(f.key.replace('Id', ''))}
-                                            className={`bg-indigo-600 text-white px-4 rounded-xl font-black text-[9px] uppercase tracking-widest ${ocrLoading ? 'opacity-50 animate-pulse' : 'hover:bg-indigo-500'}`}
-                                        >
-                                            {ocrLoading ? '...' : 'ADD'}
-                                        </button>
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex gap-2">
+                                            <input autoFocus placeholder={f.key === 'boothId' ? "Booth No..." : "Name..."} value={newLocName} onChange={e => setNewLocName(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none w-32 text-white" />
+                                            {f.key === 'lbId' && (
+                                                <select value={newLBType} onChange={e => setNewLBType(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none text-white">
+                                                    <option value="PANCHAYAT">Panchayat</option>
+                                                    <option value="MUNICIPALITY">Municipality</option>
+                                                    <option value="CORPORATION">Corporation</option>
+                                                </select>
+                                            )}
+                                            {f.key !== 'boothId' && (
+                                                <button
+                                                    disabled={ocrLoading}
+                                                    onClick={() => handleQuickAdd(f.key.replace('Id', ''))}
+                                                    className={`bg-indigo-600 text-white px-4 rounded-xl font-black text-[9px] uppercase tracking-widest ${ocrLoading ? 'opacity-50 animate-pulse' : 'hover:bg-indigo-500'}`}
+                                                >
+                                                    {ocrLoading ? '...' : 'ADD'}
+                                                </button>
+                                            )}
+                                        </div>
+                                        {f.key === 'boothId' && (
+                                            <div className="flex flex-col gap-3">
+                                                <div className="flex gap-2">
+                                                    <input placeholder="PS No..." value={newPSNo} onChange={e => setNewPSNo(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none w-20 text-white" />
+                                                    <input placeholder="Polling Station Name..." value={newPSName} onChange={e => setNewPSName(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none flex-1 text-white" />
+                                                </div>
+                                                <button
+                                                    disabled={ocrLoading}
+                                                    onClick={() => handleQuickAdd(f.key.replace('Id', ''))}
+                                                    className={`w-full bg-indigo-600 text-white py-3 rounded-xl font-black text-[9px] uppercase tracking-widest ${ocrLoading ? 'opacity-50 animate-pulse' : 'hover:bg-indigo-500'}`}
+                                                >
+                                                    {ocrLoading ? 'Inscribing Neural Booth...' : 'ADD BOOTH UNIT'}
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     <select
