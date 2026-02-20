@@ -31,8 +31,7 @@ const OCREngine = ({
     const [isAddingBooth, setIsAddingBooth] = useState(false);
     const [newLocName, setNewLocName] = useState('');
     const [newLBType, setNewLBType] = useState('PANCHAYAT');
-    const [newPSName, setNewPSName] = useState('');
-    const [newPSNo, setNewPSNo] = useState('');
+    const [validationTriggered, setValidationTriggered] = useState(false);
 
     useEffect(() => {
         if (!allLocations || allLocations.length === 0) {
@@ -41,23 +40,41 @@ const OCREngine = ({
     }, [allLocations, loadAdminData]);
 
     useEffect(() => {
-        if (ocrTargetLoc.boothId && !isAddingBooth && allLocations.length > 0) {
+        if (ocrTargetLoc.boothId && allLocations.length > 0) {
             const currentConst = allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId));
             const currentLB = currentConst?.local_bodies.find(lb => String(lb.id) === String(ocrTargetLoc.lbId));
             const currentBooth = currentLB?.booths.find(b => String(b.id) === String(ocrTargetLoc.boothId));
 
             if (currentBooth) {
-                // Only update if they differ to avoid loops
-                if (ocrTargetLoc.psName !== (currentBooth.ps_name || '') || ocrTargetLoc.psNo !== (currentBooth.ps_no || '')) {
+                if (ocrTargetLoc.psName !== (currentBooth.ps_name || '') || ocrTargetLoc.psNo !== (currentBooth.ps_no || '') || ocrTargetLoc.boothNo !== (currentBooth.number || '')) {
                     setOcrTargetLoc(prev => ({
                         ...prev,
+                        boothNo: currentBooth.number || '',
                         psName: currentBooth.ps_name || '',
                         psNo: currentBooth.ps_no || ''
                     }));
                 }
             }
         }
-    }, [ocrTargetLoc.boothId, isAddingBooth, allLocations, ocrTargetLoc.constId, ocrTargetLoc.lbId]);
+    }, [ocrTargetLoc.boothId, allLocations, ocrTargetLoc.constId, ocrTargetLoc.lbId]);
+
+    const triggerUpload = () => {
+        const errors = [];
+        if (!ocrTargetLoc.constId) errors.push("Constituency");
+        if (!ocrTargetLoc.lbId) errors.push("Local Body");
+        if (!ocrTargetLoc.boothNo) errors.push("Booth No");
+        if (!ocrTargetLoc.psNo) errors.push("PS No");
+        if (!ocrTargetLoc.psName) errors.push("PS Name");
+
+        if (errors.length > 0) {
+            setOcrError(`Mandatory Intelligence Required: ${errors.join(", ")}`);
+            setValidationTriggered(true);
+            return;
+        }
+        setOcrError(null);
+        setValidationTriggered(false);
+        ocrRef.current.click();
+    };
 
     const handleQuickAdd = async (type) => {
         if (!newLocName) return;
@@ -112,97 +129,114 @@ const OCREngine = ({
     };
 
     return (
-        <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-12 lux-animate-in pb-32">
-            <header className="flex flex-col gap-10">
-                <div className="flex justify-between items-start">
-                    <div className="space-y-4">
-                        <h1 className="text-7xl font-black tracking-tighter uppercase lux-text-gradient">AI Processor</h1>
-                        <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Autonomous Intelligence Synthesis Core</p>
+        <div className="min-h-screen lux-mesh-bg p-8 pl-96 space-y-8 lux-animate-in pb-32">
+            <header className="flex flex-col gap-6">
+                <div className="flex justify-between items-center bg-slate-900/40 p-10 rounded-[2.5rem] border border-white/5 backdrop-blur-xl shadow-2xl">
+                    <div className="space-y-1">
+                        <h1 className="text-5xl font-black tracking-tighter uppercase lux-text-gradient">AI Processor</h1>
+                        <p className="text-slate-400 font-black uppercase tracking-[0.4em] text-[8px] ml-1">Autonomous Intelligence Synthesis Core</p>
                     </div>
 
-                    <div className="flex flex-col gap-6 items-end">
-                        <div className="flex gap-6 items-end">
-                            {[
-                                { label: 'Constituency', key: 'constId', add: setIsAddingConst, state: isAddingConst, options: allLocations },
-                                { label: 'Local Body', key: 'lbId', add: setIsAddingLB, state: isAddingLB, options: allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies, disabled: !ocrTargetLoc.constId },
-                                { label: 'Booth Unit', key: 'boothId', add: setIsAddingBooth, state: isAddingBooth, options: allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies?.find(lb => String(lb.id) === String(ocrTargetLoc.lbId))?.booths, disabled: !ocrTargetLoc.lbId }
-                            ].map(f => (
-                                <div key={f.key} className="flex flex-col gap-2">
-                                    <div className="flex justify-between items-center px-1">
-                                        <label className="text-[9px] font-black uppercase text-slate-300 tracking-widest">{f.label}</label>
-                                        <button disabled={f.state ? false : f.disabled} onClick={() => f.add(!f.state)} className="text-[9px] font-black text-indigo-400 hover:text-white transition-colors disabled:opacity-0">{f.state ? 'CANCEL' : '+ NEW'}</button>
+                    <div className="flex-1 max-w-5xl ml-12">
+                        <div className="grid grid-cols-5 gap-4">
+                            {/* Constituency Section */}
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center px-1">
+                                    <label className="text-[10px] font-black uppercase text-indigo-400/80 tracking-widest">Constituency</label>
+                                    <button onClick={() => setIsAddingConst(!isAddingConst)} className="text-[8px] font-black text-white/40 hover:text-indigo-400 transition-colors">{isAddingConst ? 'CANCEL' : '+ NEW'}</button>
+                                </div>
+                                {isAddingConst ? (
+                                    <div className="flex gap-2">
+                                        <input autoFocus placeholder="Name..." value={newLocName} onChange={e => setNewLocName(e.target.value)} className="w-full lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:border-indigo-500" />
+                                        <button onClick={() => handleQuickAdd('const')} className="bg-indigo-600 text-white px-3 rounded-xl font-black text-[9px]">ADD</button>
                                     </div>
-                                    {f.state ? (
-                                        <div className="flex flex-col gap-3">
-                                            <div className="flex gap-2">
-                                                <input autoFocus placeholder={f.key === 'boothId' ? "Booth No..." : "Name..."} value={newLocName} onChange={e => setNewLocName(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none w-32 text-white" />
-                                                {f.key === 'lbId' && (
-                                                    <select value={newLBType} onChange={e => setNewLBType(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none text-white">
-                                                        <option value="PANCHAYAT">Panchayat</option>
-                                                        <option value="MUNICIPALITY">Municipality</option>
-                                                        <option value="CORPORATION">Corporation</option>
-                                                    </select>
-                                                )}
-                                                {f.key !== 'boothId' && (
-                                                    <button
-                                                        disabled={ocrLoading}
-                                                        onClick={() => handleQuickAdd(f.key.replace('Id', ''))}
-                                                        className={`bg-indigo-600 text-white px-4 rounded-xl font-black text-[9px] uppercase tracking-widest ${ocrLoading ? 'opacity-50 animate-pulse' : 'hover:bg-indigo-500'}`}
-                                                    >
-                                                        {ocrLoading ? '...' : 'ADD'}
-                                                    </button>
-                                                )}
-                                            </div>
-                                            {f.key === 'boothId' && (
-                                                <div className="flex flex-col gap-3">
-                                                    <div className="flex gap-2">
-                                                        <input placeholder="PS No..." value={newPSNo} onChange={e => setNewPSNo(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none w-20 text-white" />
-                                                        <input placeholder="Polling Station Name..." value={newPSName} onChange={e => setNewPSName(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none flex-1 text-white" />
-                                                    </div>
-                                                    <button
-                                                        disabled={ocrLoading}
-                                                        onClick={() => handleQuickAdd(f.key.replace('Id', ''))}
-                                                        className={`w-full bg-indigo-600 text-white py-3 rounded-xl font-black text-[9px] uppercase tracking-widest ${ocrLoading ? 'opacity-50 animate-pulse' : 'hover:bg-indigo-500'}`}
-                                                    >
-                                                        {ocrLoading ? 'Inscribing Neural Booth...' : 'ADD BOOTH UNIT'}
-                                                    </button>
-                                                </div>
-                                            )}
+                                ) : (
+                                    <select
+                                        value={ocrTargetLoc.constId}
+                                        onChange={(e) => setOcrTargetLoc({ ...ocrTargetLoc, constId: e.target.value, lbId: '', boothId: '', boothNo: '', psNo: '', psName: '' })}
+                                        className={`w-full lux-glass border rounded-xl px-4 py-3 text-xs font-bold uppercase text-white outline-none transition-all ${validationTriggered && !ocrTargetLoc.constId ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'border-white/10'}`}
+                                    >
+                                        <option value="">SELECT</option>
+                                        {allLocations?.map(o => <option key={o.id} value={o.id} className="bg-slate-900">{o.name}</option>)}
+                                    </select>
+                                )}
+                            </div>
+
+                            {/* Local Body Section */}
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center px-1">
+                                    <label className="text-[10px] font-black uppercase text-indigo-400/80 tracking-widest">Local Body</label>
+                                    <button disabled={!ocrTargetLoc.constId} onClick={() => setIsAddingLB(!isAddingLB)} className="text-[8px] font-black text-white/40 hover:text-indigo-400 transition-colors disabled:opacity-0">{isAddingLB ? 'CANCEL' : '+ NEW'}</button>
+                                </div>
+                                {isAddingLB ? (
+                                    <div className="flex flex-col gap-2">
+                                        <input autoFocus placeholder="Name..." value={newLocName} onChange={e => setNewLocName(e.target.value)} className="w-full lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:border-indigo-500" />
+                                        <div className="flex gap-2">
+                                            <select value={newLBType} onChange={e => setNewLBType(e.target.value)} className="flex-1 lux-glass !bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-[8px] font-black uppercase text-white outline-none">
+                                                <option value="PANCHAYAT">Panchayat</option>
+                                                <option value="MUNICIPALITY">Municipality</option>
+                                                <option value="CORPORATION">Corporation</option>
+                                            </select>
+                                            <button onClick={() => handleQuickAdd('lb')} className="bg-indigo-600 text-white px-4 rounded-xl font-black text-[9px]">ADD</button>
                                         </div>
-                                    ) : (
-                                        <select
-                                            disabled={f.disabled}
-                                            value={ocrTargetLoc[f.key]}
-                                            onChange={(e) => setOcrTargetLoc({ ...ocrTargetLoc, [f.key]: e.target.value })}
-                                            className="lux-glass border-white/10 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest outline-none disabled:opacity-20 text-slate-300 w-44"
-                                        >
-                                            <option value="">SELECT</option>
-                                            {f.options?.map(o => <option key={o.id} value={o.id} className="bg-slate-900">{o.name || `BOOTH ${o.number}`}</option>)}
-                                        </select>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                        {ocrTargetLoc.boothId && !isAddingBooth && (
-                            <div className="flex gap-4 animate-in fade-in slide-in-from-top-4 w-full justify-end">
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[9px] font-black uppercase text-indigo-400 tracking-widest ml-1">PS_NO</label>
+                                    </div>
+                                ) : (
+                                    <select
+                                        disabled={!ocrTargetLoc.constId}
+                                        value={ocrTargetLoc.lbId}
+                                        onChange={(e) => setOcrTargetLoc({ ...ocrTargetLoc, lbId: e.target.value, boothId: '', boothNo: '', psNo: '', psName: '' })}
+                                        className={`w-full lux-glass border rounded-xl px-4 py-3 text-xs font-bold uppercase text-white outline-none transition-all disabled:opacity-30 ${validationTriggered && !ocrTargetLoc.lbId ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'border-white/10'}`}
+                                    >
+                                        <option value="">SELECT</option>
+                                        {allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies?.map(o => <option key={o.id} value={o.id} className="bg-slate-900">{o.name}</option>)}
+                                    </select>
+                                )}
+                            </div>
+
+                            {/* Booth Unit Section */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-indigo-400/80 tracking-widest px-1 block">Booth Number</label>
+                                <div className="relative group">
                                     <input
-                                        value={ocrTargetLoc.psNo}
-                                        onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, psNo: e.target.value })}
-                                        className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none w-20 text-white focus:border-indigo-500/50"
+                                        placeholder="No..."
+                                        value={ocrTargetLoc.boothNo}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            const matchingBooth = allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies?.find(lb => String(lb.id) === String(ocrTargetLoc.lbId))?.booths?.find(b => b.number === val);
+                                            if (matchingBooth) {
+                                                setOcrTargetLoc({ ...ocrTargetLoc, boothId: matchingBooth.id, boothNo: val, psNo: matchingBooth.ps_no || '', psName: matchingBooth.ps_name || '' });
+                                            } else {
+                                                setOcrTargetLoc({ ...ocrTargetLoc, boothId: '', boothNo: val });
+                                            }
+                                        }}
+                                        className={`w-full lux-glass border rounded-xl px-4 py-3 text-xs font-bold text-white outline-none transition-all ${validationTriggered && !ocrTargetLoc.boothNo ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'border-white/10'}`}
                                     />
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[9px] font-black uppercase text-indigo-400 tracking-widest ml-1">POLLING STATION NAME</label>
-                                    <input
-                                        value={ocrTargetLoc.psName}
-                                        onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, psName: e.target.value })}
-                                        className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-6 py-3 text-[10px] font-black uppercase outline-none text-white w-96 focus:border-indigo-500/50"
-                                    />
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[8px] font-black text-white/20">#NUM</div>
                                 </div>
                             </div>
-                        )}
+
+                            {/* PS No Section */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-indigo-400/80 tracking-widest px-1 block">PS No</label>
+                                <input
+                                    placeholder="PS No..."
+                                    value={ocrTargetLoc.psNo}
+                                    onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, psNo: e.target.value })}
+                                    className={`w-full lux-glass border rounded-xl px-4 py-3 text-xs font-bold text-white outline-none transition-all ${validationTriggered && !ocrTargetLoc.psNo ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'border-white/10'}`}
+                                />
+                            </div>
+
+                            {/* PS Name Section */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-indigo-400/80 tracking-widest px-1 block">Polling Station Name</label>
+                                <input
+                                    placeholder="Station Location..."
+                                    value={ocrTargetLoc.psName}
+                                    onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, psName: e.target.value })}
+                                    className={`w-full lux-glass border rounded-xl px-4 py-3 text-xs font-bold text-white outline-none transition-all ${validationTriggered && !ocrTargetLoc.psName ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'border-white/10'}`}
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -218,12 +252,12 @@ const OCREngine = ({
             )}
 
             {!ocrBatch && (
-                <div onClick={() => ocrRef.current.click()} className="lux-glass group p-32 rounded-[4rem] border-white/5 flex flex-col items-center justify-center gap-10 cursor-pointer hover:bg-white/5 hover:border-indigo-500/30 transition-all shadow-2xl relative overflow-hidden">
+                <div onClick={triggerUpload} className="lux-glass group max-w-4xl mx-auto p-16 rounded-[3rem] border-white/5 flex flex-col items-center justify-center gap-6 cursor-pointer hover:bg-white/5 hover:border-indigo-500/30 transition-all shadow-2xl relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="w-32 h-32 bg-indigo-500/10 rounded-[2.5rem] flex items-center justify-center text-5xl shadow-inner group-hover:scale-110 transition-all duration-700 group-hover:shadow-[0_0_30px_rgba(99,102,241,0.2)] border border-white/5">📄</div>
-                    <div className="text-center space-y-4 relative z-10">
-                        <h2 className="text-4xl font-black uppercase tracking-tighter lux-text-gradient">Inject Source Matrix</h2>
-                        <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px]">Optimized for Neural Parallel Extraction Protocol</p>
+                    <div className="w-20 h-20 bg-indigo-500/10 rounded-[2rem] flex items-center justify-center text-3xl shadow-inner group-hover:scale-110 transition-all duration-700 group-hover:shadow-[0_0_30px_rgba(99,102,241,0.2)] border border-white/5">📄</div>
+                    <div className="text-center space-y-2 relative z-10">
+                        <h2 className="text-3xl font-black uppercase tracking-tighter lux-text-gradient">Inject Source Matrix</h2>
+                        <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[8px]">Encrypted Neural Parallel Extraction Protocol</p>
                     </div>
                     <input type="file" ref={ocrRef} className="hidden" accept="application/pdf" onChange={handleFileUpload} />
                     <div className="v2-scanline absolute inset-0 opacity-20 pointer-events-none" />
