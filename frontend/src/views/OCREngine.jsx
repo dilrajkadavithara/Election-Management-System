@@ -129,55 +129,58 @@ const OCREngine = ({
     };
 
     return (
-        <div className="min-h-screen lux-mesh-bg p-8 pl-96 space-y-8 lux-animate-in pb-32">
-            <header className="flex flex-col gap-6">
-                <div className="flex justify-between items-center bg-slate-900/40 p-10 rounded-[2.5rem] border border-white/5 backdrop-blur-xl shadow-2xl">
-                    <div className="space-y-1">
-                        <h1 className="text-5xl font-black tracking-tighter uppercase lux-text-gradient">AI Processor</h1>
-                        <p className="text-slate-400 font-black uppercase tracking-[0.4em] text-[8px] ml-1">Autonomous Intelligence Synthesis Core</p>
+        <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-12 lux-animate-in pb-32">
+            <header className="space-y-10">
+                {/* Layer 1: Title & Versioning */}
+                <div className="flex justify-between items-end border-b border-white/5 pb-10">
+                    <div className="space-y-2">
+                        <h1 className="text-8xl font-black tracking-tighter uppercase lux-text-gradient leading-none">AI Processor</h1>
+                        <p className="text-slate-400 font-black uppercase tracking-[0.6em] text-[10px] ml-2">Autonomous Intelligence Synthesis Core // v4.9</p>
                     </div>
+                </div>
 
-                    <div className="flex-1 max-w-5xl ml-12">
-                        <div className="grid grid-cols-5 gap-4">
-                            {/* Constituency Section */}
-                            <div className="space-y-2">
+                {/* Layer 2: Location Intelligence Panel */}
+                <div className="lux-glass bg-slate-900/60 p-12 rounded-[3.5rem] border border-white/10 backdrop-blur-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                    <div className="grid grid-cols-12 gap-10">
+                        {/* Constituency & Local Body - Grouped for Logic */}
+                        <div className="col-span-5 grid grid-cols-2 gap-8 border-r border-white/10 pr-10">
+                            <div className="space-y-4">
                                 <div className="flex justify-between items-center px-1">
-                                    <label className="text-[10px] font-black uppercase text-indigo-400/80 tracking-widest">Constituency</label>
-                                    <button onClick={() => setIsAddingConst(!isAddingConst)} className="text-[8px] font-black text-white/40 hover:text-indigo-400 transition-colors">{isAddingConst ? 'CANCEL' : '+ NEW'}</button>
+                                    <label className="text-[11px] font-black uppercase text-indigo-400 tracking-[0.2em]">Constituency</label>
+                                    <button onClick={() => setIsAddingConst(!isAddingConst)} className="text-[9px] font-black text-white/30 hover:text-indigo-400 transition-colors uppercase">{isAddingConst ? 'Cancel' : '+ New Unit'}</button>
                                 </div>
                                 {isAddingConst ? (
-                                    <div className="flex gap-2">
-                                        <input autoFocus placeholder="Name..." value={newLocName} onChange={e => setNewLocName(e.target.value)} className="w-full lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:border-indigo-500" />
-                                        <button onClick={() => handleQuickAdd('const')} className="bg-indigo-600 text-white px-3 rounded-xl font-black text-[9px]">ADD</button>
+                                    <div className="flex flex-col gap-3">
+                                        <input autoFocus placeholder="Enter Name..." value={newLocName} onChange={e => setNewLocName(e.target.value)} className="w-full bg-white/5 border-2 border-indigo-500/30 rounded-2xl px-6 py-5 text-sm font-bold text-white outline-none focus:border-indigo-500 shadow-inner" />
+                                        <button onClick={() => handleQuickAdd('const')} className="bg-indigo-600 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 transition-all">Register Constituency</button>
                                     </div>
                                 ) : (
                                     <select
                                         value={ocrTargetLoc.constId}
                                         onChange={(e) => setOcrTargetLoc({ ...ocrTargetLoc, constId: e.target.value, lbId: '', boothId: '', boothNo: '', psNo: '', psName: '' })}
-                                        className={`w-full lux-glass border rounded-xl px-4 py-3 text-xs font-bold uppercase text-white outline-none transition-all ${validationTriggered && !ocrTargetLoc.constId ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'border-white/10'}`}
+                                        className={`w-full bg-slate-950/80 border-2 rounded-2xl px-6 py-5 text-sm font-bold uppercase text-white outline-none appearance-none cursor-pointer transition-all ${validationTriggered && !ocrTargetLoc.constId ? 'border-rose-600 shadow-[0_0_20px_rgba(225,29,72,0.3)]' : 'border-white/10 hover:border-white/20'}`}
                                     >
-                                        <option value="">SELECT</option>
+                                        <option value="">-- SELECT --</option>
                                         {allLocations?.map(o => <option key={o.id} value={o.id} className="bg-slate-900">{o.name}</option>)}
                                     </select>
                                 )}
                             </div>
 
-                            {/* Local Body Section */}
-                            <div className="space-y-2">
+                            <div className="space-y-4">
                                 <div className="flex justify-between items-center px-1">
-                                    <label className="text-[10px] font-black uppercase text-indigo-400/80 tracking-widest">Local Body</label>
-                                    <button disabled={!ocrTargetLoc.constId} onClick={() => setIsAddingLB(!isAddingLB)} className="text-[8px] font-black text-white/40 hover:text-indigo-400 transition-colors disabled:opacity-0">{isAddingLB ? 'CANCEL' : '+ NEW'}</button>
+                                    <label className="text-[11px] font-black uppercase text-indigo-400 tracking-[0.2em]">Local Body</label>
+                                    <button disabled={!ocrTargetLoc.constId} onClick={() => setIsAddingLB(!isAddingLB)} className="text-[9px] font-black text-white/30 hover:text-indigo-400 transition-colors uppercase disabled:opacity-0">{isAddingLB ? 'Cancel' : '+ New Unit'}</button>
                                 </div>
                                 {isAddingLB ? (
-                                    <div className="flex flex-col gap-2">
-                                        <input autoFocus placeholder="Name..." value={newLocName} onChange={e => setNewLocName(e.target.value)} className="w-full lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:border-indigo-500" />
+                                    <div className="flex flex-col gap-3">
+                                        <input autoFocus placeholder="Enter Name..." value={newLocName} onChange={e => setNewLocName(e.target.value)} className="w-full bg-white/5 border-2 border-indigo-500/30 rounded-2xl px-6 py-5 text-sm font-bold text-white outline-none focus:border-indigo-500" />
                                         <div className="flex gap-2">
-                                            <select value={newLBType} onChange={e => setNewLBType(e.target.value)} className="flex-1 lux-glass !bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-[8px] font-black uppercase text-white outline-none">
+                                            <select value={newLBType} onChange={e => setNewLBType(e.target.value)} className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-[9px] font-black uppercase text-white outline-none">
                                                 <option value="PANCHAYAT">Panchayat</option>
                                                 <option value="MUNICIPALITY">Municipality</option>
                                                 <option value="CORPORATION">Corporation</option>
                                             </select>
-                                            <button onClick={() => handleQuickAdd('lb')} className="bg-indigo-600 text-white px-4 rounded-xl font-black text-[9px]">ADD</button>
+                                            <button onClick={() => handleQuickAdd('lb')} className="bg-indigo-600 text-white px-6 rounded-xl font-black text-[10px] uppercase">Add</button>
                                         </div>
                                     </div>
                                 ) : (
@@ -185,20 +188,22 @@ const OCREngine = ({
                                         disabled={!ocrTargetLoc.constId}
                                         value={ocrTargetLoc.lbId}
                                         onChange={(e) => setOcrTargetLoc({ ...ocrTargetLoc, lbId: e.target.value, boothId: '', boothNo: '', psNo: '', psName: '' })}
-                                        className={`w-full lux-glass border rounded-xl px-4 py-3 text-xs font-bold uppercase text-white outline-none transition-all disabled:opacity-30 ${validationTriggered && !ocrTargetLoc.lbId ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'border-white/10'}`}
+                                        className={`w-full bg-slate-950/80 border-2 rounded-2xl px-6 py-5 text-sm font-bold uppercase text-white outline-none transition-all disabled:opacity-20 appearance-none cursor-pointer ${validationTriggered && !ocrTargetLoc.lbId ? 'border-rose-600 shadow-[0_0_20px_rgba(225,29,72,0.3)]' : 'border-white/10 hover:border-white/20'}`}
                                     >
-                                        <option value="">SELECT</option>
+                                        <option value="">-- SELECT --</option>
                                         {allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies?.map(o => <option key={o.id} value={o.id} className="bg-slate-900">{o.name}</option>)}
                                     </select>
                                 )}
                             </div>
+                        </div>
 
-                            {/* Booth Unit Section */}
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-indigo-400/80 tracking-widest px-1 block">Booth Number</label>
-                                <div className="relative group">
+                        {/* Booth Intelligence Hub */}
+                        <div className="col-span-7 grid grid-cols-3 gap-8 pl-4">
+                            <div className="space-y-4">
+                                <label className="text-[11px] font-black uppercase text-indigo-400 tracking-[0.2em] px-1 block">Booth Tracking</label>
+                                <div className="relative">
                                     <input
-                                        placeholder="No..."
+                                        placeholder="Booth No..."
                                         value={ocrTargetLoc.boothNo}
                                         onChange={e => {
                                             const val = e.target.value;
@@ -209,31 +214,29 @@ const OCREngine = ({
                                                 setOcrTargetLoc({ ...ocrTargetLoc, boothId: '', boothNo: val });
                                             }
                                         }}
-                                        className={`w-full lux-glass border rounded-xl px-4 py-3 text-xs font-bold text-white outline-none transition-all ${validationTriggered && !ocrTargetLoc.boothNo ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'border-white/10'}`}
+                                        className={`w-full bg-slate-950/80 border-2 rounded-2xl px-8 py-5 text-sm font-black text-white outline-none transition-all ${validationTriggered && !ocrTargetLoc.boothNo ? 'border-rose-600 shadow-[0_0_20px_rgba(225,29,72,0.3)]' : 'border-white/10 focus:border-indigo-500'}`}
                                     />
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[8px] font-black text-white/20">#NUM</div>
+                                    <div className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-black text-indigo-500 opacity-40 italic">#BASE</div>
                                 </div>
                             </div>
 
-                            {/* PS No Section */}
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-indigo-400/80 tracking-widest px-1 block">PS No</label>
+                            <div className="space-y-4">
+                                <label className="text-[11px] font-black uppercase text-indigo-400 tracking-[0.2em] px-1 block">Station ID</label>
                                 <input
-                                    placeholder="PS No..."
+                                    placeholder="PS Number..."
                                     value={ocrTargetLoc.psNo}
                                     onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, psNo: e.target.value })}
-                                    className={`w-full lux-glass border rounded-xl px-4 py-3 text-xs font-bold text-white outline-none transition-all ${validationTriggered && !ocrTargetLoc.psNo ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'border-white/10'}`}
+                                    className={`w-full bg-slate-950/80 border-2 rounded-2xl px-8 py-5 text-sm font-black text-white outline-none transition-all ${validationTriggered && !ocrTargetLoc.psNo ? 'border-rose-600 shadow-[0_0_20px_rgba(225,29,72,0.3)]' : 'border-white/10 focus:border-indigo-500'}`}
                                 />
                             </div>
 
-                            {/* PS Name Section */}
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-indigo-400/80 tracking-widest px-1 block">Polling Station Name</label>
+                            <div className="space-y-4">
+                                <label className="text-[11px] font-black uppercase text-indigo-400 tracking-[0.2em] px-1 block">Station Designation</label>
                                 <input
-                                    placeholder="Station Location..."
+                                    placeholder="Full Physical Location Name..."
                                     value={ocrTargetLoc.psName}
                                     onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, psName: e.target.value })}
-                                    className={`w-full lux-glass border rounded-xl px-4 py-3 text-xs font-bold text-white outline-none transition-all ${validationTriggered && !ocrTargetLoc.psName ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'border-white/10'}`}
+                                    className={`w-full bg-slate-950/80 border-2 rounded-2xl px-8 py-5 text-sm font-black text-white outline-none transition-all ${validationTriggered && !ocrTargetLoc.psName ? 'border-rose-600 shadow-[0_0_20px_rgba(225,29,72,0.3)]' : 'border-white/10 focus:border-indigo-500'}`}
                                 />
                             </div>
                         </div>
@@ -252,15 +255,15 @@ const OCREngine = ({
             )}
 
             {!ocrBatch && (
-                <div onClick={triggerUpload} className="lux-glass group max-w-4xl mx-auto p-16 rounded-[3rem] border-white/5 flex flex-col items-center justify-center gap-6 cursor-pointer hover:bg-white/5 hover:border-indigo-500/30 transition-all shadow-2xl relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="w-20 h-20 bg-indigo-500/10 rounded-[2rem] flex items-center justify-center text-3xl shadow-inner group-hover:scale-110 transition-all duration-700 group-hover:shadow-[0_0_30px_rgba(99,102,241,0.2)] border border-white/5">📄</div>
-                    <div className="text-center space-y-2 relative z-10">
-                        <h2 className="text-3xl font-black uppercase tracking-tighter lux-text-gradient">Inject Source Matrix</h2>
-                        <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[8px]">Encrypted Neural Parallel Extraction Protocol</p>
+                <div onClick={triggerUpload} className="lux-glass group max-w-5xl mx-auto p-24 rounded-[4rem] border border-white/5 flex flex-col items-center justify-center gap-10 cursor-pointer hover:bg-white/5 hover:border-indigo-500/30 transition-all shadow-[0_30px_60px_rgba(0,0,0,0.4)] relative overflow-hidden backdrop-blur-md">
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                    <div className="w-24 h-24 bg-indigo-500/10 rounded-[2.5rem] flex items-center justify-center text-4xl shadow-inner group-hover:scale-110 transition-all duration-700 group-hover:shadow-[0_0_40px_rgba(99,102,241,0.3)] border border-white/10">📄</div>
+                    <div className="text-center space-y-4 relative z-10">
+                        <h2 className="text-5xl font-black uppercase tracking-tighter italic text-white group-hover:text-indigo-400 transition-colors duration-500">Inject Source Matrix</h2>
+                        <p className="text-slate-400 font-black uppercase tracking-[0.5em] text-[10px]">Optimized for Neural Parallel Extraction Protocol // Secure Link Active</p>
                     </div>
                     <input type="file" ref={ocrRef} className="hidden" accept="application/pdf" onChange={handleFileUpload} />
-                    <div className="v2-scanline absolute inset-0 opacity-20 pointer-events-none" />
+                    <div className="v2-scanline absolute inset-0 opacity-10 pointer-events-none" />
                 </div>
             )}
 
