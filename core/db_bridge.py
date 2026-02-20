@@ -322,7 +322,12 @@ def get_all_locations(user_profile=None):
         for lb in c.local_bodies.all():
             lb_node = {"id": lb.id, "name": lb.name, "booths": []}
             for b in lb.booths.all():
-                lb_node["booths"].append({"id": b.id, "number": b.number})
+                lb_node["booths"].append({
+                    "id": b.id,
+                    "number": b.number,
+                    "ps_name": b.polling_station_name or "",
+                    "ps_no": b.polling_station_no or ""
+                })
             c_node["local_bodies"].append(lb_node)
         data.append(c_node)
     return data

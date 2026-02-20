@@ -40,6 +40,25 @@ const OCREngine = ({
         }
     }, [allLocations, loadAdminData]);
 
+    useEffect(() => {
+        if (ocrTargetLoc.boothId && !isAddingBooth && allLocations.length > 0) {
+            const currentConst = allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId));
+            const currentLB = currentConst?.local_bodies.find(lb => String(lb.id) === String(ocrTargetLoc.lbId));
+            const currentBooth = currentLB?.booths.find(b => String(b.id) === String(ocrTargetLoc.boothId));
+
+            if (currentBooth) {
+                // Only update if they differ to avoid loops
+                if (ocrTargetLoc.psName !== (currentBooth.ps_name || '') || ocrTargetLoc.psNo !== (currentBooth.ps_no || '')) {
+                    setOcrTargetLoc(prev => ({
+                        ...prev,
+                        psName: currentBooth.ps_name || '',
+                        psNo: currentBooth.ps_no || ''
+                    }));
+                }
+            }
+        }
+    }, [ocrTargetLoc.boothId, isAddingBooth, allLocations, ocrTargetLoc.constId, ocrTargetLoc.lbId]);
+
     const handleQuickAdd = async (type) => {
         if (!newLocName) return;
 
@@ -100,67 +119,89 @@ const OCREngine = ({
                     <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Autonomous Intelligence Synthesis Core</p>
                 </div>
                 {!ocrBatch && (
-                    <div className="flex gap-6 items-end">
-                        {[
-                            { label: 'Constituency', key: 'constId', add: setIsAddingConst, state: isAddingConst, options: allLocations },
-                            { label: 'Local Body', key: 'lbId', add: setIsAddingLB, state: isAddingLB, options: allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies, disabled: !ocrTargetLoc.constId },
-                            { label: 'Booth Unit', key: 'boothId', add: setIsAddingBooth, state: isAddingBooth, options: allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies?.find(lb => String(lb.id) === String(ocrTargetLoc.lbId))?.booths, disabled: !ocrTargetLoc.lbId }
-                        ].map(f => (
-                            <div key={f.key} className="flex flex-col gap-2">
-                                <div className="flex justify-between items-center px-1">
-                                    <label className="text-[9px] font-black uppercase text-slate-300 tracking-widest">{f.label}</label>
-                                    <button disabled={f.disabled} onClick={() => f.add(!f.state)} className="text-[9px] font-black text-indigo-400 hover:text-white transition-colors disabled:opacity-0">{f.state ? 'CANCEL' : '+ NEW'}</button>
-                                </div>
-                                {f.state ? (
-                                    <div className="flex flex-col gap-3">
-                                        <div className="flex gap-2">
-                                            <input autoFocus placeholder={f.key === 'boothId' ? "Booth No..." : "Name..."} value={newLocName} onChange={e => setNewLocName(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none w-32 text-white" />
-                                            {f.key === 'lbId' && (
-                                                <select value={newLBType} onChange={e => setNewLBType(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none text-white">
-                                                    <option value="PANCHAYAT">Panchayat</option>
-                                                    <option value="MUNICIPALITY">Municipality</option>
-                                                    <option value="CORPORATION">Corporation</option>
-                                                </select>
-                                            )}
-                                            {f.key !== 'boothId' && (
-                                                <button
-                                                    disabled={ocrLoading}
-                                                    onClick={() => handleQuickAdd(f.key.replace('Id', ''))}
-                                                    className={`bg-indigo-600 text-white px-4 rounded-xl font-black text-[9px] uppercase tracking-widest ${ocrLoading ? 'opacity-50 animate-pulse' : 'hover:bg-indigo-500'}`}
-                                                >
-                                                    {ocrLoading ? '...' : 'ADD'}
-                                                </button>
+                    <div className="flex flex-col gap-6 items-end">
+                        <div className="flex gap-6 items-end">
+                            {[
+                                { label: 'Constituency', key: 'constId', add: setIsAddingConst, state: isAddingConst, options: allLocations },
+                                { label: 'Local Body', key: 'lbId', add: setIsAddingLB, state: isAddingLB, options: allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies, disabled: !ocrTargetLoc.constId },
+                                { label: 'Booth Unit', key: 'boothId', add: setIsAddingBooth, state: isAddingBooth, options: allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies?.find(lb => String(lb.id) === String(ocrTargetLoc.lbId))?.booths, disabled: !ocrTargetLoc.lbId }
+                            ].map(f => (
+                                <div key={f.key} className="flex flex-col gap-2">
+                                    <div className="flex justify-between items-center px-1">
+                                        <label className="text-[9px] font-black uppercase text-slate-300 tracking-widest">{f.label}</label>
+                                        <button disabled={f.disabled} onClick={() => f.add(!f.state)} className="text-[9px] font-black text-indigo-400 hover:text-white transition-colors disabled:opacity-0">{f.state ? 'CANCEL' : '+ NEW'}</button>
+                                    </div>
+                                    {f.state ? (
+                                        <div className="flex flex-col gap-3">
+                                            <div className="flex gap-2">
+                                                <input autoFocus placeholder={f.key === 'boothId' ? "Booth No..." : "Name..."} value={newLocName} onChange={e => setNewLocName(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none w-32 text-white" />
+                                                {f.key === 'lbId' && (
+                                                    <select value={newLBType} onChange={e => setNewLBType(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none text-white">
+                                                        <option value="PANCHAYAT">Panchayat</option>
+                                                        <option value="MUNICIPALITY">Municipality</option>
+                                                        <option value="CORPORATION">Corporation</option>
+                                                    </select>
+                                                )}
+                                                {f.key !== 'boothId' && (
+                                                    <button
+                                                        disabled={ocrLoading}
+                                                        onClick={() => handleQuickAdd(f.key.replace('Id', ''))}
+                                                        className={`bg-indigo-600 text-white px-4 rounded-xl font-black text-[9px] uppercase tracking-widest ${ocrLoading ? 'opacity-50 animate-pulse' : 'hover:bg-indigo-500'}`}
+                                                    >
+                                                        {ocrLoading ? '...' : 'ADD'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {f.key === 'boothId' && (
+                                                <div className="flex flex-col gap-3">
+                                                    <div className="flex gap-2">
+                                                        <input placeholder="PS No..." value={newPSNo} onChange={e => setNewPSNo(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none w-20 text-white" />
+                                                        <input placeholder="Polling Station Name..." value={newPSName} onChange={e => setNewPSName(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none flex-1 text-white" />
+                                                    </div>
+                                                    <button
+                                                        disabled={ocrLoading}
+                                                        onClick={() => handleQuickAdd(f.key.replace('Id', ''))}
+                                                        className={`w-full bg-indigo-600 text-white py-3 rounded-xl font-black text-[9px] uppercase tracking-widest ${ocrLoading ? 'opacity-50 animate-pulse' : 'hover:bg-indigo-500'}`}
+                                                    >
+                                                        {ocrLoading ? 'Inscribing Neural Booth...' : 'ADD BOOTH UNIT'}
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
-                                        {f.key === 'boothId' && (
-                                            <div className="flex flex-col gap-3">
-                                                <div className="flex gap-2">
-                                                    <input placeholder="PS No..." value={newPSNo} onChange={e => setNewPSNo(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none w-20 text-white" />
-                                                    <input placeholder="Polling Station Name..." value={newPSName} onChange={e => setNewPSName(e.target.value)} className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none flex-1 text-white" />
-                                                </div>
-                                                <button
-                                                    disabled={ocrLoading}
-                                                    onClick={() => handleQuickAdd(f.key.replace('Id', ''))}
-                                                    className={`w-full bg-indigo-600 text-white py-3 rounded-xl font-black text-[9px] uppercase tracking-widest ${ocrLoading ? 'opacity-50 animate-pulse' : 'hover:bg-indigo-500'}`}
-                                                >
-                                                    {ocrLoading ? 'Inscribing Neural Booth...' : 'ADD BOOTH UNIT'}
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <select
-                                        disabled={f.disabled}
-                                        value={ocrTargetLoc[f.key]}
-                                        onChange={(e) => setOcrTargetLoc({ ...ocrTargetLoc, [f.key]: e.target.value })}
-                                        className="lux-glass border-white/10 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest outline-none disabled:opacity-20 text-slate-300 w-44"
-                                    >
-                                        <option value="">SELECT</option>
-                                        {f.options?.map(o => <option key={o.id} value={o.id} className="bg-slate-900">{o.name || `BOOTH ${o.number}`}</option>)}
-                                    </select>
-                                )}
+                                    ) : (
+                                        <select
+                                            disabled={f.disabled}
+                                            value={ocrTargetLoc[f.key]}
+                                            onChange={(e) => setOcrTargetLoc({ ...ocrTargetLoc, [f.key]: e.target.value })}
+                                            className="lux-glass border-white/10 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest outline-none disabled:opacity-20 text-slate-300 w-44"
+                                        >
+                                            <option value="">SELECT</option>
+                                            {f.options?.map(o => <option key={o.id} value={o.id} className="bg-slate-900">{o.name || `BOOTH ${o.number}`}</option>)}
+                                        </select>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        {ocrTargetLoc.boothId && !isAddingBooth && (
+                            <div className="flex gap-4 animate-in fade-in slide-in-from-top-4 w-full justify-end">
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[9px] font-black uppercase text-indigo-400 tracking-widest ml-1">PS_NO</label>
+                                    <input
+                                        value={ocrTargetLoc.psNo}
+                                        onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, psNo: e.target.value })}
+                                        className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none w-20 text-white"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[9px] font-black uppercase text-indigo-400 tracking-widest ml-1">POLLING STATION NAME</label>
+                                    <input
+                                        value={ocrTargetLoc.psName}
+                                        onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, psName: e.target.value })}
+                                        className="lux-glass !bg-white/5 border border-white/10 rounded-xl px-6 py-3 text-[10px] font-black uppercase outline-none text-white w-96"
+                                    />
+                                </div>
                             </div>
-                        ))}
+                        )}
                     </div>
                 )}
             </header>
