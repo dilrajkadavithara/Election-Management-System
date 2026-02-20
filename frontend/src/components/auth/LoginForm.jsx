@@ -88,7 +88,7 @@ const LoginForm = ({
                     </form>
                 </div>
 
-                <p className="text-center text-[8px] font-bold text-slate-600 uppercase tracking-[0.8em] animate-pulse">Neural Intelligence Engine v4.6 // Elite Sync</p>
+                <p className="text-center text-[8px] font-bold text-slate-600 uppercase tracking-[0.8em] animate-pulse">Neural Intelligence Engine v4.7 // Profile Intel Sync</p>
             </div>
         </div>
     );

@@ -50,52 +50,56 @@ const EditProfileModal = ({
                     <div className="space-y-1 col-span-2">
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Full Name</label>
                         <input type="text" value={editData.full_name || ''} onChange={(e) => setEditData({ ...editData, full_name: e.target.value })}
-                            className={`w-full p-3 bg-slate-50 border-2 rounded-2xl font-bold transition-all ${!editData.full_name || editData.full_name === 'N/A' ? 'border-rose-200 bg-rose-50/30' : 'border-slate-50'}`}
+                            className={`w-full p-3 bg-slate-50 border-2 rounded-2xl font-bold text-slate-900 transition-all ${!editData.full_name || editData.full_name === 'N/A' ? 'border-rose-200 bg-rose-50/30' : 'border-slate-50'}`}
                         />
                     </div>
 
                     <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Relation Type</label>
-                        <input type="text" placeholder="Father/Mother/Husband" value={editData.relation_type || ''} onChange={(e) => setEditData({ ...editData, relation_type: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold" />
+                        <input type="text" placeholder="Father/Mother/Husband" value={editData.relation_type || ''} onChange={(e) => setEditData({ ...editData, relation_type: e.target.value })}
+                            className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold text-slate-900"
+                        />
                     </div>
                     <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Relation Name</label>
                         <input type="text" value={editData.relation_name || ''} onChange={(e) => setEditData({ ...editData, relation_name: e.target.value })}
-                            className={`w-full p-3 bg-slate-50 border-2 rounded-2xl font-bold transition-all ${!editData.relation_name || editData.relation_name === 'N/A' ? 'border-rose-200 bg-rose-50/30' : 'border-slate-50'}`}
+                            className={`w-full p-3 bg-slate-50 border-2 rounded-2xl font-bold text-slate-900 transition-all ${!editData.relation_name || editData.relation_name === 'N/A' ? 'border-rose-200 bg-rose-50/30' : 'border-slate-50'}`}
                         />
                     </div>
 
                     <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">House No</label>
-                        <input type="text" value={editData.house_no || ''} onChange={(e) => setEditData({ ...editData, house_no: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold font-mono" />
+                        <input type="text" value={editData.house_no || ''} onChange={(e) => setEditData({ ...editData, house_no: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold font-mono text-slate-900" />
                     </div>
                     <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">House Name</label>
-                        <input type="text" value={editData.house_name || ''} onChange={(e) => setEditData({ ...editData, house_name: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold" />
+                        <input type="text" value={editData.house_name || ''} onChange={(e) => setEditData({ ...editData, house_name: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold text-slate-900" />
                     </div>
 
                     <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">EPIC ID</label>
                         <input type="text" value={editData.epic_id || ''} onChange={(e) => setEditData({ ...editData, epic_id: e.target.value })}
-                            className={`w-full p-3 bg-slate-50 border-2 rounded-2xl font-bold font-mono transition-all ${!editData.epic_id || editData.epic_id === 'N/A' ? 'border-rose-200 bg-rose-50/30' : 'border-slate-50'}`}
+                            className={`w-full p-3 bg-slate-50 border-2 rounded-2xl font-bold font-mono text-slate-900 transition-all ${!editData.epic_id || editData.epic_id === 'N/A' ? 'border-rose-200 bg-rose-50/30' : 'border-slate-50'}`}
                         />
                     </div>
                     <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Age</label>
                         <input type="number" value={editData.age || ''} onChange={(e) => setEditData({ ...editData, age: e.target.value })}
-                            className={`w-full p-3 bg-slate-50 border-2 rounded-2xl font-bold transition-all ${!editData.age || editData.age === 'N/A' ? 'border-rose-200 bg-rose-50/30' : 'border-slate-50'}`}
+                            className={`w-full p-3 bg-slate-50 border-2 rounded-2xl font-bold text-slate-900 transition-all ${!editData.age || editData.age === 'N/A' ? 'border-rose-200 bg-rose-50/30' : 'border-slate-50'}`}
                         />
                     </div>
                     <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Gender</label>
-                        <select value={editData.gender || ''} onChange={(e) => setEditData({ ...editData, gender: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold uppercase text-xs">
+                        <select value={editData.gender || ''} onChange={(e) => setEditData({ ...editData, gender: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold uppercase text-xs text-slate-900">
+                            <option value="">SELECT</option>
                             <option value="MALE">Male</option>
                             <option value="FEMALE">Female</option>
+                            <option value="TRANSGENDER">Transgender</option>
                         </select>
                     </div>
                     <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Voter Leaning</label>
-                        <select value={editData.voter_leaning || ''} onChange={(e) => setEditData({ ...editData, voter_leaning: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold uppercase text-xs">
+                        <select value={editData.voter_leaning || ''} onChange={(e) => setEditData({ ...editData, voter_leaning: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold uppercase text-xs text-slate-900">
                             <option value="">Unknown</option>
                             <option value="UDF">UDF</option>
                             <option value="LDF">LDF</option>
@@ -105,16 +109,16 @@ const EditProfileModal = ({
                     </div>
                     <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Residence</label>
-                        <select value={editData.current_location || ''} onChange={(e) => setEditData({ ...editData, current_location: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold uppercase text-xs">
+                        <select value={editData.current_location || ''} onChange={(e) => setEditData({ ...editData, current_location: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold uppercase text-xs text-slate-900">
                             <option value="LOCAL">Local</option>
-                            <option value="OUTSIDE_DISTRICT">Outside District</option>
-                            <option value="OUTSIDE_STATE">Outside State</option>
+                            <option value="DISTRICT">Outside District</option>
+                            <option value="STATE">Outside State</option>
                             <option value="ABROAD">Abroad</option>
                         </select>
                     </div>
                     <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Voting Probability</label>
-                        <select value={editData.voting_probability || ''} onChange={(e) => setEditData({ ...editData, voting_probability: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold uppercase text-xs">
+                        <select value={editData.voting_probability || ''} onChange={(e) => setEditData({ ...editData, voting_probability: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold uppercase text-xs text-slate-900">
                             <option value="">Select Probability</option>
                             <option value="CONFIRMED">🎯 Confirmed</option>
                             <option value="LIKELY">📈 Likely</option>
@@ -124,7 +128,10 @@ const EditProfileModal = ({
                     </div>
                     <div className="space-y-1 col-span-2">
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Phone Number</label>
-                        <input type="text" value={editData.phone_no || ''} onChange={(e) => setEditData({ ...editData, phone_no: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold" placeholder="e.g. +91 9876543210" />
+                        <input type="text" value={editData.phone_no || ''} onChange={(e) => setEditData({ ...editData, phone_no: e.target.value })}
+                            className={`w-full p-3 bg-slate-50 border-2 rounded-2xl font-bold text-slate-900 transition-all ${!editData.phone_no ? 'border-amber-200 bg-amber-50/20' : 'border-slate-50'}`}
+                            placeholder="e.g. +91 9876543210"
+                        />
                     </div>
                 </div>
                 <div className="flex gap-4 pt-6">
