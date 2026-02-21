@@ -239,6 +239,8 @@ const App = () => {
                 ocrTargetLoc.psName
             );
             if (res.success) {
+                // Clear the batch from Redis so auto-reconnect doesn't reload it
+                try { await api.clearSession(ocrBatch.id); } catch (_) { }
                 setShowSuccess(true);
                 setTimeout(() => {
                     setShowSuccess(false);
