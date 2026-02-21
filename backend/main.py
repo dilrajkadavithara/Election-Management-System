@@ -216,26 +216,6 @@ logger = logging.getLogger("ElectionEngine")
 
 app = FastAPI(title="Election Management System Backend")
 
-@app.get("/api/diag/booth-check")
-async def diag_booth_check():
-    from core_db.models import Booth, LocalBody
-    # Check Vadakkaekara
-    lb = LocalBody.objects.filter(name__icontains="VADAKKAEKARA").first()
-    if not lb:
-        return {"found": False, "reason": "Local body VADAKKAEKARA not found", "all_lbs": [l.name for l in LocalBody.objects.all()[:10]]}
-    
-    b85 = Booth.objects.filter(local_body=lb, number__in=["085", "85"]).first()
-    if not b85:
-        return {"found": False, "lb": lb.name, "reason": "Booth 085 not found in this LB", "available_booth_nums": [b.number for b in lb.booth_set.all()[:10]]}
-    
-    return {
-        "found": True, 
-        "lb": lb.name, 
-        "booth_num": b85.number, 
-        "ps_name": b85.polling_station_name,
-        "voter_count": b85.voters.count()
-    }
-
 # Auth Helpers
 def create_access_token(data: dict):
     to_encode = data.copy()
