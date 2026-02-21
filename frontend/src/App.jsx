@@ -295,14 +295,18 @@ const App = () => {
                 if (flagged.length > 0) {
                     const res = flagged[0];
                     setEditData({
-                        full_name: res['Full Name'],
-                        relation_type: res['Relation Type'],
-                        relation_name: res['Relation Name'],
-                        house_no: res['House Number'],
-                        house_name: res['House Name'],
-                        epic_id: res.EPIC_ID,
-                        age: res.Age,
-                        gender: res.Gender?.toUpperCase() === 'MALE' ? 'MALE' : 'FEMALE',
+                        full_name: res['Full Name'] || res.full_name,
+                        relation_type: res['Relation Type'] || res.relation_type,
+                        relation_name: res['Relation Name'] || res.relation_name,
+                        house_no: res['House Number'] || res.house_no,
+                        house_name: res['House Name'] || res.house_name,
+                        epic_id: res.EPIC_ID || res.epic_id,
+                        age: res.Age || res.age,
+                        gender: (res.Gender || res.gender)?.toUpperCase() === 'MALE' ? 'MALE' : 'FEMALE',
+                        voter_leaning: res.voter_leaning || res.Leaning || '',
+                        current_location: res.current_location || res.Location || 'LOCAL',
+                        voting_probability: res.voting_probability || res.Probability || '',
+                        phone_no: res.phone_no || res.phone || '',
                         voter_id: res.voter_id,
                         image_name: res.image_name
                     });

@@ -104,6 +104,10 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
                     house_name=get_val(['House Name', 'house_name']) or '',
                     age=age_val,
                     gender=get_val(['Gender', 'gender']) or '',
+                    phone_no=get_val(['phone_no', 'Phone Number', 'Phone']),
+                    voter_leaning=get_val(['voter_leaning', 'Leaning', 'Sentiment']),
+                    current_location=get_val(['current_location', 'Location', 'Residence']),
+                    voting_probability=get_val(['voting_probability', 'Probability', 'Chance']),
                     source_file=original_filename,
                     status='VERIFIED',
                     created_by=created_by_user
