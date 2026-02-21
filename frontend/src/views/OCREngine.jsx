@@ -33,7 +33,7 @@ const OCREngine = ({
     const [validationTriggered, setValidationTriggered] = useState(false);
     const [newPSName, setNewPSName] = useState('');
     const [newPSNo, setNewPSNo] = useState('');
-    const [isAddingBooth, setIsAddingBooth] = useState(false);
+    const [isAddingBooth, setIsAddingBooth] = useState(true);
 
     useEffect(() => {
         if (!allLocations || allLocations.length === 0) {
@@ -203,20 +203,20 @@ const OCREngine = ({
                     </div>
 
                     {/* Row 2: Tactical Metadata */}
-                    <div className="grid grid-cols-12 gap-10 relative z-10">
+                    <div className="grid grid-cols-12 gap-10 relative z-10 items-end">
                         {/* Booth Selector (3 cols) */}
                         <div className="col-span-3 space-y-4">
-                            <label className={`lux-tech-label px-2 ${validationTriggered && !ocrTargetLoc.boothNo ? 'text-rose-500' : ''}`}>Booth Identity</label>
+                            <label className={`lux-tech-label px-2 ${validationTriggered && !ocrTargetLoc.boothNo ? 'text-rose-500' : ''}`}>Booth Number</label>
                             <div className="flex gap-4">
                                 {isAddingBooth ? (
-                                    <input autoFocus placeholder="NO." value={ocrTargetLoc.boothNo} onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, boothId: '', boothNo: e.target.value })} className="flex-1 lux-data-field border-indigo-500/40 text-center !px-0" />
+                                    <input autoFocus placeholder="NO." value={ocrTargetLoc.boothNo} onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, boothId: '', boothNo: e.target.value })} className="flex-1 lux-data-field border-indigo-500/40 text-center !px-0 h-[52px]" />
                                 ) : (
                                     <div className="relative flex-1">
                                         <select
                                             disabled={!ocrTargetLoc.lbId}
                                             value={ocrTargetLoc.boothId}
                                             onChange={(e) => setOcrTargetLoc({ ...ocrTargetLoc, boothId: e.target.value })}
-                                            className={`w-full lux-data-field appearance-none cursor-pointer disabled:opacity-20 ${validationTriggered && !ocrTargetLoc.boothNo ? 'border-rose-600' : ''}`}
+                                            className={`w-full lux-data-field appearance-none cursor-pointer disabled:opacity-20 h-[52px] ${validationTriggered && !ocrTargetLoc.boothNo ? 'border-rose-600' : ''}`}
                                         >
                                             <option value="">-- SELECT --</option>
                                             {allLocations.find(c => String(c.id) === String(ocrTargetLoc.constId))?.local_bodies?.find(lb => String(lb.id) === String(ocrTargetLoc.lbId))?.booths?.map(o => (
@@ -235,17 +235,17 @@ const OCREngine = ({
                         {/* PS No (1 col) */}
                         <div className="col-span-1 space-y-4">
                             <label className={`lux-tech-label text-center block ${validationTriggered && !ocrTargetLoc.psNo ? 'text-rose-500' : ''}`}>PS NO</label>
-                            <input maxLength={3} placeholder="###" value={ocrTargetLoc.psNo} onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, psNo: e.target.value })} className={`w-full lux-data-field text-center !px-0 font-bold ${validationTriggered && !ocrTargetLoc.psNo ? 'border-rose-600' : ''}`} />
+                            <input maxLength={3} placeholder="###" value={ocrTargetLoc.psNo} onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, psNo: e.target.value })} className={`w-full lux-data-field text-center !px-0 font-bold h-[52px] ${validationTriggered && !ocrTargetLoc.psNo ? 'border-rose-600' : ''}`} />
                         </div>
 
                         {/* Polling Station Name (Remaining 8 cols) */}
                         <div className="col-span-8 space-y-4">
-                            <label className={`lux-tech-label px-2 ${validationTriggered && !ocrTargetLoc.psName ? 'text-rose-500' : ''}`}>Full Physical Designation</label>
+                            <label className={`lux-tech-label px-2 ${validationTriggered && !ocrTargetLoc.psName ? 'text-rose-500' : ''}`}>Polling Station Name</label>
                             <input
                                 placeholder="ENTER FULL INSTITUTIONAL POLLING STATION NAME..."
                                 value={ocrTargetLoc.psName}
                                 onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, psName: e.target.value })}
-                                className={`w-full lux-data-field tracking-wide ${validationTriggered && !ocrTargetLoc.psName ? 'border-rose-600' : ''}`}
+                                className={`w-full lux-data-field tracking-wide h-[52px] ${validationTriggered && !ocrTargetLoc.psName ? 'border-rose-600' : ''}`}
                             />
                         </div>
                     </div>
@@ -301,10 +301,10 @@ const OCREngine = ({
                             <h3 className="lux-tech-label mb-12 italic border-b border-white/5 pb-4">Neural Flow Status</h3>
                             <div className="space-y-8">
                                 {[
-                                    { step: 'uploaded', label: 'Matrix Ingestion', icon: '📥' },
-                                    { step: 'extracted', label: 'Target Stream Secured', icon: '🎯' },
-                                    { step: 'processing', label: 'Parallel Extraction', icon: '⚡' },
-                                    { step: 'processed', label: 'Intelligence Synthesis', icon: '✨' }
+                                    { step: 'uploaded', label: 'Upload Complete', icon: '📥' },
+                                    { step: 'extracted', label: 'Pages Detected', icon: '🎯' },
+                                    { step: 'processing', label: 'AI Processing', icon: '⚡' },
+                                    { step: 'processed', label: 'Data Ready', icon: '✨' }
                                 ].map((s, i) => {
                                     const steps = ['uploaded', 'extracted', 'processing', 'processed'];
                                     const status = ocrBatch.status;
@@ -343,18 +343,18 @@ const OCREngine = ({
 
                             <div className="v2-scanline absolute inset-0 opacity-10" />
                             <div className="relative z-10 flex flex-col h-full">
-                                <h2 className="text-8xl font-black uppercase tracking-tighter leading-none mb-12 italic" style={{ fontFamily: '"Rajdhani", sans-serif' }}>
-                                    {ocrBatch.status === 'uploaded' && <span className="text-slate-800">READY_FOR_EXTRACT</span>}
-                                    {(ocrBatch.status === 'extracting' || ocrBatch.status === 'processing') && <span className="lux-text-gradient animate-pulse">NEURAL_DEEP_SYNC</span>}
-                                    {ocrBatch.status === 'extracted' && <span className="text-indigo-600">TARGET_LOCKED</span>}
-                                    {ocrBatch.status === 'processed' && <span className="text-emerald-500">SYNTHESIS_COMPLETE</span>}
+                                <h2 className="text-5xl font-black uppercase tracking-tighter leading-none mb-12 italic" style={{ fontFamily: '"Rajdhani", sans-serif' }}>
+                                    {ocrBatch.status === 'uploaded' && <span className="text-slate-800">FILE READY</span>}
+                                    {(ocrBatch.status === 'extracting' || ocrBatch.status === 'processing') && <span className="lux-text-gradient animate-pulse">PROCESSING DATA</span>}
+                                    {ocrBatch.status === 'extracted' && <span className="text-indigo-600">PAGES READ</span>}
+                                    {ocrBatch.status === 'processed' && <span className="text-emerald-500">PREVIEW READY</span>}
                                 </h2>
 
                                 <div className="grid grid-cols-3 gap-12 mt-auto">
                                     {[
-                                        { l: 'Matrix Pages', v: ocrBatch.total_pages || 0, c: 'text-white' },
-                                        { l: 'Neural Sync', v: `${calculateIntelligence()}%`, c: 'text-indigo-400' },
-                                        { l: 'Asset Records', v: ocrBatch.voters_processed || 0, c: 'text-emerald-400' }
+                                        { l: 'Total Pages', v: ocrBatch.total_pages || 0, c: 'text-white' },
+                                        { l: 'Progress', v: `${calculateIntelligence()}%`, c: 'text-indigo-400' },
+                                        { l: 'Voters Found', v: ocrBatch.voters_processed || 0, c: 'text-emerald-400' }
                                     ].map(m => (
                                         <div key={m.l}>
                                             <p className="lux-tech-label mb-3">{m.l}</p>
