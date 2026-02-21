@@ -125,9 +125,10 @@ const OCREngine = ({
     const calculateIntelligence = () => {
         if (!ocrBatch) return 0;
         if (ocrBatch.status === 'processed') return 100;
-        if (ocrBatch.status !== 'processing') return 0;
-        const total = Math.max(1, (ocrBatch.total_pages || 0) - 2);
-        return Math.min(100, Math.round((ocrBatch.pages_processed / total) * 100));
+        if (!['extracting', 'processing'].includes(ocrBatch.status)) return 0;
+        const totalPages = Math.max(1, (ocrBatch.total_pages || 0) - 2);
+        const pagesProcessed = ocrBatch.pages_processed || 0;
+        return Math.min(99, Math.round((pagesProcessed / totalPages) * 100));
     };
 
     const isLocationValid = !!(ocrTargetLoc.constId && ocrTargetLoc.lbId && (ocrTargetLoc.boothId || ocrTargetLoc.boothNo) && ocrTargetLoc.psNo && ocrTargetLoc.psName);
@@ -301,13 +302,13 @@ const OCREngine = ({
                             <div className="space-y-8">
                                 {[
                                     { step: 'uploaded', label: 'Matrix Ingestion', icon: '📥' },
-                                    { step: 'processing', label: 'Parallel Extraction', icon: '⚡' },
                                     { step: 'extracted', label: 'Target Stream Secured', icon: '🎯' },
+                                    { step: 'processing', label: 'Parallel Extraction', icon: '⚡' },
                                     { step: 'processed', label: 'Intelligence Synthesis', icon: '✨' }
                                 ].map((s, i) => {
-                                    const steps = ['uploaded', 'processing', 'extracted', 'processed'];
+                                    const steps = ['uploaded', 'extracted', 'processing', 'processed'];
                                     const status = ocrBatch.status;
-                                    const currentIndex = steps.indexOf(status === 'extracting' ? 'processing' : status);
+                                    const currentIndex = steps.indexOf(status === 'extracting' ? 'extracted' : status);
                                     const itemIndex = steps.indexOf(s.step);
                                     const isDone = itemIndex < currentIndex;
                                     const isActive = itemIndex === currentIndex;

@@ -118,52 +118,48 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
 
 def get_strategic_analytics(user_profile, constituency_id=None):
     """Deep analytics aggregation for Command Center V2"""
+    from django.db.models import Count, Case, When, IntegerField, F, Value
+    
     voters = user_profile.get_accessible_voters()
     if constituency_id:
         voters = voters.filter(booth__constituency_id=constituency_id)
-        
-    # Get relevant booths
-    if constituency_id:
-        booths = Booth.objects.filter(constituency_id=constituency_id).order_by('number')
-    else:
-        # If no constituency, get all booths accessible to user
-        from django.db.models import Subquery
-        booths = Booth.objects.filter(id__in=Subquery(voters.values('booth_id'))).order_by('constituency', 'number')
-        
+    
+    # Single GROUP BY query for all booth stats
+    booth_agg = voters.values(
+        'booth__id', 'booth__number', 'booth__polling_station_name', 'booth__name'
+    ).annotate(
+        total=Count('id'),
+        udf=Count(Case(When(voter_leaning='UDF', then=1), output_field=IntegerField())),
+        ldf=Count(Case(When(voter_leaning='LDF', then=1), output_field=IntegerField())),
+        nda=Count(Case(When(voter_leaning='NDA', then=1), output_field=IntegerField())),
+        neutral=Count(Case(When(voter_leaning='NEUTRAL', then=1), output_field=IntegerField())),
+        intel_tagged=Count(Case(When(
+            Q(voter_leaning__isnull=False) | Q(current_location__isnull=False) |
+            Q(voting_probability__isnull=False) | Q(phone_no__isnull=False),
+            then=1
+        ), output_field=IntegerField())),
+    ).order_by('booth__number')
+
     booth_stats = []
-    for b in booths:
-        bvoters = voters.filter(booth=b)
-        total = bvoters.count()
-        if total == 0: continue
-        
-        udf = bvoters.filter(voter_leaning='UDF').count()
-        ldf = bvoters.filter(voter_leaning='LDF').count()
-        nda = bvoters.filter(voter_leaning='NDA').count()
-        leaning_neutral = bvoters.filter(voter_leaning='NEUTRAL').count()
-        
-        # Coverage: What percentage of voters have any intelligence tag or basic info update?
-        intel_tagged = bvoters.filter(
-            Q(voter_leaning__isnull=False) | 
-            Q(current_location__isnull=False) | 
-            Q(voting_probability__isnull=False) |
-            Q(phone_no__isnull=False)
-        ).distinct().count()
-        
+    for row in booth_agg:
+        total = row['total']
+        if total == 0:
+            continue
         booth_stats.append({
-            "id": b.id,
-            "number": b.number,
-            "name": b.polling_station_name or b.name or f"Booth {b.number}",
+            "id": row['booth__id'],
+            "number": row['booth__number'],
+            "name": row['booth__polling_station_name'] or row['booth__name'] or f"Booth {row['booth__number']}",
             "total": total,
-            "udf": udf,
-            "ldf": ldf,
-            "nda": nda,
-            "neutral": leaning_neutral,
-            "coverage": round((intel_tagged / total) * 100, 1) if total > 0 else 0
+            "udf": row['udf'],
+            "ldf": row['ldf'],
+            "nda": row['nda'],
+            "neutral": row['neutral'],
+            "coverage": round((row['intel_tagged'] / total) * 100, 1) if total > 0 else 0
         })
         
-    # Recent activity across these voters
+    # Recent activity — use select_related to avoid N+1 on booth/user
     recent_activity = []
-    recent_voters = voters.order_by('-updated_at')[:8]
+    recent_voters = voters.select_related('booth', 'created_by').order_by('-updated_at')[:8]
     for rv in recent_voters:
         recent_activity.append({
             "voter_name": rv.full_name,
@@ -178,74 +174,62 @@ def get_strategic_analytics(user_profile, constituency_id=None):
     }
 
 def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id=None):
+    from django.db.models import Count, Case, When, IntegerField, Value
+    
     voters = user_profile.get_accessible_voters()
     if constituency_id: voters = voters.filter(booth__constituency_id=constituency_id)
     if lb_id: voters = voters.filter(booth__local_body_id=lb_id)
     if booth_id: voters = voters.filter(booth_id=booth_id)
-        
-    total = voters.count()
     
-    # 1. Gender Split
-    male = voters.filter(gender__iexact='Male').count()
-    female = voters.filter(gender__iexact='Female').count()
-    
-    # 2. Voter Sentiment (Leaning)
-    sentiment = {
-        "UDF": voters.filter(voter_leaning='UDF').count(),
-        "LDF": voters.filter(voter_leaning='LDF').count(),
-        "NDA": voters.filter(voter_leaning='NDA').count(),
-        "NEUTRAL": voters.filter(voter_leaning='NEUTRAL').count(),
-    }
-    
-    # 3. Outreach (Data Readiness)
-    outreach = {
-        "with_phone": voters.filter(phone_no__isnull=False).exclude(phone_no='').count(),
-    }
-    
-    # 4. Age Distribution
-    age_dist = {
-        "18-25": voters.filter(age__gte=18, age__lte=25).count(),
-        "26-40": voters.filter(age__gte=26, age__lte=40).count(),
-        "41-60": voters.filter(age__gte=41, age__lte=60).count(),
-        "60+": voters.filter(age__gt=60).count(),
-    }
+    # Single aggregated query for ALL counts
+    stats = voters.aggregate(
+        total=Count('id'),
+        # Gender
+        male=Count(Case(When(gender__iexact='Male', then=1), output_field=IntegerField())),
+        female=Count(Case(When(gender__iexact='Female', then=1), output_field=IntegerField())),
+        # Sentiment
+        udf=Count(Case(When(voter_leaning='UDF', then=1), output_field=IntegerField())),
+        ldf=Count(Case(When(voter_leaning='LDF', then=1), output_field=IntegerField())),
+        nda=Count(Case(When(voter_leaning='NDA', then=1), output_field=IntegerField())),
+        neutral=Count(Case(When(voter_leaning='NEUTRAL', then=1), output_field=IntegerField())),
+        # Outreach
+        with_phone=Count(Case(When(phone_no__isnull=False, then=Case(When(~Q(phone_no=''), then=1))), output_field=IntegerField())),
+        # Age Distribution
+        age_18_25=Count(Case(When(age__gte=18, age__lte=25, then=1), output_field=IntegerField())),
+        age_26_40=Count(Case(When(age__gte=26, age__lte=40, then=1), output_field=IntegerField())),
+        age_41_60=Count(Case(When(age__gte=41, age__lte=60, then=1), output_field=IntegerField())),
+        age_60_plus=Count(Case(When(age__gt=60, then=1), output_field=IntegerField())),
+        # Location
+        loc_local=Count(Case(When(current_location='LOCAL', then=1), output_field=IntegerField())),
+        loc_abroad=Count(Case(When(current_location='ABROAD', then=1), output_field=IntegerField())),
+        loc_state=Count(Case(When(current_location='STATE', then=1), output_field=IntegerField())),
+        loc_district=Count(Case(When(current_location='DISTRICT', then=1), output_field=IntegerField())),
+        # Probability
+        prob_confirmed=Count(Case(When(voting_probability='CONFIRMED', then=1), output_field=IntegerField())),
+        prob_likely=Count(Case(When(voting_probability='LIKELY', then=1), output_field=IntegerField())),
+        prob_unlikely=Count(Case(When(voting_probability='UNLIKELY', then=1), output_field=IntegerField())),
+        prob_oos=Count(Case(When(voting_probability='OUT_OF_STATION', then=1), output_field=IntegerField())),
+    )
 
-    # 5. Geographical Logistics (Location)
-    location = {
-        "LOCAL": voters.filter(current_location='LOCAL').count(),
-        "ABROAD": voters.filter(current_location='ABROAD').count(),
-        "STATE": voters.filter(current_location='STATE').count(),
-        "DISTRICT": voters.filter(current_location='DISTRICT').count(),
-    }
-
-    # 6. Voting Probability (Political Pulse)
-    probability = {
-        "CONFIRMED": voters.filter(voting_probability='CONFIRMED').count(),
-        "LIKELY": voters.filter(voting_probability='LIKELY').count(),
-        "UNLIKELY": voters.filter(voting_probability='UNLIKELY').count(),
-        "OUT_OF_STATION": voters.filter(voting_probability='OUT_OF_STATION').count(),
-    }
-
-    # 7. Decisive Set (Local + Confirmed Presence) - The basis for Win Probability
-    decisive_voters = voters.filter(current_location='LOCAL', voting_probability='CONFIRMED')
-    decisive_stats = {
-        "total": decisive_voters.count(),
-        "UDF": decisive_voters.filter(voter_leaning='UDF').count(),
-        "LDF": decisive_voters.filter(voter_leaning='LDF').count(),
-        "NDA": decisive_voters.filter(voter_leaning='NDA').count(),
-        "NEUTRAL": decisive_voters.filter(voter_leaning='NEUTRAL').count(),
-    }
+    # Decisive set: single query for local + confirmed voters
+    decisive = voters.filter(current_location='LOCAL', voting_probability='CONFIRMED').aggregate(
+        total=Count('id'),
+        udf=Count(Case(When(voter_leaning='UDF', then=1), output_field=IntegerField())),
+        ldf=Count(Case(When(voter_leaning='LDF', then=1), output_field=IntegerField())),
+        nda=Count(Case(When(voter_leaning='NDA', then=1), output_field=IntegerField())),
+        neutral_d=Count(Case(When(voter_leaning='NEUTRAL', then=1), output_field=IntegerField())),
+    )
     
     return {
-        "total": total, 
-        "gender": {"male": male, "female": female},
-        "sentiment": sentiment, 
-        "outreach": outreach,
-        "age_dist": age_dist,
-        "location": location,
-        "probability": probability,
-        "decisive_stats": decisive_stats,
-        "tagging_progress": voters.count() # Simplified for dashboard
+        "total": stats['total'], 
+        "gender": {"male": stats['male'], "female": stats['female']},
+        "sentiment": {"UDF": stats['udf'], "LDF": stats['ldf'], "NDA": stats['nda'], "NEUTRAL": stats['neutral']},
+        "outreach": {"with_phone": stats['with_phone']},
+        "age_dist": {"18-25": stats['age_18_25'], "26-40": stats['age_26_40'], "41-60": stats['age_41_60'], "60+": stats['age_60_plus']},
+        "location": {"LOCAL": stats['loc_local'], "ABROAD": stats['loc_abroad'], "STATE": stats['loc_state'], "DISTRICT": stats['loc_district']},
+        "probability": {"CONFIRMED": stats['prob_confirmed'], "LIKELY": stats['prob_likely'], "UNLIKELY": stats['prob_unlikely'], "OUT_OF_STATION": stats['prob_oos']},
+        "decisive_stats": {"total": decisive['total'], "UDF": decisive['udf'], "LDF": decisive['ldf'], "NDA": decisive['nda'], "NEUTRAL": decisive['neutral_d']},
+        "tagging_progress": stats['total']
     }
 
 def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None, serial_from=None, serial_to=None, location=None):
@@ -355,7 +339,23 @@ def get_all_users():
     users = []
     for u in User.objects.all():
         if hasattr(u, 'profile'):
-            users.append({"id": u.id, "username": u.username, "role": u.profile.role})
+            p = u.profile
+            users.append({
+                "id": u.id,
+                "username": u.username,
+                "role": p.role,
+                "can_download": p.can_download,
+                "can_upload": p.can_upload,
+                "can_verify": p.can_verify,
+                "can_edit_voters": p.can_edit_voters,
+                "can_send_broadcasts": p.can_send_broadcasts,
+                "can_manage_system": p.can_manage_system,
+                "assignments": {
+                    "constituencies": list(p.assigned_constituencies.values_list('id', flat=True)),
+                    "local_bodies": list(p.assigned_local_bodies.values_list('id', flat=True)),
+                    "booths": list(p.assigned_booths.values_list('id', flat=True)),
+                }
+            })
     return users
 
 def create_managed_user(username, password, role, assignments):
@@ -363,7 +363,23 @@ def create_managed_user(username, password, role, assignments):
     user = User.objects.create_user(username=username, password=password)
     profile, _ = UserProfile.objects.get_or_create(user=user)
     profile.role = role
+    # Save permissions from assignments dict
+    if isinstance(assignments, dict):
+        profile.can_download = assignments.get('can_download', False)
+        profile.can_upload = assignments.get('can_upload', False)
+        profile.can_verify = assignments.get('can_verify', True)
+        profile.can_edit_voters = assignments.get('can_edit_voters', True)
+        profile.can_send_broadcasts = assignments.get('can_send_broadcasts', False)
+        profile.can_manage_system = assignments.get('can_manage_system', False)
     profile.save()
+    # Save scope assignments
+    if isinstance(assignments, dict):
+        const_ids = assignments.get('constituencies', [])
+        lb_ids = assignments.get('local_bodies', [])
+        booth_ids = assignments.get('booths', [])
+        if const_ids: profile.assigned_constituencies.set(const_ids)
+        if lb_ids: profile.assigned_local_bodies.set(lb_ids)
+        if booth_ids: profile.assigned_booths.set(booth_ids)
     return True, "User created"
 
 def delete_user(user_id):
@@ -374,7 +390,21 @@ def delete_user(user_id):
 def update_user_profile(user_id, data):
     from django.contrib.auth.models import User
     user = User.objects.get(id=user_id)
-    if 'role' in data: user.profile.role = data['role']; user.profile.save()
+    p = user.profile
+    if 'role' in data: p.role = data['role']
+    if 'can_download' in data: p.can_download = data['can_download']
+    if 'can_upload' in data: p.can_upload = data['can_upload']
+    if 'can_verify' in data: p.can_verify = data['can_verify']
+    if 'can_edit_voters' in data: p.can_edit_voters = data['can_edit_voters']
+    if 'can_send_broadcasts' in data: p.can_send_broadcasts = data['can_send_broadcasts']
+    if 'can_manage_system' in data: p.can_manage_system = data['can_manage_system']
+    p.save()
+    # Update scope assignments if provided
+    if 'assignments' in data and isinstance(data['assignments'], dict):
+        a = data['assignments']
+        if 'constituencies' in a: p.assigned_constituencies.set(a['constituencies'])
+        if 'local_bodies' in a: p.assigned_local_bodies.set(a['local_bodies'])
+        if 'booths' in a: p.assigned_booths.set(a['booths'])
     return True, "User updated"
 
 def get_comm_stats(user_profile):

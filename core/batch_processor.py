@@ -58,9 +58,9 @@ class BatchProcessor:
                 logging.error(f"Thread Error on Page {page_num}: {e}")
                 return page_num, []
 
-        # Safe parallelism level for Gemini Flash Free Tier (Limit 15 RPM)
-        # We use 5 workers to be safe and avoid 429 errors.
-        max_workers = 5 
+        # High-Performance Neural Parallelism (Paid Tier)
+        # Scaled to 30 workers for ultra-fast extraction.
+        max_workers = 30 
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Map the processing function across all target pages

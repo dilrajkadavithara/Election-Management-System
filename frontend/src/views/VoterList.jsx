@@ -4,6 +4,8 @@ import api from '../api';
 const VoterList = ({
     voterList,
     voterTotal,
+    currentPage,
+    voterLoading,
     listFilters,
     setListFilters,
     searchQuery,
@@ -16,6 +18,9 @@ const VoterList = ({
     setEditMode,
     handleUpdateIntel
 }) => {
+    const pageSize = 50;
+    const totalPages = Math.max(1, Math.ceil(voterTotal / pageSize));
+
     return (
         <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-12 lux-animate-in">
             <header className="flex justify-between items-end border-b border-white/5 pb-10">
@@ -83,23 +88,31 @@ const VoterList = ({
                         </div>
                     ))}
                     <div className="flex gap-4 min-w-fit">
-                        <button onClick={() => { loadVoters(); loadAdminData(); }} className="bg-white text-black px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-400 hover:text-white transition-all shadow-lg">Load Intelligence</button>
+                        <button onClick={() => { loadVoters(1); loadAdminData(); }} className="bg-white text-black px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-400 hover:text-white transition-all shadow-lg">Load Intelligence</button>
                         <button onClick={() => { setListFilters({ constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '', serialFrom: '', serialTo: '', location: '' }); setSearchQuery(''); }} className="bg-white/5 text-slate-300 px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Reset</button>
                     </div>
                 </div>
             </div>
 
-            <div className="lux-glass rounded-[2.5rem] border-white/5 shadow-2xl overflow-hidden">
+            <div className="lux-glass rounded-[2.5rem] border-white/5 shadow-2xl overflow-hidden relative">
+                {voterLoading && (
+                    <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm z-10 flex items-center justify-center">
+                        <div className="flex flex-col items-center gap-4">
+                            <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                            <span className="text-[10px] font-black uppercase text-indigo-400 tracking-widest animate-pulse">Loading Intelligence...</span>
+                        </div>
+                    </div>
+                )}
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="border-b border-white/5 text-[9px] font-black uppercase text-slate-300 tracking-[0.2em]">
                             <th className="pl-10 py-6">Sl</th>
-                            <th className="px-6 py-6 min-w-[200px]">Strategic Asset</th>
+                            <th className="px-6 py-6 min-w-[200px]">Name</th>
                             <th className="px-6 py-6 w-[120px]">EPIC ID</th>
-                            <th className="px-6 py-6">Sector Info</th>
+                            <th className="px-6 py-6">House</th>
                             <th className="px-6 py-6 text-center">Gen/Age</th>
-                            <th className="px-6 py-6 min-w-[220px]">Neural Intelligence Tags</th>
-                            <th className="pr-10 py-6 text-right w-[100px]">Control</th>
+                            <th className="px-6 py-6">Booth</th>
+                            <th className="pr-10 py-6 text-right w-[100px]">Action</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
@@ -117,8 +130,8 @@ const VoterList = ({
                                 </td>
                                 <td className="px-6 py-5">
                                     <div className="flex flex-col gap-1">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Booth {v.booth_no}</span>
-                                        <div className="h-1 w-8 bg-indigo-500/20 rounded-full group-hover:w-full transition-all duration-700"></div>
+                                        <span className="text-[10px] font-black text-white uppercase tracking-tighter">{v.house_name || '—'}</span>
+                                        <span className="text-[9px] font-bold text-slate-500">{v.house_no || ''}</span>
                                     </div>
                                 </td>
                                 <td className="px-6 py-5 text-center">
@@ -128,47 +141,46 @@ const VoterList = ({
                                     </div>
                                 </td>
                                 <td className="px-6 py-5">
-                                    <div className="flex flex-wrap gap-2 group-hover:scale-105 transition-transform duration-500 origin-left">
-                                        {['UDF', 'LDF', 'NDA', 'NEUTRAL'].map(l => (
-                                            <button
-                                                key={l}
-                                                onClick={() => handleUpdateIntel(v.id, { voter_leaning: l })}
-                                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black transition-all border ${v.voter_leaning === l ? (l === 'UDF' ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_10px_#6366f1]' : l === 'LDF' ? 'bg-rose-600 border-rose-400 text-white shadow-[0_0_10px_#f43f5e]' : l === 'NDA' ? 'bg-amber-600 border-amber-400 text-white shadow-[0_0_10px_#f59e0b]' : 'bg-slate-600 border-slate-400 text-white shadow-[0_0_10px_#475569]') : 'bg-transparent border-white/10 text-slate-300 hover:border-white/30'}`}
-                                            >
-                                                {l}
-                                            </button>
-                                        ))}
-                                        <div className="w-[1px] h-6 bg-white/10 mx-1" />
-                                        {[
-                                            { id: 'LOCAL', icon: '🏠' },
-                                            { id: 'ABROAD', icon: '✈️' },
-                                            { id: 'STATE', icon: '🇮🇳' },
-                                            { id: 'DISTRICT', icon: '🏘️' }
-                                        ].map(loc => (
-                                            <button
-                                                key={loc.id}
-                                                onClick={() => handleUpdateIntel(v.id, { current_location: loc.id })}
-                                                className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all border ${v.current_location === loc.id ? 'bg-white/10 border-indigo-500 shadow-[0_0_10px_#818cf8]' : 'bg-transparent border-white/5 hover:border-white/20 grayscale group-hover:grayscale-0'}`}
-                                                title={loc.id}
-                                            >
-                                                {loc.icon}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Booth {v.booth_no}</span>
                                 </td>
                                 <td className="pr-10 py-5 text-right">
                                     <button
                                         onClick={() => { setEditData(v); setEditMode(true); }}
                                         className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500 hover:text-white px-5 py-2 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all"
                                     >
-                                        Modify Asset
+                                        Edit ✏️
                                     </button>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
-                <div className="h-10" />
+
+                {/* Pagination Controls */}
+                <div className="flex items-center justify-between px-10 py-6 border-t border-white/5">
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                        Showing {voterTotal > 0 ? ((currentPage - 1) * pageSize) + 1 : 0}–{Math.min(currentPage * pageSize, voterTotal)} of {voterTotal}
+                    </p>
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => loadVoters(currentPage - 1)}
+                            disabled={currentPage <= 1}
+                            className="bg-white/5 text-slate-300 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                        >
+                            ← Previous
+                        </button>
+                        <span className="text-[11px] font-black text-indigo-400 tracking-widest">
+                            Page {currentPage} / {totalPages}
+                        </span>
+                        <button
+                            onClick={() => loadVoters(currentPage + 1)}
+                            disabled={currentPage >= totalPages}
+                            className="bg-white/5 text-slate-300 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                        >
+                            Next →
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );

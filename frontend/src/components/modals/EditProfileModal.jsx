@@ -37,7 +37,7 @@ const EditProfileModal = ({
                     </div>
                 </div>
 
-                {ocrBatch && editData.image_name && (
+                {ocrBatch && ocrBatch.status === 'processed' && editData.image_name && typeof editData.voter_id === 'string' && (
                     <div className="p-4 bg-slate-50 rounded-[32px] border-2 border-slate-100 flex flex-col items-center gap-4">
                         <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none">Original Scan Data</p>
                         <div className="w-full h-32 bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-inner flex items-center justify-center">

@@ -37,6 +37,7 @@ const App = () => {
     const [strategicStats, setStrategicStats] = useState(null);
     const [voterList, setVoterList] = useState([]);
     const [voterTotal, setVoterTotal] = useState(0);
+    const [currentPage, setCurrentPage] = useState(1);
     const [dashFilters, setDashFilters] = useState({ constituency: '', lb: '', booth: '' });
     const [listFilters, setListFilters] = useState({ constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '', serialFrom: '', serialTo: '', location: '' });
     const [searchQuery, setSearchQuery] = useState('');
@@ -75,6 +76,7 @@ const App = () => {
 
     // UI State
     const [loading, setLoading] = useState(false);
+    const [voterLoading, setVoterLoading] = useState(false);
     const [error, setError] = useState(null);
     const [editMode, setEditMode] = useState(false);
     const [editData, setEditData] = useState({});
@@ -92,7 +94,7 @@ const App = () => {
     }, [isLoggedIn]);
 
     useEffect(() => {
-        if (isLoggedIn && view === 'voters') loadVoters();
+        if (isLoggedIn && view === 'voters') loadVoters(currentPage);
     }, [view, dashFilters, listFilters, searchQuery]);
 
     useEffect(() => {
@@ -152,7 +154,8 @@ const App = () => {
         } catch (e) { console.error("Global Stats Load Error:", e); }
     };
 
-    const loadVoters = async () => {
+    const loadVoters = async (page = 1) => {
+        setVoterLoading(true);
         try {
             const data = await api.getVoters({
                 search: searchQuery,
@@ -162,11 +165,15 @@ const App = () => {
                 gender: listFilters.gender,
                 age_from: listFilters.ageFrom,
                 age_to: listFilters.ageTo,
-                location: listFilters.location
+                location: listFilters.location,
+                page: page,
+                page_size: 50
             });
             setVoterList(data.results);
-            setVoterTotal(data.count);
+            setVoterTotal(data.total || data.count || 0);
+            setCurrentPage(page);
         } catch (e) { console.error(e); }
+        setVoterLoading(false);
     };
 
     const loadCommData = async () => {
@@ -474,7 +481,7 @@ const App = () => {
                         )}
                     </div>
                 )}
-                {view === 'voters' && <VoterList voterList={voterList} voterTotal={voterTotal} listFilters={listFilters} setListFilters={setListFilters} searchQuery={searchQuery} setSearchQuery={setSearchQuery} allLocations={allLocations} loadVoters={loadVoters} loadAdminData={loadAdminData} currentUser={currentUser} setEditData={setEditData} setEditMode={setEditMode} handleUpdateIntel={handleUpdateIntel} />}
+                {view === 'voters' && <VoterList voterList={voterList} voterTotal={voterTotal} currentPage={currentPage} voterLoading={voterLoading} listFilters={listFilters} setListFilters={setListFilters} searchQuery={searchQuery} setSearchQuery={setSearchQuery} allLocations={allLocations} loadVoters={loadVoters} loadAdminData={loadAdminData} currentUser={currentUser} setEditData={setEditData} setEditMode={setEditMode} handleUpdateIntel={handleUpdateIntel} />}
                 {view === 'admin' && <AdminControl allLocations={allLocations} allUsers={allUsers} userRole={userRole} newLocData={newLocData} setNewLocData={setNewLocData} handleAddLocation={handleAddLocation} newUserData={newUserData} setNewUserData={setNewUserData} assignSelection={assignSelection} setAssignSelection={setAssignSelection} handleCreateUser={handleCreateUser} handleUpdateUser={handleUpdateUser} handleDeleteUser={handleDeleteUser} startEditUser={startEditUser} editingUser={editingUser} setEditingUser={setEditingUser} allParties={allParties} newPartyData={newPartyData} setNewPartyData={setNewPartyData} newPartyFile={newPartyFile} setNewPartyFile={setNewPartyFile} handleAddParty={handleAddParty} PARTY_PRESETS={PARTY_PRESETS} dashboardStats={dashboardStats} />}
                 {view === 'comm' && <CommunicationHub commType={commType} setCommType={setCommType} commMessage={commMessage} setCommMessage={setCommMessage} handleCommunicationSend={handleCommunicationSend} voterTotal={voterTotal} commStats={commStats} commTemplates={commTemplates} allLocations={allLocations} listFilters={listFilters} setListFilters={setListFilters} loadVoters={loadVoters} />}
                 {view === 'engine' && <OCREngine ocrBatch={ocrBatch} setOcrBatch={setOcrBatch} ocrLoading={ocrLoading} setOcrLoading={setOcrLoading} ocrError={ocrError} setOcrError={setOcrError} ocrRef={ocrRef} handleFileUpload={handleFileUpload} startExtraction={startExtraction} startOcr={startOcr} handleSaveBatch={handleSaveBatch} discardBatch={discardBatch} stopAndClearRAM={stopAndClearRAM} setEditData={setEditData} setEditMode={setEditMode} allLocations={allLocations} ocrTargetLoc={ocrTargetLoc} setOcrTargetLoc={setOcrTargetLoc} loadAdminData={loadAdminData} useGemini={useGemini} setUseGemini={setUseGemini} useDirectPdf={useDirectPdf} setUseDirectPdf={setUseDirectPdf} />}
