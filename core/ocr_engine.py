@@ -5,13 +5,18 @@ import os
 import re
 import json
 import google.generativeai as genai
+from google.generativeai import caching
+import datetime
 from PIL import Image
 from dotenv import load_dotenv
 from pathlib import Path
+import time
+import logging
 
 # Load env for API Key
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
+logger = logging.getLogger("OCREngine")
 
 class OCREngine:
     # Zones defined as percentages of the box: (x1, y1, x2, y2)
@@ -40,7 +45,58 @@ class OCREngine:
         else:
             self.gemini_model = None
 
-    def extract_from_pdf(self, pdf_path, page_num=None):
+    def upload_file(self, file_path):
+        """Uploads a file to Gemini File API for caching and parallel processing."""
+        if not self.gemini_model: return None
+        try:
+            logger.info(f"📤 Uploading {file_path} to Gemini File API...")
+            uploaded_file = genai.upload_file(path=file_path, display_name=os.path.basename(file_path))
+            
+            # Wait for processing
+            while uploaded_file.state.name == "PROCESSING":
+                time.sleep(1)
+                uploaded_file = genai.get_file(uploaded_file.name)
+            
+            if uploaded_file.state.name == "FAILED":
+                raise Exception("Gemini File Processing Failed")
+            
+            logger.info(f"✅ File {uploaded_file.name} ready on Cloud.")
+            return uploaded_file
+        except Exception as e:
+            logger.error(f"❌ Gemini Upload Error: {e}")
+            return None
+
+    def extract_from_cached_file(self, google_file, page_num):
+        """Ultra-fast, low-cost extraction using pre-uploaded file reference."""
+        if not self.gemini_model: return None
+
+        prompt = f"""
+        You are an expert Indian Voter List extractor. 
+        Extract ALL voter records from PAGE {page_num} of this document.
+        Return the data as a RAW JSON list of objects. No markdown.
+        Format: {{ "serial_number": "", "epic_id": "", "name_malayalam": "", "relation_name_malayalam": "", "relation_type": "", "house_number": "", "house_name_malayalam": "", "age": 0, "gender": "" }}
+        """
+
+        try:
+            response = self.gemini_model.generate_content([prompt, google_file])
+            text = response.text.strip()
+            
+            # Clean possible markdown
+            if "```json" in text: text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text: text = text.split("```")[1].split("```")[0].strip()
+            
+            # Find JSON boundaries
+            start = text.find('[')
+            if start == -1: start = text.find('{')
+            if start != -1:
+                parsed_json, _ = json.JSONDecoder().raw_decode(text[start:])
+                return parsed_json
+            return json.loads(text)
+        except Exception as e:
+            logger.error(f"❌ Cached Extraction Error (Page {page_num}): {e}")
+            return None
+
+    def extract_from_pdf(self, pdf_path, page_num=None, pdf_data=None):
         """Processes specific pages or entire PDF using Gemini. Targeted extraction avoids token limits."""
         if not self.gemini_model:
             return None
@@ -72,8 +128,9 @@ class OCREngine:
         """
 
         try:
-            with open(pdf_path, 'rb') as f:
-                pdf_data = f.read()
+            if pdf_data is None:
+                with open(pdf_path, 'rb') as f:
+                    pdf_data = f.read()
 
             response = self.gemini_model.generate_content([
                 prompt,

@@ -15,11 +15,21 @@ class BatchProcessor:
         import concurrent.futures
         all_standardized = []
         
+        # 1. Upload to Cloud ONCE (The Speed/Cost Optimizer)
+        google_file = self.engine.upload_file(pdf_path)
+        if not google_file:
+            logging.error("Failed to upload file to Gemini. Falling back to slow byte mode.")
+        
         pages = page_range if page_range else [None]
         
         def process_page(page_num):
             try:
-                raw_data = self.engine.extract_from_pdf(pdf_path, page_num=page_num)
+                # Use CACHED mode if upload succeeded, else fallback
+                if google_file:
+                    raw_data = self.engine.extract_from_cached_file(google_file, page_num)
+                else:
+                    raw_data = self.engine.extract_from_pdf(pdf_path, page_num=page_num)
+                
                 if not raw_data:
                     return page_num, []
 
@@ -58,33 +68,33 @@ class BatchProcessor:
                 logging.error(f"Thread Error on Page {page_num}: {e}")
                 return page_num, []
 
-        # High-Performance Neural Parallelism (Paid Tier)
+        # High-Performance Neural Parallelism
         # Scaled to 30 workers for ultra-fast extraction.
         max_workers = 30 
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Map the processing function across all target pages
             future_to_page = {executor.submit(process_page, p): p for p in pages}
-            
-            # Temporary storage to maintain order after parallel execution
             ordered_results = {}
             
             for future in concurrent.futures.as_completed(future_to_page):
                 page, results = future.result()
                 ordered_results[page] = results
-                
-                # Signal progress and results as they arrive
                 if callback and results:
                     callback(page, results)
 
-            # Reconstruct the final list in correct page order
             for p in pages:
                 if p in ordered_results:
                     for i, voter in enumerate(ordered_results[p]):
-                        # Global IDs are assigned here to ensure continuity
                         voter["voter_id"] = len(all_standardized) + 1
                         self._apply_standardization(voter, voter["voter_id"])
                         all_standardized.append(voter)
+        
+        # Cleanup: Remove file from Google Cloud to be a good citizen
+        try:
+            if google_file:
+                import google.generativeai as genai
+                genai.delete_file(google_file.name)
+        except: pass
 
         return all_standardized
 
