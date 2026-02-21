@@ -851,5 +851,4 @@ if dist_path.exists():
     @app.get("/{full_path:path}")
     async def serve_react(full_path: str):
         if full_path.startswith("api"): raise HTTPException(404)
-        if full_path.startswith("voter-intel-hq-2026"): raise HTTPException(404)
         return FileResponse(dist_path / "index.html")
