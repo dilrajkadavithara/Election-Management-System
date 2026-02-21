@@ -11,22 +11,29 @@ const EditProfileModal = ({
     // Large, accessible selection component for Booth Agents
     const ActionCard = ({ label, options, currentVal, onSelect, columns = 2 }) => (
         <div className="space-y-4">
-            <h3 className="text-[11px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">{label}</h3>
+            <h3 className="text-[11px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2 leading-relaxed">{label}</h3>
             <div className={`grid grid-cols-${columns} gap-3`}>
                 {options.map(opt => (
                     <button
                         key={opt.id}
-                        onClick={() => onSelect(opt.id)}
+                        onClick={() => {
+                            // Toggle Logic: Unselect if already selected
+                            if (currentVal === opt.id) {
+                                onSelect('');
+                            } else {
+                                onSelect(opt.id);
+                            }
+                        }}
                         style={{ borderLeftColor: opt.color || 'transparent' }}
                         className={`p-5 rounded-[2rem] border-2 transition-all duration-300 flex flex-col items-center justify-center gap-3 relative overflow-hidden group ${currentVal === opt.id
-                                ? 'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-100 scale-[1.02]'
-                                : 'bg-slate-50 border-slate-100 text-slate-500 hover:border-indigo-200 hover:bg-white'
+                            ? 'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-100 scale-[1.02]'
+                            : 'bg-slate-50 border-slate-100 text-slate-500 hover:border-indigo-200 hover:bg-white'
                             } ${opt.color ? 'border-l-[6px]' : ''}`}
                     >
                         <span className={`text-3xl transition-transform duration-500 ${currentVal === opt.id ? 'scale-110 rotate-3' : 'group-hover:scale-110'}`}>
                             {opt.icon}
                         </span>
-                        <span className="text-[10px] font-black uppercase tracking-[0.15em] leading-none text-center">
+                        <span className="text-[12px] font-black uppercase tracking-tight leading-tight text-center">
                             {opt.label}
                         </span>
                         {currentVal === opt.id && (
@@ -54,16 +61,16 @@ const EditProfileModal = ({
                 {/* 1. Profile Identity */}
                 <div className="text-center space-y-3 relative">
                     <div className="mx-auto w-12 h-1 bg-slate-100 rounded-full mb-6" />
-                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.5em] opacity-60">Intelligence Input</p>
+                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.5em] opacity-60">വിവര ശേഖരണം</p>
                     <h2 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight px-4 break-words">
                         {editData.full_name || 'System Voter'}
                     </h2>
                     <div className="flex justify-center flex-wrap gap-2 pt-2">
                         <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-5 py-2 rounded-full uppercase tracking-tighter shadow-sm border border-slate-200/50">
-                            {editData.gender || '??'}
+                            {editData.gender === 'MALE' ? 'പുരുഷൻ' : editData.gender === 'FEMALE' ? 'സ്ത്രീ' : editData.gender || '??'}
                         </span>
                         <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-5 py-2 rounded-full uppercase tracking-tighter shadow-sm border border-slate-200/50">
-                            {editData.age || 'UNK'} YEARS OLD
+                            {editData.age || 'UNK'} വയസ്സ്
                         </span>
                     </div>
                 </div>
@@ -71,51 +78,51 @@ const EditProfileModal = ({
                 <div className="space-y-12">
                     {/* 2. Political Alignment (Aligned to LEANING_CHOICES) */}
                     <ActionCard
-                        label="Who do they support?"
+                        label="ആരെ പിന്തുണയ്ക്കുന്നു?"
                         currentVal={editData.voter_leaning}
                         onSelect={(id) => setEditData({ ...editData, voter_leaning: id })}
                         options={[
-                            { id: 'UDF', label: 'UDF (INC)', icon: '🟦', color: '#2563eb' },
-                            { id: 'LDF', label: 'LDF (CPM)', icon: '🟥', color: '#dc2626' },
-                            { id: 'NDA', label: 'NDA (BJP)', icon: '🟧', color: '#ea580c' },
-                            { id: 'NEUTRAL', label: 'NEUTRAL', icon: '⬜', color: '#94a3b8' }
+                            { id: 'UDF', label: 'യു.ഡി.എഫ്', icon: '🟦', color: '#2563eb' },
+                            { id: 'LDF', label: 'എൽ.ഡി.എഫ്', icon: '🟥', color: '#dc2626' },
+                            { id: 'NDA', label: 'എൻ.ഡി.എ', icon: '🟧', color: '#ea580c' },
+                            { id: 'NEUTRAL', label: 'നിഷ്പക്ഷൻ', icon: '⬜', color: '#94a3b8' }
                         ]}
                     />
 
                     {/* 3. Physical Presence (Aligned to LOCATION_CHOICES) */}
                     <ActionCard
-                        label="Where are they now?"
+                        label="ഇപ്പോൾ എവിടെയുണ്ട്?"
                         currentVal={editData.current_location}
                         onSelect={(id) => setEditData({ ...editData, current_location: id })}
                         options={[
-                            { id: 'LOCAL', label: 'AT HOME', icon: '🏠' },
-                            { id: 'ABROAD', label: 'ABROAD', icon: '✈️' },
-                            { id: 'STATE', label: 'OTHER STATE', icon: '🚆' },
-                            { id: 'DISTRICT', label: 'OTHER DIST', icon: '🚗' }
+                            { id: 'LOCAL', label: 'നാട്ടിലുണ്ട്', icon: '🏠' },
+                            { id: 'ABROAD', label: 'വിദേശത്ത്', icon: '✈️' },
+                            { id: 'STATE', label: 'മറ്റൊരു സംസ്ഥാനത്ത്', icon: '🚆' },
+                            { id: 'DISTRICT', label: 'മറ്റൊരു ജില്ലയിൽ', icon: '🚗' }
                         ]}
                     />
 
                     {/* 4. Voting Probability (Aligned to PROBABILITY_CHOICES) */}
                     <ActionCard
-                        label="Will they come to vote?"
+                        label="വോട്ട് ചെയ്യാൻ സാധ്യത എത്ര?"
                         currentVal={editData.voting_probability}
                         onSelect={(id) => setEditData({ ...editData, voting_probability: id })}
                         options={[
-                            { id: 'CONFIRMED', label: '100% SURE', icon: '🎯' },
-                            { id: 'LIKELY', label: 'PROBABLY', icon: '📈' },
-                            { id: 'UNLIKELY', label: 'DOUBTFUL', icon: '📉' },
-                            { id: 'OUT_OF_STATION', label: 'NOT HERE', icon: '🚪' }
+                            { id: 'CONFIRMED', label: 'ഉറപ്പായും വോട്ട് ചെയ്യും', icon: '🎯' },
+                            { id: 'LIKELY', label: 'സാധ്യതയുണ്ട്', icon: '📈' },
+                            { id: 'UNLIKELY', label: 'സാധ്യത കുറവാണ്', icon: '📉' },
+                            { id: 'OUT_OF_STATION', label: 'വോട്ട് ചെയ്യാൻ എത്തില്ല', icon: '🚪' }
                         ]}
                     />
 
                     {/* 5. Mobile Connection */}
                     <div className="space-y-4">
-                        <label className="text-[11px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">WhatsApp / Phone Number</label>
+                        <label className="text-[11px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">ഫോൺ നമ്പർ</label>
                         <div className="relative group">
                             <input
                                 type="text"
                                 value={editData.phone_no || ''}
-                                placeholder="+91 ____ ___ ___"
+                                placeholder="പത്ത് അക്ക ഫോൺ നമ്പർ"
                                 onChange={(e) => setEditData({ ...editData, phone_no: e.target.value })}
                                 className="w-full text-3xl font-black bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] p-8 focus:border-indigo-500 focus:bg-white transition-all text-slate-900 outline-none tracking-[0.1em] placeholder:text-slate-200"
                             />
@@ -128,16 +135,16 @@ const EditProfileModal = ({
                 <details className="group border-t border-slate-100 pt-8 opacity-40 hover:opacity-100 transition-opacity">
                     <summary className="text-[10px] font-black uppercase text-slate-400 cursor-pointer list-none flex items-center justify-center gap-3">
                         <span className="w-1.5 h-1.5 bg-slate-300 rounded-full" />
-                        SYSTEM DATA REFERENCE
+                        സിസ്റ്റം ഡാറ്റ റെഫറൻസ്
                         <span className="w-1.5 h-1.5 bg-slate-300 rounded-full" />
                     </summary>
                     <div className="grid grid-cols-2 gap-8 mt-8 text-left bg-slate-50 rounded-[2rem] p-6 border border-slate-100">
                         <div className="space-y-1">
-                            <p className="text-[8px] font-black text-slate-400">EPIC ID NUMBER</p>
+                            <p className="text-[8px] font-black text-slate-400">വോട്ടർ ഐഡി (EPIC)</p>
                             <p className="text-sm font-bold font-mono tracking-tight text-slate-600">{editData.epic_id}</p>
                         </div>
                         <div className="space-y-1 text-right">
-                            <p className="text-[8px] font-black text-slate-400 uppercase">House Identity</p>
+                            <p className="text-[8px] font-black text-slate-400 uppercase">വീട്ടുപേര് / നമ്പർ</p>
                             <p className="text-sm font-bold text-slate-600 uppercase tracking-tighter truncate">{editData.house_name} ({editData.house_no})</p>
                         </div>
                     </div>
@@ -149,13 +156,13 @@ const EditProfileModal = ({
                         onClick={() => setEditMode(false)}
                         className="flex-1 p-7 rounded-[2.5rem] font-black uppercase text-[11px] tracking-[0.2em] border-2 border-slate-100 text-slate-400 hover:bg-slate-50 transition-all active:scale-95"
                     >
-                        CANCEL
+                        റദ്ദാക്കുക
                     </button>
                     <button
                         onClick={saveCorrection}
                         className="flex-[2] p-7 rounded-[2.5rem] font-black uppercase text-[11px] tracking-[0.2em] bg-indigo-600 text-white shadow-2xl shadow-indigo-200 hover:bg-indigo-700 hover:shadow-indigo-300 transition-all active:scale-95 relative overflow-hidden"
                     >
-                        <span className="relative z-10">SAVE INTELLIGENCE ➔</span>
+                        <span className="relative z-10">വിവരങ്ങൾ രേഖപ്പെടുത്തുക ➔</span>
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full hover:translate-x-full transition-transform duration-1000" />
                     </button>
                 </div>
@@ -165,7 +172,7 @@ const EditProfileModal = ({
                     <button
                         onClick={deleteRecord}
                         className="absolute top-10 right-10 w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center text-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm border border-rose-100"
-                        title="Delete Voter"
+                        title="ഡിലീറ്റ് ചെയ്യുക"
                     >
                         🗑️
                     </button>
