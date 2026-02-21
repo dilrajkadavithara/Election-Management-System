@@ -30,7 +30,13 @@ SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-development-key-only")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost 127.0.0.1 [::1]").split()
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "intelhub.live www.intelhub.live localhost 127.0.0.1 [::1]").split()
+
+# Ensure Django knows it is behind a proxy sub-folder
+FORCE_SCRIPT_NAME = "/voter-intel-hq-2026"
+
+# Required for Django 4.0+ for admin login to work behind https
+CSRF_TRUSTED_ORIGINS = ["https://intelhub.live", "https://www.intelhub.live"]
 
 
 # Application definition
