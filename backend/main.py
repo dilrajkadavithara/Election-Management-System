@@ -18,6 +18,7 @@ from passlib.context import CryptContext
 from asgiref.sync import sync_to_async
 import concurrent.futures
 import multiprocessing
+from fastapi.middleware.wsgi import WSGIMiddleware
 
 # Load env
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -839,6 +840,10 @@ async def fetch_strategic_analytics(constituency_id: str = None, user_info: dict
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Django Admin Integration
+from voter_vault.wsgi import application as django_app
+app.mount("/voter-intel-hq-2026", WSGIMiddleware(django_app))
+
 # Static Frontend Support
 dist_path = BASE_DIR / "frontend" / "dist"
 if dist_path.exists():
@@ -846,4 +851,5 @@ if dist_path.exists():
     @app.get("/{full_path:path}")
     async def serve_react(full_path: str):
         if full_path.startswith("api"): raise HTTPException(404)
+        if full_path.startswith("voter-intel-hq-2026"): raise HTTPException(404)
         return FileResponse(dist_path / "index.html")
