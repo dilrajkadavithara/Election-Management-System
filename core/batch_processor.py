@@ -21,7 +21,7 @@ class BatchProcessor:
             logging.error("Failed to upload file to Gemini. Falling back to slow byte mode.")
         
         # Reduced concurrency to avoid 429 Rate Limit issues on Gemini Free Tier
-        max_workers = 10 
+        max_workers = 5 
         pages = page_range if page_range else [None]
         
         def process_page(page_num):
@@ -72,7 +72,7 @@ class BatchProcessor:
 
         # High-Performance Neural Parallelism
         # Scaled to 30 workers for ultra-fast extraction.
-        max_workers = 10 
+        max_workers = 5 
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_page = {executor.submit(process_page, p): p for p in pages}

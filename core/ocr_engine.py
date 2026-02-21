@@ -70,15 +70,22 @@ class OCREngine:
         """Ultra-fast, low-cost extraction using pre-uploaded file reference with retry logic."""
         if not self.gemini_model: return None
 
+        # Hyper-Targeted Page Prompt
         prompt = f"""
-        You are an expert Indian Voter List extractor. 
-        Extract ALL voter records from PAGE {page_num} of this document.
-        Return the data as a RAW JSON list of objects. No markdown.
-        Format: {{ "serial_number": "", "epic_id": "", "name_malayalam": "", "relation_name_malayalam": "", "relation_type": "", "house_number": "", "house_name_malayalam": "", "age": 0, "gender": "" }}
+        Act as a professional Data Entry Specialist.
+        FOCUS ONLY ON PAGE {page_num} of the attached document. 
+        Ignore all other pages. 
+        Extract EVERY voter record from THIS PAGE ONLY.
+        
+        Expected Format (JSON List):
+        [{{ "serial_number": "number", "epic_id": "text", "name_malayalam": "text", "relation_name_malayalam": "text", "relation_type": "Father/Husband/Other", "house_number": "text", "house_name_malayalam": "text", "age": number, "gender": "Male/Female" }}]
+
+        IMPORTANT: If no records are found on Page {page_num}, return an empty list [].
+        Return ONLY the raw JSON.
         """
 
-        max_retries = 5
-        base_delay = 5
+        max_retries = 8 # Increased retries for heavy team usage
+        base_delay = 10 # Longer delay to let API burst quota reset
         for attempt in range(max_retries):
             try:
                 response = self.gemini_model.generate_content([prompt, google_file])
@@ -92,52 +99,50 @@ class OCREngine:
                 start = text.find('[')
                 if start == -1: start = text.find('{')
                 if start != -1:
-                    parsed_json, _ = json.JSONDecoder().raw_decode(text[start:])
-                    return parsed_json
-                return json.loads(text)
+                    # Attempt robust parse
+                    try:
+                        parsed_json, _ = json.JSONDecoder().raw_decode(text[start:])
+                        return parsed_json
+                    except:
+                        # Fallback for simple fragments
+                        import json
+                        return json.loads(text[start:])
+                return [] 
             except Exception as e:
-                if "429" in str(e) or "quota" in str(e).lower():
-                    delay = base_delay * (2 ** attempt)
-                    logger.warning(f"⚠️ Gemini Rate Limit (Cached) Page {page_num}. Retrying in {delay}s... ({attempt+1}/{max_retries})")
+                err_str = str(e).lower()
+                if "429" in err_str or "quota" in err_str or "limit" in err_str:
+                    delay = base_delay * (1.5 ** attempt) # Slightly slower growth
+                    logger.warning(f"⏳ Page {page_num} waiting on Quota... ({delay}s) [{attempt+1}/{max_retries}]")
                     time.sleep(delay)
                     continue
-                logger.error(f"❌ Cached Extraction Error (Page {page_num}): {e}")
-                return None
+                
+                # If safety or internal error, wait briefly and retry
+                if "safety" in err_str or "internal" in err_str or "500" in err_str:
+                    time.sleep(5)
+                    continue
+
+                logger.error(f"❌ Page {page_num} Error: {e}")
+                return []
         return None
 
     def extract_from_pdf(self, pdf_path, page_num=None, pdf_data=None):
         """Processes specific pages or entire PDF using Gemini with retry logic. Targeted extraction avoids token limits."""
         if not self.gemini_model:
             return None
-
-        target_instruction = f"Extract ALL voter records from PAGE {page_num} of this PDF." if page_num else "Extract ALL voter records from this PDF."
         
         prompt = f"""
-        You are a highly accurate OCR system for Indian Voter Lists (Malayalam).
-        {target_instruction}
-        Return the data as a JSON list of objects.
+        Act as a professional Data Entry Specialist.
+        FOCUS ONLY ON PAGE {page_num if page_num else 'ALL'} of the attached document. 
+        Extract EVERY voter record from THIS PAGE ONLY.
         
-        JSON Structure:
-        {{
-            "serial_number": "string",
-            "epic_id": "string",
-            "name_malayalam": "string",
-            "relation_name_malayalam": "string",
-            "relation_type": "FATHER/HUSBAND/MOTHER/OTHER",
-            "house_number": "string",
-            "house_name_malayalam": "string",
-            "age": "number",
-            "gender": "MALE/FEMALE"
-        }}
-        
-        Strict Rules:
-        1. Capture Malayalam text exactly.
-        2. If multiple voters exist on the page, return all of them.
-        3. Return ONLY raw JSON. No conversational text.
+        Expected Format (JSON List):
+        [{{ "serial_number": "number", "epic_id": "text", "name_malayalam": "text", "relation_name_malayalam": "text", "relation_type": "Father/Husband/Other", "house_number": "text", "house_name_malayalam": "text", "age": number, "gender": "Male/Female" }}]
+
+        IMPORTANT: Return ONLY the raw JSON.
         """
 
-        max_retries = 5
-        base_delay = 5
+        max_retries = 8
+        base_delay = 10
         for attempt in range(max_retries):
             try:
                 if pdf_data is None:
@@ -153,33 +158,35 @@ class OCREngine:
                 ])
                 text = response.text.strip()
                 
-                # Clean markdown
-                if "```json" in text:
-                    text = text.split("```json")[1].split("```")[0].strip()
-                elif "```" in text:
-                    text = text.split("```")[1].split("```")[0].strip()
+                # Clean possible markdown
+                if "```json" in text: text = text.split("```json")[1].split("```")[0].strip()
+                elif "```" in text: text = text.split("```")[1].split("```")[0].strip()
                 
-                # Robust JSON decoding
-                try:
-                    start_index = text.find('[')
-                    if start_index == -1:
-                        start_index = text.find('{')
-                    
-                    if start_index != -1:
-                        parsed_json, _ = json.JSONDecoder().raw_decode(text[start_index:])
+                # Find JSON boundaries
+                start = text.find('[')
+                if start == -1: start = text.find('{')
+                if start != -1:
+                    try:
+                        parsed_json, _ = json.JSONDecoder().raw_decode(text[start:])
                         return parsed_json
-                    else:
-                        return json.loads(text)
-                except Exception:
-                    return json.loads(text)
+                    except:
+                        import json
+                        return json.loads(text[start:])
+                return []
             except Exception as e:
-                if "429" in str(e) or "quota" in str(e).lower():
-                    delay = base_delay * (2 ** attempt)
-                    logger.warning(f"⚠️ Gemini Rate Limit (Direct PDF) Page {page_num}. Retrying in {delay}s... ({attempt+1}/{max_retries})")
+                err_str = str(e).lower()
+                if "429" in err_str or "quota" in err_str:
+                    delay = base_delay * (1.5 ** attempt)
+                    logger.warning(f"⏳ Page {page_num} waiting on Quota... ({delay}s) [{attempt+1}/{max_retries}]")
                     time.sleep(delay)
                     continue
-                logger.error(f"❌ Gemini PDF Extraction Error: {e}")
-                return None
+                
+                if "safety" in err_str or "internal" in err_str:
+                    time.sleep(5)
+                    continue
+
+                logger.error(f"❌ Direct PDF Error: {e}")
+                return []
         return None
 
     def extract_with_gemini(self, img_np):
