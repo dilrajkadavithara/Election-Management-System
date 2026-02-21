@@ -100,6 +100,20 @@ const App = () => {
         if (isLoggedIn && view === 'comm') loadCommData();
     }, [view, dashFilters]);
 
+    // Auto-reconnect to latest processed batch when opening AI Processor
+    useEffect(() => {
+        if (isLoggedIn && view === 'engine' && !ocrBatch) {
+            (async () => {
+                try {
+                    const res = await api.getLatestBatch();
+                    if (res.found && res.batch) {
+                        setOcrBatch(res.batch);
+                    }
+                } catch (e) { console.error("Auto-reconnect failed:", e); }
+            })();
+        }
+    }, [view, isLoggedIn]);
+
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true); setError(null);

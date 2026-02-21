@@ -507,6 +507,18 @@ async def cancel_batch(batch_id: str, user_info=Depends(get_current_user)):
     gc.collect()
     return {"success": True, "message": "Batch cancellation requested"}
 
+@app.get("/api/batch/latest")
+async def get_latest_batch(user_info=Depends(get_current_user)):
+    """Return the most recent 'processed' batch for this user so the UI can auto-reconnect."""
+    all_batches = state_manager.list_all_batches()
+    # Filter: same user, status is 'processed' (ready to commit)
+    user_batches = [b for b in all_batches if b.get('user') == user_info['username'] and b.get('status') == 'processed']
+    if not user_batches:
+        return {"found": False}
+    # Return the one with the most results (most recent meaningful batch)
+    best = max(user_batches, key=lambda b: len(b.get('results', [])))
+    return {"found": True, "batch": best}
+
 # --- New Save Bridge to handle ID vs Name resolution ---
 def sync_save_batch_wrapper(payload_dict, user_id):
     from core_db.models import Constituency, LocalBody, Booth

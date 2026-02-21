@@ -83,6 +83,11 @@ const api = {
         return response.data;
     },
 
+    getLatestBatch: async () => {
+        const response = await client.get('/api/batch/latest');
+        return response.data;
+    },
+
     updateVoter: async (batchId, voterId, data) => {
         const response = await client.post(`/api/update-voter/${batchId}/${voterId}`, data);
         return response.data;
