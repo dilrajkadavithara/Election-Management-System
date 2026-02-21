@@ -50,8 +50,8 @@ def check_booth_exists(constituency_name, booth_number):
 def save_booth_data(constituency_name, local_body_type, local_body_name, booth_number, voter_data_list, original_filename, polling_station_no="", polling_station_name="", user_id=None):
     try:
         with transaction.atomic():
-            constituency, _ = Constituency.objects.get_or_create(name=constituency_name)
-            local_body, _ = LocalBody.objects.get_or_create(constituency=constituency, name=local_body_name, body_type=local_body_type)
+            constituency, _ = Constituency.objects.get_or_create(name=constituency_name.strip().upper())
+            local_body, _ = LocalBody.objects.get_or_create(constituency=constituency, name=local_body_name.strip().upper(), body_type=local_body_type)
 
             booth, created = Booth.objects.get_or_create(
                 constituency=constituency,
@@ -333,12 +333,12 @@ def get_all_locations(user_profile=None):
     return data
 
 def add_constituency(name):
-    c, created = Constituency.objects.get_or_create(name=name)
+    c, created = Constituency.objects.get_or_create(name=name.strip().upper())
     return {"id": c.id, "name": c.name, "created": created}
 
 def add_local_body(const_id, name, btype):
     c = Constituency.objects.get(id=const_id)
-    lb, created = LocalBody.objects.get_or_create(constituency=c, name=name, body_type=btype)
+    lb, created = LocalBody.objects.get_or_create(constituency=c, name=name.strip().upper(), body_type=btype)
     return {"id": lb.id, "name": lb.name, "created": created}
 
 def add_booth(const_id, lb_id, number, ps_name="", ps_no=""):
