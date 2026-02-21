@@ -8,139 +8,172 @@ const EditProfileModal = ({
     saveCorrection,
     ocrBatch
 }) => {
-    const deleteRecord = async () => {
-        if (!confirm("Are you sure you want to PERMANENTLY DELETE this record from the batch?")) return;
+    // Large, accessible selection component for Booth Agents
+    const ActionCard = ({ label, options, currentVal, onSelect, columns = 2 }) => (
+        <div className="space-y-4">
+            <h3 className="text-[11px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">{label}</h3>
+            <div className={`grid grid-cols-${columns} gap-3`}>
+                {options.map(opt => (
+                    <button
+                        key={opt.id}
+                        onClick={() => onSelect(opt.id)}
+                        style={{ borderLeftColor: opt.color || 'transparent' }}
+                        className={`p-5 rounded-[2rem] border-2 transition-all duration-300 flex flex-col items-center justify-center gap-3 relative overflow-hidden group ${currentVal === opt.id
+                                ? 'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-100 scale-[1.02]'
+                                : 'bg-slate-50 border-slate-100 text-slate-500 hover:border-indigo-200 hover:bg-white'
+                            } ${opt.color ? 'border-l-[6px]' : ''}`}
+                    >
+                        <span className={`text-3xl transition-transform duration-500 ${currentVal === opt.id ? 'scale-110 rotate-3' : 'group-hover:scale-110'}`}>
+                            {opt.icon}
+                        </span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.15em] leading-none text-center">
+                            {opt.label}
+                        </span>
+                        {currentVal === opt.id && (
+                            <div className="absolute top-3 right-4 text-[8px] animate-pulse">● LIVE</div>
+                        )}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
 
+    const deleteRecord = async () => {
+        if (!confirm("Delete this person from the system?")) return;
         try {
             await api.deleteVoterFromBatch(ocrBatch.id, editData.voter_id);
-            // Close modal and let parent refresh or move to next
             setEditMode(false);
-            // Trigger a refresh of the batch status in App.jsx
-            saveCorrection(); // Re-using saveCorrection logic which re-fetches status
-        } catch (e) {
-            alert("Failed to delete: " + e.message);
-        }
+            if (saveCorrection) saveCorrection();
+        } catch (e) { alert("Error: " + e.message); }
     };
 
     return (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-            <div className="bg-white w-full max-w-2xl rounded-[40px] p-12 shadow-2xl space-y-6 overflow-y-auto max-h-[90vh]">
-                <div className="flex justify-between items-center border-b pb-4">
-                    <h2 className="text-3xl font-black uppercase text-slate-900">Edit Profile</h2>
-                    <div className="flex gap-2">
-                        {ocrBatch && editData.voter_id && (
-                            <button onClick={deleteRecord} className="text-[10px] font-black uppercase bg-rose-50 text-rose-600 px-4 py-1.5 rounded-full border border-rose-100 hover:bg-rose-600 hover:text-white transition-all">
-                                🗑️ Delete Record
-                            </button>
-                        )}
-                        {ocrBatch && editData.voter_id && <span className="text-[10px] font-black uppercase bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-full border border-indigo-100 animate-pulse">Smart Review Mode</span>}
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-2xl rounded-[3.5rem] p-8 sm:p-14 shadow-[0_40px_120px_rgba(0,0,0,0.4)] space-y-12 overflow-y-auto max-h-[92vh] relative animate-in fade-in slide-in-from-bottom-8 duration-500">
+
+                {/* 1. Profile Identity */}
+                <div className="text-center space-y-3 relative">
+                    <div className="mx-auto w-12 h-1 bg-slate-100 rounded-full mb-6" />
+                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.5em] opacity-60">Intelligence Input</p>
+                    <h2 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight px-4 break-words">
+                        {editData.full_name || 'System Voter'}
+                    </h2>
+                    <div className="flex justify-center flex-wrap gap-2 pt-2">
+                        <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-5 py-2 rounded-full uppercase tracking-tighter shadow-sm border border-slate-200/50">
+                            {editData.gender || '??'}
+                        </span>
+                        <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-5 py-2 rounded-full uppercase tracking-tighter shadow-sm border border-slate-200/50">
+                            {editData.age || 'UNK'} YEARS OLD
+                        </span>
                     </div>
                 </div>
 
-                {ocrBatch && ocrBatch.status === 'processed' && editData.image_name && typeof editData.voter_id === 'string' && (
-                    <div className="p-4 bg-slate-50 rounded-[32px] border-2 border-slate-100 flex flex-col items-center gap-4">
-                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none">Original Scan Data</p>
-                        <div className="w-full h-32 bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-inner flex items-center justify-center">
-                            <img src={`/api/crop/${ocrBatch.id}/${editData.image_name}`} className="h-full object-contain" alt="voter crop" />
+                <div className="space-y-12">
+                    {/* 2. Political Alignment (Aligned to LEANING_CHOICES) */}
+                    <ActionCard
+                        label="Who do they support?"
+                        currentVal={editData.voter_leaning}
+                        onSelect={(id) => setEditData({ ...editData, voter_leaning: id })}
+                        options={[
+                            { id: 'UDF', label: 'UDF (INC)', icon: '🟦', color: '#2563eb' },
+                            { id: 'LDF', label: 'LDF (CPM)', icon: '🟥', color: '#dc2626' },
+                            { id: 'NDA', label: 'NDA (BJP)', icon: '🟧', color: '#ea580c' },
+                            { id: 'NEUTRAL', label: 'NEUTRAL', icon: '⬜', color: '#94a3b8' }
+                        ]}
+                    />
+
+                    {/* 3. Physical Presence (Aligned to LOCATION_CHOICES) */}
+                    <ActionCard
+                        label="Where are they now?"
+                        currentVal={editData.current_location}
+                        onSelect={(id) => setEditData({ ...editData, current_location: id })}
+                        options={[
+                            { id: 'LOCAL', label: 'AT HOME', icon: '🏠' },
+                            { id: 'ABROAD', label: 'ABROAD', icon: '✈️' },
+                            { id: 'STATE', label: 'OTHER STATE', icon: '🚆' },
+                            { id: 'DISTRICT', label: 'OTHER DIST', icon: '🚗' }
+                        ]}
+                    />
+
+                    {/* 4. Voting Probability (Aligned to PROBABILITY_CHOICES) */}
+                    <ActionCard
+                        label="Will they come to vote?"
+                        currentVal={editData.voting_probability}
+                        onSelect={(id) => setEditData({ ...editData, voting_probability: id })}
+                        options={[
+                            { id: 'CONFIRMED', label: '100% SURE', icon: '🎯' },
+                            { id: 'LIKELY', label: 'PROBABLY', icon: '📈' },
+                            { id: 'UNLIKELY', label: 'DOUBTFUL', icon: '📉' },
+                            { id: 'OUT_OF_STATION', label: 'NOT HERE', icon: '🚪' }
+                        ]}
+                    />
+
+                    {/* 5. Mobile Connection */}
+                    <div className="space-y-4">
+                        <label className="text-[11px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">WhatsApp / Phone Number</label>
+                        <div className="relative group">
+                            <input
+                                type="text"
+                                value={editData.phone_no || ''}
+                                placeholder="+91 ____ ___ ___"
+                                onChange={(e) => setEditData({ ...editData, phone_no: e.target.value })}
+                                className="w-full text-3xl font-black bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] p-8 focus:border-indigo-500 focus:bg-white transition-all text-slate-900 outline-none tracking-[0.1em] placeholder:text-slate-200"
+                            />
+                            <div className="absolute right-8 top-1/2 -translate-y-1/2 text-3xl animate-bounce">📱</div>
                         </div>
                     </div>
+                </div>
+
+                {/* 6. Technical Footnote (Safe & Hidden) */}
+                <details className="group border-t border-slate-100 pt-8 opacity-40 hover:opacity-100 transition-opacity">
+                    <summary className="text-[10px] font-black uppercase text-slate-400 cursor-pointer list-none flex items-center justify-center gap-3">
+                        <span className="w-1.5 h-1.5 bg-slate-300 rounded-full" />
+                        SYSTEM DATA REFERENCE
+                        <span className="w-1.5 h-1.5 bg-slate-300 rounded-full" />
+                    </summary>
+                    <div className="grid grid-cols-2 gap-8 mt-8 text-left bg-slate-50 rounded-[2rem] p-6 border border-slate-100">
+                        <div className="space-y-1">
+                            <p className="text-[8px] font-black text-slate-400">EPIC ID NUMBER</p>
+                            <p className="text-sm font-bold font-mono tracking-tight text-slate-600">{editData.epic_id}</p>
+                        </div>
+                        <div className="space-y-1 text-right">
+                            <p className="text-[8px] font-black text-slate-400 uppercase">House Identity</p>
+                            <p className="text-sm font-bold text-slate-600 uppercase tracking-tighter truncate">{editData.house_name} ({editData.house_no})</p>
+                        </div>
+                    </div>
+                </details>
+
+                {/* Submit & Cancel */}
+                <div className="flex flex-col sm:flex-row gap-5 pt-4">
+                    <button
+                        onClick={() => setEditMode(false)}
+                        className="flex-1 p-7 rounded-[2.5rem] font-black uppercase text-[11px] tracking-[0.2em] border-2 border-slate-100 text-slate-400 hover:bg-slate-50 transition-all active:scale-95"
+                    >
+                        CANCEL
+                    </button>
+                    <button
+                        onClick={saveCorrection}
+                        className="flex-[2] p-7 rounded-[2.5rem] font-black uppercase text-[11px] tracking-[0.2em] bg-indigo-600 text-white shadow-2xl shadow-indigo-200 hover:bg-indigo-700 hover:shadow-indigo-300 transition-all active:scale-95 relative overflow-hidden"
+                    >
+                        <span className="relative z-10">SAVE INTELLIGENCE ➔</span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full hover:translate-x-full transition-transform duration-1000" />
+                    </button>
+                </div>
+
+                {/* Quick Deletion (Top-Right Trash) */}
+                {ocrBatch && (
+                    <button
+                        onClick={deleteRecord}
+                        className="absolute top-10 right-10 w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center text-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm border border-rose-100"
+                        title="Delete Voter"
+                    >
+                        🗑️
+                    </button>
                 )}
-
-                <div className="grid grid-cols-2 gap-6 text-left">
-                    <div className="space-y-1 col-span-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Full Name</label>
-                        <input type="text" value={editData.full_name || ''} onChange={(e) => setEditData({ ...editData, full_name: e.target.value })}
-                            className={`w-full p-3 bg-slate-50 border-2 rounded-2xl font-bold text-slate-900 transition-all ${!editData.full_name || editData.full_name === 'N/A' ? 'border-rose-200 bg-rose-50/30' : 'border-slate-50'}`}
-                        />
-                    </div>
-
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Relation Type</label>
-                        <input type="text" placeholder="Father/Mother/Husband" value={editData.relation_type || ''} onChange={(e) => setEditData({ ...editData, relation_type: e.target.value })}
-                            className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold text-slate-900"
-                        />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Relation Name</label>
-                        <input type="text" value={editData.relation_name || ''} onChange={(e) => setEditData({ ...editData, relation_name: e.target.value })}
-                            className={`w-full p-3 bg-slate-50 border-2 rounded-2xl font-bold text-slate-900 transition-all ${!editData.relation_name || editData.relation_name === 'N/A' ? 'border-rose-200 bg-rose-50/30' : 'border-slate-50'}`}
-                        />
-                    </div>
-
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">House No</label>
-                        <input type="text" value={editData.house_no || ''} onChange={(e) => setEditData({ ...editData, house_no: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold font-mono text-slate-900" />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">House Name</label>
-                        <input type="text" value={editData.house_name || ''} onChange={(e) => setEditData({ ...editData, house_name: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold text-slate-900" />
-                    </div>
-
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">EPIC ID</label>
-                        <input type="text" value={editData.epic_id || ''} onChange={(e) => setEditData({ ...editData, epic_id: e.target.value })}
-                            className={`w-full p-3 bg-slate-50 border-2 rounded-2xl font-bold font-mono text-slate-900 transition-all ${!editData.epic_id || editData.epic_id === 'N/A' ? 'border-rose-200 bg-rose-50/30' : 'border-slate-50'}`}
-                        />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Age</label>
-                        <input type="number" value={editData.age || ''} onChange={(e) => setEditData({ ...editData, age: e.target.value })}
-                            className={`w-full p-3 bg-slate-50 border-2 rounded-2xl font-bold text-slate-900 transition-all ${!editData.age || editData.age === 'N/A' ? 'border-rose-200 bg-rose-50/30' : 'border-slate-50'}`}
-                        />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Gender</label>
-                        <select value={editData.gender || ''} onChange={(e) => setEditData({ ...editData, gender: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold uppercase text-xs text-slate-900">
-                            <option value="">SELECT</option>
-                            <option value="MALE">Male</option>
-                            <option value="FEMALE">Female</option>
-                            <option value="TRANSGENDER">Transgender</option>
-                        </select>
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Voter Leaning</label>
-                        <select value={editData.voter_leaning || ''} onChange={(e) => setEditData({ ...editData, voter_leaning: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold uppercase text-xs text-slate-900">
-                            <option value="">Unknown</option>
-                            <option value="UDF">UDF</option>
-                            <option value="LDF">LDF</option>
-                            <option value="NDA">NDA</option>
-                            <option value="NEUTRAL">Neutral</option>
-                        </select>
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Residence</label>
-                        <select value={editData.current_location || ''} onChange={(e) => setEditData({ ...editData, current_location: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold uppercase text-xs text-slate-900">
-                            <option value="LOCAL">Local</option>
-                            <option value="DISTRICT">Outside District</option>
-                            <option value="STATE">Outside State</option>
-                            <option value="ABROAD">Abroad</option>
-                        </select>
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Voting Probability</label>
-                        <select value={editData.voting_probability || ''} onChange={(e) => setEditData({ ...editData, voting_probability: e.target.value })} className="w-full p-3 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold uppercase text-xs text-slate-900">
-                            <option value="">Select Probability</option>
-                            <option value="CONFIRMED">🎯 Confirmed</option>
-                            <option value="LIKELY">📈 Likely</option>
-                            <option value="UNLIKELY">📉 Unlikely</option>
-                            <option value="OUT_OF_STATION">🚪 Out of Station</option>
-                        </select>
-                    </div>
-                    <div className="space-y-1 col-span-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-2">Phone Number</label>
-                        <input type="text" value={editData.phone_no || ''} onChange={(e) => setEditData({ ...editData, phone_no: e.target.value })}
-                            className={`w-full p-3 bg-slate-50 border-2 rounded-2xl font-bold text-slate-900 transition-all ${!editData.phone_no ? 'border-amber-200 bg-amber-50/20' : 'border-slate-50'}`}
-                            placeholder="e.g. +91 9876543210"
-                        />
-                    </div>
-                </div>
-                <div className="flex gap-4 pt-6">
-                    <button onClick={() => setEditMode(false)} className="flex-1 font-black uppercase text-[10px] tracking-widest p-5 border-2 rounded-2xl hover:bg-slate-50 transition-all">Dismiss</button>
-                    <button onClick={saveCorrection} className="flex-[2] bg-indigo-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl hover:bg-indigo-700 transition-all active:scale-[0.98]">Confirm & Save ➔</button>
-                </div>
             </div>
         </div>
     );
 };
 
 export default EditProfileModal;
+
