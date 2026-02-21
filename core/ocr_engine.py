@@ -67,7 +67,7 @@ class OCREngine:
             return None
 
     def extract_from_cached_file(self, google_file, page_num):
-        """Ultra-fast, low-cost extraction using pre-uploaded file reference."""
+        """Ultra-fast, low-cost extraction using pre-uploaded file reference with retry logic."""
         if not self.gemini_model: return None
 
         prompt = f"""
@@ -77,27 +77,36 @@ class OCREngine:
         Format: {{ "serial_number": "", "epic_id": "", "name_malayalam": "", "relation_name_malayalam": "", "relation_type": "", "house_number": "", "house_name_malayalam": "", "age": 0, "gender": "" }}
         """
 
-        try:
-            response = self.gemini_model.generate_content([prompt, google_file])
-            text = response.text.strip()
-            
-            # Clean possible markdown
-            if "```json" in text: text = text.split("```json")[1].split("```")[0].strip()
-            elif "```" in text: text = text.split("```")[1].split("```")[0].strip()
-            
-            # Find JSON boundaries
-            start = text.find('[')
-            if start == -1: start = text.find('{')
-            if start != -1:
-                parsed_json, _ = json.JSONDecoder().raw_decode(text[start:])
-                return parsed_json
-            return json.loads(text)
-        except Exception as e:
-            logger.error(f"❌ Cached Extraction Error (Page {page_num}): {e}")
-            return None
+        max_retries = 5
+        base_delay = 5
+        for attempt in range(max_retries):
+            try:
+                response = self.gemini_model.generate_content([prompt, google_file])
+                text = response.text.strip()
+                
+                # Clean possible markdown
+                if "```json" in text: text = text.split("```json")[1].split("```")[0].strip()
+                elif "```" in text: text = text.split("```")[1].split("```")[0].strip()
+                
+                # Find JSON boundaries
+                start = text.find('[')
+                if start == -1: start = text.find('{')
+                if start != -1:
+                    parsed_json, _ = json.JSONDecoder().raw_decode(text[start:])
+                    return parsed_json
+                return json.loads(text)
+            except Exception as e:
+                if "429" in str(e) or "quota" in str(e).lower():
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning(f"⚠️ Gemini Rate Limit (Cached) Page {page_num}. Retrying in {delay}s... ({attempt+1}/{max_retries})")
+                    time.sleep(delay)
+                    continue
+                logger.error(f"❌ Cached Extraction Error (Page {page_num}): {e}")
+                return None
+        return None
 
     def extract_from_pdf(self, pdf_path, page_num=None, pdf_data=None):
-        """Processes specific pages or entire PDF using Gemini. Targeted extraction avoids token limits."""
+        """Processes specific pages or entire PDF using Gemini with retry logic. Targeted extraction avoids token limits."""
         if not self.gemini_model:
             return None
 
@@ -127,45 +136,51 @@ class OCREngine:
         3. Return ONLY raw JSON. No conversational text.
         """
 
-        try:
-            if pdf_data is None:
-                with open(pdf_path, 'rb') as f:
-                    pdf_data = f.read()
-
-            response = self.gemini_model.generate_content([
-                prompt,
-                {
-                    "mime_type": "application/pdf",
-                    "data": pdf_data
-                }
-            ])
-            text = response.text.strip()
-            
-            # Clean markdown
-            if "```json" in text:
-                text = text.split("```json")[1].split("```")[0].strip()
-            elif "```" in text:
-                text = text.split("```")[1].split("```")[0].strip()
-            
-            # Option B: Robust Streaming Decoder (Ignores footer text)
+        max_retries = 5
+        base_delay = 5
+        for attempt in range(max_retries):
             try:
-                start_index = text.find('[')
-                if start_index == -1:
-                    start_index = text.find('{')
+                if pdf_data is None:
+                    with open(pdf_path, 'rb') as f:
+                        pdf_data = f.read()
+
+                response = self.gemini_model.generate_content([
+                    prompt,
+                    {
+                        "mime_type": "application/pdf",
+                        "data": pdf_data
+                    }
+                ])
+                text = response.text.strip()
                 
-                if start_index != -1:
-                    # raw_decode parses ONE valid object and stops, ignoring the rest
-                    parsed_json, _ = json.JSONDecoder().raw_decode(text[start_index:])
-                    return parsed_json
-                else:
-                    # Fallback for pure JSON
+                # Clean markdown
+                if "```json" in text:
+                    text = text.split("```json")[1].split("```")[0].strip()
+                elif "```" in text:
+                    text = text.split("```")[1].split("```")[0].strip()
+                
+                # Robust JSON decoding
+                try:
+                    start_index = text.find('[')
+                    if start_index == -1:
+                        start_index = text.find('{')
+                    
+                    if start_index != -1:
+                        parsed_json, _ = json.JSONDecoder().raw_decode(text[start_index:])
+                        return parsed_json
+                    else:
+                        return json.loads(text)
+                except Exception:
                     return json.loads(text)
-            except Exception:
-                # Last resort: Try standard load if finding bracket failed logic
-                return json.loads(text)
-        except Exception as e:
-            print(f"Gemini PDF Extraction Error: {e}")
-            return None
+            except Exception as e:
+                if "429" in str(e) or "quota" in str(e).lower():
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning(f"⚠️ Gemini Rate Limit (Direct PDF) Page {page_num}. Retrying in {delay}s... ({attempt+1}/{max_retries})")
+                    time.sleep(delay)
+                    continue
+                logger.error(f"❌ Gemini PDF Extraction Error: {e}")
+                return None
+        return None
 
     def extract_with_gemini(self, img_np):
         """High-precision extraction using Gemini AI with exponential backoff."""

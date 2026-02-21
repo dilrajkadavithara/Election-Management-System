@@ -59,12 +59,11 @@ def run_extraction_task(batch_id: str, dpi: int, direct_pdf: bool = False):
         if not batch: return
         
         pdf_path = batch['file_path']
-        p_dir = PAGES_DIR / batch_id
-        c_dir = CROPS_DIR / batch_id
+        
         # 0. Bird's-Eye Synchronization: Prefer database state over passed arguments
         direct_pdf = batch.get('direct_pdf', direct_pdf)
 
-        # 1. Page Count (Using PyPDF2)
+        # 1. Page Count (Using PyPDF2 or Info)
         try:
             from PyPDF2 import PdfReader
             with open(pdf_path, 'rb') as f:
@@ -73,10 +72,13 @@ def run_extraction_task(batch_id: str, dpi: int, direct_pdf: bool = False):
         except Exception as e:
             logger.error(f"Page count failure: {e}")
 
+        p_dir = PAGES_DIR / batch_id
+        c_dir = CROPS_DIR / batch_id
+
         if direct_pdf:
             # --- STRATEGIC SHORTCUT (Safe Mode) ---
             batch['direct_pdf'] = True
-            batch['pages_processed'] = 0 # Reset for the next step progress tracking
+            batch['pages_processed'] = 0 
             batch['status'] = 'extracted'
             state_manager.set_batch(batch_id, batch)
             logger.info(f"Batch {batch_id} ready for Strategic AI extraction.")
