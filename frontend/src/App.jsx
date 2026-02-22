@@ -26,7 +26,7 @@ const App = () => {
     const [userRole, setUserRole] = useState(localStorage.getItem('voter_role'));
     const [username, setUsername] = useState(localStorage.getItem('voter_user'));
     const [view, setView] = useState('dashboard');
-    const [isV2, setIsV2] = useState(false);
+    const [isV2, setIsV2] = useState(true);
     const [loginUser, setLoginUser] = useState('');
     const [loginPass, setLoginPass] = useState('');
     const [loginConsent, setLoginConsent] = useState(false);
@@ -463,7 +463,7 @@ const App = () => {
 
     return (
         <div className={`min-h-screen ${isV2 && view === 'dashboard' ? 'v2-bg-obsidian' : 'bg-slate-50'} flex font-sans transition-colors duration-700`}>
-            <Sidebar view={view} setView={setView} userRole={userRole} username={username} handleLogout={handleLogout} />
+            <Sidebar view={view} setView={setView} userRole={userRole} username={username} handleLogout={handleLogout} isV2={isV2} setIsV2={setIsV2} />
 
             <main className={`flex-1 flex flex-col overflow-y-auto ${view === 'design' ? 'bg-slate-200 p-0' : (isV2 && view === 'dashboard' ? 'p-0' : 'p-12')}`}>
                 {view === 'dashboard' && (

@@ -1,4 +1,4 @@
-const Sidebar = ({ view, setView, userRole, username, handleLogout }) => {
+const Sidebar = ({ view, setView, userRole, username, handleLogout, isV2, setIsV2 }) => {
     return (
         <aside className="fixed left-6 top-6 bottom-6 w-80 lux-glass rounded-[3rem] p-10 flex flex-col z-[1000] border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-y-auto custom-scrollbar">
             <div className="flex items-center gap-5 mb-16 px-2 flex-shrink-0">
@@ -32,6 +32,17 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout }) => {
                         )}
                     </button>
                 ))}
+
+                <div className="pt-8 border-t border-white/5 mt-8 space-y-4">
+                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em] px-8">System Mode</p>
+                    <button
+                        onClick={() => setIsV2(!isV2)}
+                        className={`w-full flex items-center gap-5 px-8 py-4 rounded-[1.25rem] transition-all duration-500 border border-white/5 ${isV2 ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-500/10 text-slate-400'}`}
+                    >
+                        <span className="text-xl">{isV2 ? '🚀' : '🏛️'}</span>
+                        <span className="font-black text-[9px] tracking-[0.2em] uppercase">{isV2 ? 'Modern Hub Active' : 'Legacy Mode'}</span>
+                    </button>
+                </div>
             </nav>
 
             <button onClick={handleLogout} className="mt-12 flex-shrink-0 flex items-center gap-5 px-8 py-5 rounded-[1.5rem] text-rose-500 font-black text-[10px] tracking-[0.2em] hover:bg-rose-500/10 transition-all group">
