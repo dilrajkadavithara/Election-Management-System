@@ -14,6 +14,7 @@ const VoterList = ({
     loadVoters,
     loadAdminData,
     currentUser,
+    userRole,
     setEditData,
     setEditMode,
     handleUpdateIntel
@@ -41,7 +42,7 @@ const VoterList = ({
                             leaning: listFilters.leaning,
                             location: listFilters.location
                         })}
-                        disabled={currentUser?.role !== 'SUPERUSER' && !currentUser?.can_download}
+                        disabled={(currentUser?.role !== 'SUPERUSER' && userRole !== 'SUPERUSER') && !currentUser?.can_download}
                         className="lux-btn-primary !py-4 !px-8 shadow-[0_0_20px_rgba(99,102,241,0.3)]"
                     >
                         Export Assets 📥
