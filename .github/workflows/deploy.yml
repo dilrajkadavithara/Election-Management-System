@@ -47,9 +47,9 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
-          source: "frontend/dist/"
-          target: "/opt/voterslist/frontend/dist/"
-          strip_components: 2
+          source: "frontend/dist/**,Paravur_Polling_Stations_list (1).xlsx"
+          target: "/opt/voterslist/"
+          strip_components: 0
 
       - name: Start Application & Verify
         uses: appleboy/ssh-action@v1.0.3

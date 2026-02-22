@@ -4,7 +4,6 @@ import django
 import random
 import json
 from datetime import datetime, timedelta
-
 from pathlib import Path
 
 # 1. SETUP DJANGO
@@ -62,6 +61,11 @@ def generate_full_demo():
     # --- Step 2: Booth Setup (Excel Import) ---
     print("📋 Importing Polling Stations from Excel...")
     excel_path = str(BASE_DIR / 'Paravur_Polling_Stations_list (1).xlsx')
+    
+    if not os.path.exists(excel_path):
+        print(f"❌ ERROR: Excel file not found at {excel_path}")
+        return
+
     df = pd.read_excel(excel_path)
     
     booth_count = 0
@@ -105,20 +109,15 @@ def generate_full_demo():
     print(f"✅ Created {len(assigned_booths)} Booth Units.")
 
     # --- Step 3: DNA Emulation (Names) ---
-    # In a real run, we'd use the 575 seed names. For now, we'll use a robust internal generator.
     M_FIRST = ["Suresh", "Binoy", "Ratish", "Anil", "Pradeep", "Raghavan", "Venu", "Soman", "Rajesh", "Bijoy", "Manoj", "Ajayan", "Sarith", "Binu"]
     F_FIRST = ["Sunitha", "Bindu", "Deepa", "Saritha", "Latha", "Mini", "Sheela", "Preetha", "Remya", "Dhanya", "Maya", "Lini", "Kavitha", "Sindhu"]
     SURNAMES = ["Manjali", "Puthuval", "Chittattukara", "Kunnath", "Ezhara", "Pillai", "Nair", "Varghese", "K.P.", "M.R.", "T.S.", "Das", "Menon"]
     HOUSES = ["Sreenilayam", "Mangalath", "Puthuval", "Kizhakkevedu", "Padinjarethalaykkal", "Aswathy", "Karthika", "Gokulam", "Souparnika", "Vrindavan"]
 
-    # --- Step 4: Voter Generation ---
-    total_created = 0
-    batch_size = 5000
-    
-    # Personnel Hierarchy Simulation (Local Body Heads)
+    # Personnel Hierarchy Simulation
     for lb in lb_objs:
         leader_name = f"{random.choice(M_FIRST + F_FIRST)} {random.choice(SURNAMES)}"
-        user, _ = User.objects.get_or_create(username=f"lb_head_{lb.name.lower()}", defaults={'is_staff': False})
+        user, _ = User.objects.get_or_create(username=f"lb_head_{lb.name.lower().replace(' ', '_')}", defaults={'is_staff': False})
         user.set_password('demo123')
         user.save()
         prof, _ = UserProfile.objects.get_or_create(user=user)
@@ -126,9 +125,12 @@ def generate_full_demo():
         prof.assigned_local_bodies.set([lb])
         prof.save()
 
-    print(f"🧬 Injecting {TARGET_VOTERS} Synthetic Profiles (Batch processing)...")
+    print(f"🧬 Injecting {TARGET_VOTERS} Synthetic Profiles (Small batch processing for server stability)...")
     
+    batch_size = 2000 # Reduced batch size for stability
     voters_to_create = []
+    total_created = 0
+
     for i in range(TARGET_VOTERS):
         gender = random.choice(['MALE', 'FEMALE'])
         fname = random.choice(M_FIRST) if gender == 'MALE' else random.choice(F_FIRST)
@@ -146,18 +148,12 @@ def generate_full_demo():
         is_local = random.random() > LOCATION_GAP
         location = 'LOCAL' if is_local else random.choice(['ABROAD', 'STATE', 'DISTRICT'])
         
-        # Digitization (92%)
         is_digitized = random.random() < 0.92
         
-        # Probability Simulation
         if location == 'LOCAL':
             prob = random.choice(['CONFIRMED', 'LIKELY', 'UNLIKELY']) if is_digitized else None
         else:
             prob = 'OUT_OF_STATION' if is_digitized else None
-
-        # Simulation Time (14 day velocity)
-        days_ago = random.randint(0, 14)
-        ts = datetime.now() - timedelta(days=days_ago)
 
         v = Voter(
             booth=random.choice(assigned_booths),
@@ -180,16 +176,23 @@ def generate_full_demo():
         if len(voters_to_create) >= batch_size:
             Voter.objects.bulk_create(voters_to_create)
             total_created += len(voters_to_create)
-            # Update created_at via direct SQL because bulk_create doesn't trigger auto_now_add logic for manual TS
-            print(f"   - {total_created} voters injected...")
             voters_to_create = []
+            if total_created % 10000 == 0:
+                print(f"   - {total_created} voters successfully injected.")
 
-    print(f"✨ DEMO COMPLETE! 2,00,000 Voters and 8 Local Authorities initialized for North Paravur.")
+    # Create remaining
+    if voters_to_create:
+        Voter.objects.bulk_create(voters_to_create)
+        total_created += len(voters_to_create)
+
+    print(f"✨ DEMO COMPLETE! {total_created} Voters initialized.")
 
 if __name__ == "__main__":
-    # Safety Check
-    if Voter.objects.count() > 0:
-        print("⚠️ Database currently contains data. Deleting existing records for Clean Demo...")
-        Voter.objects.all().delete()
-        Booth.objects.all().delete()
+    # Safety Check: Deep scrub before rebuild
+    print("🧹 Performing Deep Scrub of existing demo data...")
+    const_to_clean = Constituency.objects.filter(name=CONSTITUENCY_NAME)
+    if const_to_clean.exists():
+        Voter.objects.filter(booth__constituency__in=const_to_clean).delete()
+        Booth.objects.filter(constituency__in=const_to_clean).delete()
+    
     generate_full_demo()
