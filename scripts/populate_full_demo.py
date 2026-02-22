@@ -188,11 +188,12 @@ def generate_full_demo():
     print(f"✨ DEMO COMPLETE! {total_created} Voters initialized.")
 
 if __name__ == "__main__":
-    # Safety Check: Deep scrub before rebuild
-    print("🧹 Performing Deep Scrub of existing demo data...")
-    const_to_clean = Constituency.objects.filter(name=CONSTITUENCY_NAME)
-    if const_to_clean.exists():
-        Voter.objects.filter(booth__constituency__in=const_to_clean).delete()
-        Booth.objects.filter(constituency__in=const_to_clean).delete()
+    # Safety Check: TOTAL DEEP SCRUB for Demo Environment
+    print("🧹 Performing TOTAL DATABASE SCRUB for Clean Demo...")
+    Voter.objects.all().delete()
+    Booth.objects.all().delete()
+    # Also clean up old Local Bodies and Constituencies to avoid duplicates
+    LocalBody.objects.all().delete()
+    Constituency.objects.all().delete()
     
     generate_full_demo()
