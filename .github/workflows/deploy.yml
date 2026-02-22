@@ -51,7 +51,7 @@ jobs:
           target: "/opt/voterslist/frontend/dist/"
           strip_components: 2
 
-      - name: Start Application
+      - name: Start Application & Verify
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -62,4 +62,21 @@ jobs:
             cd /opt/voterslist
             docker compose down --remove-orphans
             docker compose up -d --build
-            docker system prune -f
+            
+            echo "Waiting for services to initialize (45 seconds)..."
+            sleep 45
+            
+            echo "--- DOCKER STATUS ---"
+            docker compose ps
+            
+            echo "--- VERIFYING HEALTH ---"
+            HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:80 || echo "FAILED")
+            
+            if [ "$HEALTH" == "200" ] || [ "$HEALTH" == "301" ] || [ "$HEALTH" == "302" ]; then
+              echo "🚀 DEPLOYMENT SUCCESSFUL: Site is responding with $HEALTH"
+              docker system prune -f
+            else
+              echo "❌ DEPLOYMENT FAILURE: Site returned $HEALTH. Printing logs..."
+              docker compose logs --tail=50
+              exit 1
+            fi
