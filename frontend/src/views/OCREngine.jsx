@@ -69,7 +69,7 @@ const OCREngine = ({
         if (!ocrTargetLoc.psName) errors.push("Polling Station Name");
 
         if (errors.length > 0) {
-            setOcrError(`Mandatory Intelligence Required: ${errors.join(", ")}`);
+            setOcrError(`Please fill in all details: ${errors.join(", ")}`);
             setValidationTriggered(true);
             return;
         }
@@ -136,10 +136,10 @@ const OCREngine = ({
     return (
         <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-8 lux-animate-in pb-32" style={{ fontFamily: '"Inter", sans-serif' }}>
             <header className="space-y-6">
-                <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient leading-none" style={{ fontFamily: '"Rajdhani", sans-serif' }}>AI Processor</h1>
+                <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient leading-none" style={{ fontFamily: '"Rajdhani", sans-serif' }}>Voter List Importer</h1>
 
-                {/* Tactical Location Grid: Logical 2-Row Design */}
                 <div className="lux-glass bg-slate-900/80 p-10 rounded-[2rem] border border-white/5 shadow-2xl space-y-10 relative overflow-hidden">
+                    <h3 className="lux-tech-label mb-2 italic border-b border-white/5 pb-4">Select Location</h3>
 
                     {/* Row 1: High-Width Modules */}
                     <div className="grid grid-cols-2 gap-16 relative z-10">
@@ -148,7 +148,7 @@ const OCREngine = ({
                             <label className={`lux-tech-label px-2 ${validationTriggered && !ocrTargetLoc.constId ? 'text-rose-500 animate-pulse' : ''}`}>Constituency</label>
                             <div className="flex gap-4">
                                 {isAddingConst ? (
-                                    <input autoFocus placeholder="REGISTER NEW CONSTITUENCY..." value={newLocName} onChange={e => setNewLocName(e.target.value)} className="flex-1 lux-data-field border-indigo-500/40 shadow-[0_0_15px_rgba(99,102,241,0.1)]" />
+                                    <input autoFocus placeholder="ENTER NEW CONSTITUENCY NAME..." value={newLocName} onChange={e => setNewLocName(e.target.value)} className="flex-1 lux-data-field border-indigo-500/40 shadow-[0_0_15px_rgba(99,102,241,0.1)]" />
                                 ) : (
                                     <div className="relative flex-1">
                                         <select
@@ -170,7 +170,7 @@ const OCREngine = ({
 
                         {/* Local Body Column */}
                         <div className="space-y-4">
-                            <label className={`lux-tech-label px-2 ${validationTriggered && !ocrTargetLoc.lbId ? 'text-rose-500 animate-pulse' : ''}`}>Local Body</label>
+                            <label className={`lux-tech-label px-2 ${validationTriggered && !ocrTargetLoc.lbId ? 'text-rose-500 animate-pulse' : ''}`}>Panchayat / Municipality</label>
                             <div className="flex gap-4">
                                 {isAddingLB ? (
                                     <div className="flex-1 flex gap-2">
@@ -202,7 +202,7 @@ const OCREngine = ({
                         </div>
                     </div>
 
-                    {/* Row 2: Tactical Metadata */}
+                    {/* Booth Details */}
                     <div className="grid grid-cols-12 gap-10 relative z-10 items-end">
                         {/* Booth Selector (3 cols) */}
                         <div className="col-span-3 space-y-4">
@@ -234,13 +234,13 @@ const OCREngine = ({
 
                         {/* PS No (1 col) */}
                         <div className="col-span-1 space-y-4">
-                            <label className={`lux-tech-label text-center block ${validationTriggered && !ocrTargetLoc.psNo ? 'text-rose-500' : ''}`}>PS NO</label>
+                            <label className={`lux-tech-label text-center block ${validationTriggered && !ocrTargetLoc.psNo ? 'text-rose-500' : ''}`}>PS NO.</label>
                             <input maxLength={3} placeholder="###" value={ocrTargetLoc.psNo} onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, psNo: e.target.value })} className={`w-full lux-data-field text-center !px-0 font-bold h-[52px] ${validationTriggered && !ocrTargetLoc.psNo ? 'border-rose-600' : ''}`} />
                         </div>
 
                         {/* Polling Station Name (Remaining 8 cols) */}
                         <div className="col-span-8 space-y-4">
-                            <label className={`lux-tech-label px-2 ${validationTriggered && !ocrTargetLoc.psName ? 'text-rose-500' : ''}`}>Polling Station Name</label>
+                            <label className={`lux-tech-label px-2 ${validationTriggered && !ocrTargetLoc.psName ? 'text-rose-500' : ''}`}>School / Building Name</label>
                             <input
                                 placeholder="ENTER FULL INSTITUTIONAL POLLING STATION NAME..."
                                 value={ocrTargetLoc.psName}
@@ -278,9 +278,9 @@ const OCREngine = ({
                     </div>
 
                     <div className="text-center space-y-3 relative z-10">
-                        <h2 className="text-4xl font-black uppercase tracking-tighter italic text-white group-hover:text-indigo-400 transition-colors duration-500" style={{ fontFamily: '"Rajdhani", sans-serif' }}>UPLOAD YOUR DOC</h2>
+                        <h2 className="text-4xl font-black uppercase tracking-tighter italic text-white group-hover:text-indigo-400 transition-colors duration-500" style={{ fontFamily: '"Rajdhani", sans-serif' }}>UPLOAD VOTER LIST</h2>
                         <div className="flex flex-col items-center gap-2">
-                            <p className="lux-tech-label tracking-[0.4em] text-slate-400 !text-[7px]">DRAG & DROP CSV/PDF TO INITIATE PARSING // SECURE LINK ACTIVE</p>
+                            <p className="lux-tech-label tracking-[0.4em] text-slate-400 !text-[7px]">DRAG & DROP FILE TO START SCANNING // SECURE LINK ACTIVE</p>
                             <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
                         </div>
                     </div>
@@ -298,12 +298,12 @@ const OCREngine = ({
                         <div className="lux-tactical-corner-br" />
 
                         <div>
-                            <h3 className="lux-tech-label mb-12 italic border-b border-white/5 pb-4">Neural Flow Status</h3>
+                            <h3 className="lux-tech-label mb-12 italic border-b border-white/5 pb-4">Current Progress</h3>
                             <div className="space-y-8">
                                 {[
                                     { step: 'uploaded', label: 'Upload Complete', icon: '📥' },
                                     { step: 'extracted', label: 'Pages Detected', icon: '🎯' },
-                                    { step: 'processing', label: 'AI Processing', icon: '⚡' },
+                                    { step: 'processing', label: 'Processing Data', icon: '⚡' },
                                     { step: 'processed', label: 'Data Ready', icon: '✨' }
                                 ].map((s, i) => {
                                     const steps = ['uploaded', 'extracted', 'processing', 'processed'];
@@ -329,8 +329,8 @@ const OCREngine = ({
                         </div>
 
                         <div className="lux-glass !bg-rose-500/5 border-rose-500/20 p-8 rounded-3xl mt-12">
-                            <p className="lux-tech-label !text-rose-400 mb-4">Risk Management</p>
-                            <button onClick={stopAndClearRAM} className="w-full py-4 rounded-xl bg-rose-500 text-white lux-tech-label !text-white shadow-lg hover:bg-rose-600 transition-all">Emergency Deactivate</button>
+                            <p className="lux-tech-label !text-rose-400 mb-4">Actions</p>
+                            <button onClick={stopAndClearRAM} className="w-full py-4 rounded-xl bg-rose-500 text-white lux-tech-label !text-white shadow-lg hover:bg-rose-600 transition-all">Cancel and Stop</button>
                         </div>
                     </div>
 
@@ -375,7 +375,7 @@ const OCREngine = ({
                                 <div className="lux-tactical-corner-tl" />
                                 <div className="lux-tactical-corner-br" />
                                 <div>
-                                    <p className="lux-tech-label !text-emerald-400 mb-2">Optimal Profiles</p>
+                                    <p className="lux-tech-label !text-emerald-400 mb-2">Ready to Save</p>
                                     <p className="text-5xl font-black text-white group-hover:scale-110 transition-transform origin-left" style={{ fontFamily: '"Rajdhani", sans-serif' }}>{ocrBatch.clean_count || 0}</p>
                                 </div>
                                 <div className="text-5xl opacity-20 transform group-hover:rotate-12 transition-all">💎</div>
@@ -384,7 +384,7 @@ const OCREngine = ({
                                 <div className="lux-tactical-corner-tl" />
                                 <div className="lux-tactical-corner-br" />
                                 <div>
-                                    <p className="lux-tech-label !text-rose-400 mb-2">Tactical Anomalies</p>
+                                    <p className="lux-tech-label !text-rose-400 mb-2">Records with Errors</p>
                                     <p className="text-5xl font-black text-white group-hover:scale-110 transition-transform origin-left" style={{ fontFamily: '"Rajdhani", sans-serif' }}>{ocrBatch.flagged_count || 0}</p>
                                 </div>
                                 <div className="text-5xl opacity-20 transform group-hover:-rotate-12 transition-all">🚩</div>
@@ -399,7 +399,7 @@ const OCREngine = ({
                                     className={`lux-btn-primary flex-1 !py-8 text-sm tracking-[0.3em] !font-bold disabled:opacity-30 disabled:cursor-not-allowed`}
                                     style={{ fontFamily: '"Rajdhani", sans-serif' }}
                                 >
-                                    Initialize Matrix Extraction Protocol
+                                    Start Scanning
                                 </button>
                             )}
                             {ocrBatch.status === 'extracted' && (
@@ -409,7 +409,7 @@ const OCREngine = ({
                                     className={`lux-btn-primary flex-1 !py-8 text-sm tracking-[0.3em] !font-bold !from-indigo-600 !to-purple-600 shadow-[0_0_30px_rgba(99,102,241,0.5)] disabled:opacity-30 disabled:cursor-not-allowed`}
                                     style={{ fontFamily: '"Rajdhani", sans-serif' }}
                                 >
-                                    Deploy Neural AI Core ⚡
+                                    Run Data Processor ⚡
                                 </button>
                             )}
                             {ocrBatch.status === 'processed' && (
@@ -420,7 +420,7 @@ const OCREngine = ({
                                         className={`flex-1 bg-white text-black py-8 rounded-2xl font-bold uppercase text-[11px] tracking-[0.2em] shadow-2xl hover:bg-indigo-400 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed`}
                                         style={{ fontFamily: '"Rajdhani", sans-serif' }}
                                     >
-                                        Commit Intelligence to DB
+                                        Save to Database
                                     </button>
                                     <button onClick={() => api.exportBatchCSV(ocrBatch.id)} className="px-12 lux-glass rounded-2xl font-bold text-white text-[11px] uppercase tracking-widest border-white/10 hover:bg-white/10" style={{ fontFamily: '"Rajdhani", sans-serif' }}>Export Result</button>
                                 </div>

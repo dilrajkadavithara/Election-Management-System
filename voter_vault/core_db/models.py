@@ -266,3 +266,35 @@ class CommunicationLog(models.Model):
 
     class Meta:
         ordering = ['-sent_at']
+
+class DailyProgress(models.Model):
+    """
+    Tracks tactical metrics on a daily basis for War Room analysis.
+    This allows monitoring of digitization speed and political conversion rates.
+    """
+    booth = models.ForeignKey(Booth, on_delete=models.CASCADE, related_name='tracking_stats')
+    date = models.DateField(db_index=True)
+    
+    # Cumulative Totals (Snapshots)
+    digitized_total = models.PositiveIntegerField(default=0, help_text="Total voters digitized in this booth so far")
+    udf_total = models.PositiveIntegerField(default=0, help_text="Total confirmed UDF supporters")
+    ldf_total = models.PositiveIntegerField(default=0)
+    nda_total = models.PositiveIntegerField(default=0)
+    neutral_total = models.PositiveIntegerField(default=0)
+    
+    # Daily Delta (Activity of the day)
+    new_digitized = models.IntegerField(default=0, help_text="Net new digitized today")
+    new_udf = models.IntegerField(default=0, help_text="Net new UDF converts today (from Neutrals/Others)")
+    new_ldf = models.IntegerField(default=0)
+    new_nda = models.IntegerField(default=0)
+    
+    # Analytic Snapshot
+    winning_chance = models.FloatField(default=0.0, help_text="Winning probability based on current confirmed + likely trend")
+    
+    class Meta:
+        unique_together = ('booth', 'date')
+        ordering = ['-date', 'booth']
+        verbose_name_plural = "Daily Progress Tracking"
+
+    def __str__(self):
+        return f"{self.booth.number} - {self.date}"

@@ -368,24 +368,17 @@ async def get_strategic_analytics_api(constituency_id: str = None, user_info=Dep
 @app.get("/api/war-room/stats")
 async def get_war_stats(
     constituency_id: str = None, lb: str = None, booth: str = None,
-    gender: str = None, age_group: str = None, 
-    location: str = None, probability: str = None,
-    perspective: str = 'UDF',
     user_info=Depends(get_current_user)
 ):
     c_id = int(constituency_id) if constituency_id and str(constituency_id).isdigit() else None
     l_id = int(lb) if lb and str(lb).isdigit() else None
     b_id = int(booth) if booth and str(booth).isdigit() else None
     
-    # We need a sync wrapper here because it's a new function
     def sync_war_wrapper():
-        from core.db_bridge import get_filtered_war_stats
+        from core.db_bridge import get_war_room_tactical_stats
         from django.contrib.auth.models import User
         user = User.objects.get(username=user_info['username'])
-        return get_filtered_war_stats(
-            user.profile, c_id, l_id, b_id, 
-            gender, age_group, location, probability, perspective
-        )
+        return get_war_room_tactical_stats(user.profile, c_id, l_id, b_id)
         
     return await sync_to_async(sync_war_wrapper, thread_sensitive=True)()
 

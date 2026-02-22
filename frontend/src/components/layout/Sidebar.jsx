@@ -6,19 +6,20 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout, isV2, setIsV
                     🗳️
                 </div>
                 <div>
-                    <h1 className="font-black uppercase text-[10px] tracking-[0.3em] lux-text-gradient opacity-90">Election Intel</h1>
+                    <h1 className="font-black uppercase text-[10px] tracking-[0.3em] lux-text-gradient opacity-90">Election Manager</h1>
                     <p className="text-[12px] text-white font-black uppercase tracking-widest mt-1">{username}</p>
                 </div>
             </div>
 
             <nav className="space-y-4 flex-grow">
                 {[
-                    { id: 'dashboard', label: 'AI Dashboard', icon: '📊' },
-                    ...(userRole !== 'BOOTH_AGENT' ? [{ id: 'engine', label: 'AI Processor', icon: '⚡' }] : []),
-                    { id: 'voters', label: 'Voters Base', icon: '👥' },
-                    { id: 'comm', label: 'Reachout to Voters', icon: '📡' },
-                    { id: 'design', label: 'AI driven Voter slips', icon: '🎨' },
-                    ...(['SUPERUSER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER'].includes(userRole) ? [{ id: 'admin', label: 'GOVERNANCE LAYER', icon: '🛡️' }] : [])
+                    { id: 'dashboard', label: 'Main Dashboard', icon: '📊' },
+                    { id: 'warroom', label: 'TACTICAL WAR ROOM', icon: '⚔️' },
+                    ...(userRole !== 'BOOTH_AGENT' ? [{ id: 'engine', label: 'Batch Upload', icon: '⚡' }] : []),
+                    { id: 'voters', label: 'Voter List', icon: '👥' },
+                    { id: 'comm', label: 'Send Messages', icon: '📡' },
+                    { id: 'design', label: 'Voter Slips', icon: '🎨' },
+                    ...(['SUPERUSER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER'].includes(userRole) ? [{ id: 'admin', label: 'USER SETTINGS', icon: '🛡️' }] : [])
                 ].map(item => (
                     <button
                         key={item.id}
@@ -40,7 +41,7 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout, isV2, setIsV
                         className={`w-full flex items-center gap-5 px-8 py-4 rounded-[1.25rem] transition-all duration-500 border border-white/5 ${isV2 ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-500/10 text-slate-400'}`}
                     >
                         <span className="text-xl">{isV2 ? '🚀' : '🏛️'}</span>
-                        <span className="font-black text-[9px] tracking-[0.2em] uppercase">{isV2 ? 'Modern Hub Active' : 'Legacy Mode'}</span>
+                        <span className="font-black text-[9px] tracking-[0.2em] uppercase">{isV2 ? 'V2 Dashboard' : 'Legacy Mode'}</span>
                     </button>
                 </div>
             </nav>
@@ -50,7 +51,7 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout, isV2, setIsV
             </div>
             <button onClick={handleLogout} className="mt-4 flex-shrink-0 flex items-center gap-5 px-8 py-5 rounded-[1.5rem] text-rose-500 font-black text-[10px] tracking-[0.2em] hover:bg-rose-500/10 transition-all group">
                 <span className="text-2xl group-hover:rotate-12 transition-transform">🚪</span>
-                <span>DEACTIVATE CORE</span>
+                <span>LOGOUT</span>
             </button>
         </aside >
     );

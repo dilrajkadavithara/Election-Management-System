@@ -62,7 +62,7 @@ const Dashboard = ({
         <div className="min-h-screen lux-mesh-bg flex items-center justify-center">
             <div className="flex flex-col items-center animate-pulse">
                 <div className="w-20 h-20 bg-indigo-500 rounded-full blur-2xl opacity-50 mb-4" />
-                <p className="font-black uppercase tracking-[0.4em] text-xs text-indigo-400">Initializing Intelligence Core...</p>
+                <p className="font-black uppercase tracking-[0.4em] text-xs text-indigo-400">Loading Dashboard...</p>
             </div>
         </div>
     );
@@ -128,10 +128,10 @@ const Dashboard = ({
                     <header className="flex justify-between items-center border-b border-white/5 pb-6">
                         <div>
                             <button onClick={() => setViewMode('CLASSIC')} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white mb-2 flex items-center gap-2 transition-colors">
-                                ← AI Dashboard
+                                ← Main Dashboard
                             </button>
                             <h1 className="text-6xl font-black tracking-tighter uppercase leading-none">
-                                War <span className="lux-text-gradient">Room</span>
+                                Victory <span className="lux-text-gradient">Analysis</span>
                             </h1>
                         </div>
                         {/* Perspective Toggle */}
@@ -197,7 +197,7 @@ const Dashboard = ({
                         {/* Strategy Info */}
                         <div className="col-span-8 bg-black/20 rounded-3xl p-8 border border-white/5 flex flex-col justify-between">
                             <div>
-                                <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-400 mb-2">Tactical Assessment</h3>
+                                <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-400 mb-2">Current Situation</h3>
                                 <h2 className="text-3xl font-black uppercase text-white leading-tight mb-4">
                                     {perspective} Secured Vote Bank
                                 </h2>
@@ -226,7 +226,7 @@ const Dashboard = ({
                     {/* 1. Global Geography Filters (LINKED) */}
                     <div>
                         <h3 className="font-black uppercase tracking-[0.2em] text-[10px] text-slate-400 mb-4 flex items-center gap-2">
-                            🗺️ Battleground Scope
+                            🗺️ Target Area
                         </h3>
                         <div className="space-y-3">
                             {[
@@ -333,13 +333,13 @@ const Dashboard = ({
             {/* --- CLASSIC VIEW: FILTER HEADER --- */}
             <header className="flex justify-between items-center border-b border-white/5 pb-12 relative z-20">
                 <div>
-                    <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-emerald-500 mb-2 italic">AI Driven Campaign</h3>
+                    <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-emerald-500 mb-2 italic">Official Campaign</h3>
                     <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient">AI Dashboard</h1>
                 </div>
 
                 <div className="flex flex-col gap-4 items-end">
                     <button onClick={() => setViewMode('WAR_ROOM')} className="bg-white text-black px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.3)] animate-pulse">
-                        Go to War Room →
+                        Victory Analysis →
                     </button>
 
                     <div className="flex gap-4">
@@ -405,7 +405,7 @@ const Dashboard = ({
 
                 {/* VoteIntel (Sentiment) */}
                 <div className="col-span-8 lux-card p-10 relative overflow-hidden group min-h-[300px]">
-                    <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-300 mb-8 border-b border-white/5 pb-6">VoteIntel™</h3>
+                    <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-300 mb-8 border-b border-white/5 pb-6">Voter Support</h3>
                     <div className="h-[200px] w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={[
@@ -431,7 +431,7 @@ const Dashboard = ({
 
                 {/* Age Composition (Bottom Right Block 1) */}
                 <div className="col-span-4 lux-card p-10 h-[300px] flex flex-col justify-between relative overflow-hidden">
-                    <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-300 mb-8 border-b border-white/5 pb-6">Age Composition</h3>
+                    <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-300 mb-8 border-b border-white/5 pb-6">Age Groups</h3>
                     <div className="w-full h-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart layout="vertical" data={Object.entries(age_dist).map(([k, v]) => ({ name: k, value: v }))} margin={{ left: 0, right: 30 }}>
@@ -449,8 +449,8 @@ const Dashboard = ({
                 {/* Target Neutrals (Optimization Vector) */}
                 <div className="col-span-4 lux-card p-10 bg-slate-900/50 border border-emerald-500/20 relative group h-[260px] flex flex-col justify-between">
                     <div>
-                        <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-emerald-500 mb-4 italic">Target Neutrals</h3>
-                        <h2 className="text-4xl font-black uppercase tracking-tighter leading-tight">Optimization <br />Vector</h2>
+                        <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-emerald-500 mb-4 italic">Target Undecided</h3>
+                        <h2 className="text-4xl font-black uppercase tracking-tighter leading-tight">Winning <br />Strategy</h2>
                     </div>
                     <button onClick={() => { setListFilters({ ...listFilters, leaning: 'NEUTRAL' }); setView('voters'); }} className="lux-btn-primary w-fit mt-4">Get the list</button>
                 </div>
@@ -458,7 +458,7 @@ const Dashboard = ({
                 {/* Digitization Level */}
                 <div className="col-span-4 lux-card p-10 bg-slate-900/50 border border-indigo-500/20 relative group h-[260px] flex flex-col justify-between">
                     <div>
-                        <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-300 border-b border-white/5 pb-4">Digitization level</h3>
+                        <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-300 border-b border-white/5 pb-4">Digital Progress</h3>
                         <div className="mt-6">
                             <div className="flex justify-between items-end">
                                 <span className="text-5xl font-black text-white tracking-tighter">{(dashboardStats.tagging_progress || 0).toLocaleString()}</span>
@@ -476,9 +476,9 @@ const Dashboard = ({
 
                 {/* Further Moves (Tactical Actions) */}
                 <div className="col-span-4 lux-card p-10 border border-white/5 h-[260px] flex flex-col justify-between">
-                    <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-indigo-400 border-b border-white/5 pb-4 italic">Further Moves</h3>
+                    <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-indigo-400 border-b border-white/5 pb-4 italic">Next Actions</h3>
                     <div>
-                        <h4 className="text-2xl font-black uppercase tracking-tighter leading-tight">Digital Advantage <br />System Ready</h4>
+                        <h4 className="text-2xl font-black uppercase tracking-tighter leading-tight">Campaign Booster <br />System Ready</h4>
                         <div className="flex gap-4 mt-6">
                             <button onClick={() => setView('engine')} className="lux-glass px-6 py-3 rounded-xl font-bold text-[9px] uppercase tracking-widest hover:border-indigo-500 transition-all">Digitize more</button>
                             <button onClick={() => setView('comm')} className="bg-white text-black px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-indigo-400 transition-all">Reachout to Voters</button>

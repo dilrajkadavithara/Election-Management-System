@@ -213,6 +213,38 @@ def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id
         prob_likely=Count(Case(When(voting_probability='LIKELY', then=1), output_field=IntegerField())),
         prob_unlikely=Count(Case(When(voting_probability='UNLIKELY', then=1), output_field=IntegerField())),
         prob_oos=Count(Case(When(voting_probability='OUT_OF_STATION', then=1), output_field=IntegerField())),
+        
+        # --- GRANULAR INTERSECTIONS ---
+        # Gender / Leaning
+        male_udf=Count(Case(When(gender__iexact='Male', voter_leaning='UDF', then=1), output_field=IntegerField())),
+        male_ldf=Count(Case(When(gender__iexact='Male', voter_leaning='LDF', then=1), output_field=IntegerField())),
+        male_nda=Count(Case(When(gender__iexact='Male', voter_leaning='NDA', then=1), output_field=IntegerField())),
+        male_neu=Count(Case(When(gender__iexact='Male', voter_leaning='NEUTRAL', then=1), output_field=IntegerField())),
+        female_udf=Count(Case(When(gender__iexact='Female', voter_leaning='UDF', then=1), output_field=IntegerField())),
+        female_ldf=Count(Case(When(gender__iexact='Female', voter_leaning='LDF', then=1), output_field=IntegerField())),
+        female_nda=Count(Case(When(gender__iexact='Female', voter_leaning='NDA', then=1), output_field=IntegerField())),
+        female_neu=Count(Case(When(gender__iexact='Female', voter_leaning='NEUTRAL', then=1), output_field=IntegerField())),
+
+        # Age / Leaning
+        age_18_25_udf=Count(Case(When(age__gte=18, age__lte=25, voter_leaning='UDF', then=1), output_field=IntegerField())),
+        age_18_25_ldf=Count(Case(When(age__gte=18, age__lte=25, voter_leaning='LDF', then=1), output_field=IntegerField())),
+        age_18_25_nda=Count(Case(When(age__gte=18, age__lte=25, voter_leaning='NDA', then=1), output_field=IntegerField())),
+        age_18_25_neu=Count(Case(When(age__gte=18, age__lte=25, voter_leaning='NEUTRAL', then=1), output_field=IntegerField())),
+        
+        age_26_40_udf=Count(Case(When(age__gte=26, age__lte=40, voter_leaning='UDF', then=1), output_field=IntegerField())),
+        age_26_40_ldf=Count(Case(When(age__gte=26, age__lte=40, voter_leaning='LDF', then=1), output_field=IntegerField())),
+        age_26_40_nda=Count(Case(When(age__gte=26, age__lte=40, voter_leaning='NDA', then=1), output_field=IntegerField())),
+        age_26_40_neu=Count(Case(When(age__gte=26, age__lte=40, voter_leaning='NEUTRAL', then=1), output_field=IntegerField())),
+
+        age_41_60_udf=Count(Case(When(age__gte=41, age__lte=60, voter_leaning='UDF', then=1), output_field=IntegerField())),
+        age_41_60_ldf=Count(Case(When(age__gte=41, age__lte=60, voter_leaning='LDF', then=1), output_field=IntegerField())),
+        age_41_60_nda=Count(Case(When(age__gte=41, age__lte=60, voter_leaning='NDA', then=1), output_field=IntegerField())),
+        age_41_60_neu=Count(Case(When(age__gte=41, age__lte=60, voter_leaning='NEUTRAL', then=1), output_field=IntegerField())),
+
+        age_60_plus_udf=Count(Case(When(age__gt=60, voter_leaning='UDF', then=1), output_field=IntegerField())),
+        age_60_plus_ldf=Count(Case(When(age__gt=60, voter_leaning='LDF', then=1), output_field=IntegerField())),
+        age_60_plus_nda=Count(Case(When(age__gt=60, voter_leaning='NDA', then=1), output_field=IntegerField())),
+        age_60_plus_neu=Count(Case(When(age__gt=60, voter_leaning='NEUTRAL', then=1), output_field=IntegerField())),
     )
 
     # Decisive set: single query for local + confirmed voters
@@ -233,7 +265,18 @@ def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id
         "location": {"LOCAL": stats['loc_local'], "ABROAD": stats['loc_abroad'], "STATE": stats['loc_state'], "DISTRICT": stats['loc_district']},
         "probability": {"CONFIRMED": stats['prob_confirmed'], "LIKELY": stats['prob_likely'], "UNLIKELY": stats['prob_unlikely'], "OUT_OF_STATION": stats['prob_oos']},
         "decisive_stats": {"total": decisive['total'], "UDF": decisive['udf'], "LDF": decisive['ldf'], "NDA": decisive['nda'], "NEUTRAL": decisive['neutral_d']},
-        "tagging_progress": stats['total']
+        "tagging_progress": stats['total'],
+        # New Intersections
+        "gender_split": {
+            "Male": {"UDF": stats['male_udf'], "LDF": stats['male_ldf'], "NDA": stats['male_nda'], "NEUTRAL": stats['male_neu']},
+            "Female": {"UDF": stats['female_udf'], "LDF": stats['female_ldf'], "NDA": stats['female_nda'], "NEUTRAL": stats['female_neu']}
+        },
+        "age_split": {
+            "18-25": {"UDF": stats['age_18_25_udf'], "LDF": stats['age_18_25_ldf'], "NDA": stats['age_18_25_nda'], "NEUTRAL": stats['age_18_25_neu']},
+            "26-40": {"UDF": stats['age_26_40_udf'], "LDF": stats['age_26_40_ldf'], "NDA": stats['age_26_40_nda'], "NEUTRAL": stats['age_26_40_neu']},
+            "41-60": {"UDF": stats['age_41_60_udf'], "LDF": stats['age_41_60_ldf'], "NDA": stats['age_41_60_nda'], "NEUTRAL": stats['age_41_60_neu']},
+            "60+": {"UDF": stats['age_60_plus_udf'], "LDF": stats['age_60_plus_ldf'], "NDA": stats['age_60_plus_nda'], "NEUTRAL": stats['age_60_plus_neu']}
+        }
     }
 
 def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None, serial_from=None, serial_to=None, location=None):
@@ -505,5 +548,153 @@ def get_filtered_war_stats(user_profile, constituency_id=None, lb_id=None, booth
         "total_pool": total_matching_voters,
         "supporter_count": supporter_count,
         "probability": prob
+    }
+
+def get_war_room_tactical_stats(user_profile, constituency_id=None, lb_id=None, booth_id=None):
+    """
+    Tactical tracking for War Room. 
+    Returns daily/weekly progress for the selected scope.
+    """
+    from django.db.models import Sum, Avg, F
+    from datetime import datetime, timedelta
+    from core_db.models import DailyProgress
+    
+    # 1. Determine Scope
+    if user_profile.role == 'SUPERUSER':
+        base_booths = Booth.objects.all()
+    else:
+        voters_scope = user_profile.get_accessible_voters()
+        accessible_booth_ids = list(voters_scope.values_list('booth_id', flat=True).distinct())
+        
+        if not accessible_booth_ids:
+            # Fallback: check assigned booths/lbs if no voters digitized yet
+            ids = list(user_profile.assigned_booths.values_list('id', flat=True))
+            lb_ids = list(user_profile.assigned_local_bodies.values_list('id', flat=True))
+            if lb_ids:
+                ids += list(Booth.objects.filter(local_body_id__in=lb_ids).values_list('id', flat=True))
+            accessible_booth_ids = list(set(ids))
+
+        base_booths = Booth.objects.filter(id__in=accessible_booth_ids)
+    
+    # Apply Geography Filters
+    if booth_id:
+        base_booths = base_booths.filter(id=booth_id)
+    elif lb_id:
+        base_booths = base_booths.filter(local_body_id=lb_id)
+    elif constituency_id:
+        base_booths = base_booths.filter(constituency_id=constituency_id)
+        
+    booth_ids = list(base_booths.values_list('id', flat=True))
+    if not booth_ids:
+        return {"summary": {}, "history": [], "breakdown": [], "daily_change": {"digitized": 0, "udf": 0}, "weekly_change": {"digitized": 0, "udf": 0}}
+
+    # 2. Get Dates (Robust: find latest available data date)
+    latest_rec = DailyProgress.objects.filter(booth_id__in=booth_ids).order_by('-date').first()
+    if not latest_rec:
+        return {"summary": {}, "history": [], "breakdown": [], "daily_change": {"digitized": 0, "udf": 0}, "weekly_change": {"digitized": 0, "udf": 0}}
+    
+    today = latest_rec.date
+    yesterday = today - timedelta(days=1)
+    last_week = today - timedelta(days=7)
+    
+    def get_agg(date_val):
+        res = DailyProgress.objects.filter(booth_id__in=booth_ids, date=date_val).aggregate(
+            digitized=Sum('digitized_total'),
+            udf=Sum('udf_total'),
+            ldf=Sum('ldf_total'),
+            nda=Sum('nda_total'),
+            neutral=Sum('neutral_total'),
+            new_dig=Sum('new_digitized'),
+            new_udf=Sum('new_udf'),
+            win_prob=Avg('winning_chance')
+        )
+        for k in res: 
+            if res[k] is None: res[k] = 0
+        return res
+
+    current = get_agg(today)
+    prev_day = get_agg(yesterday)
+    prev_week = get_agg(last_week)
+    
+    # 3. History Timeline (Last 14 days)
+    history_raw = DailyProgress.objects.filter(
+        booth_id__in=booth_ids, 
+        date__gte=today - timedelta(days=14),
+        date__lte=today
+    ).values('date').annotate(
+        digitized=Sum('digitized_total'),
+        udf=Sum('udf_total'),
+        new_dig=Sum('new_digitized'),
+        new_udf=Sum('new_udf'),
+        win_prob=Avg('winning_chance')
+    ).order_by('date')
+    
+    history = []
+    for h in history_raw:
+        history.append({
+            "date": h['date'].isoformat(),
+            "digitized": h['digitized'] or 0,
+            "udf": h['udf'] or 0,
+            "new_dig": h['new_dig'] or 0,
+            "new_udf": h['new_udf'] or 0,
+            "win_prob": round(h['win_prob'] or 0, 1)
+        })
+
+    # 4. Breakdown Grid
+    breakdown = []
+    if booth_id or lb_id:
+        # Show Booth breakdown
+        for b in base_booths.order_by('number'):
+            stats_rec = DailyProgress.objects.filter(booth=b, date=today).first()
+            if stats_rec:
+                breakdown.append({
+                    "id": b.id,
+                    "name": f"Booth {b.number}",
+                    "sub": b.polling_station_name or b.name or "",
+                    "digitized": stats_rec.digitized_total,
+                    "udf": stats_rec.udf_total,
+                    "daily_dig": stats_rec.new_digitized,
+                    "daily_udf": stats_rec.new_udf,
+                    "win_prob": stats_rec.winning_chance,
+                    "coverage": round((stats_rec.digitized_total / 1200) * 100, 1)
+                })
+    else:
+        # Show Local Body breakdown
+        lbs_in_scope = LocalBody.objects.filter(booths__in=base_booths).distinct()
+        for lb in lbs_in_scope:
+            lb_booth_ids = list(base_booths.filter(local_body=lb).values_list('id', flat=True))
+            lb_stats = DailyProgress.objects.filter(booth_id__in=lb_booth_ids, date=today).aggregate(
+                digitized=Sum('digitized_total'),
+                udf=Sum('udf_total'),
+                daily_dig=Sum('new_digitized'),
+                daily_udf=Sum('new_udf'),
+                win_prob=Avg('winning_chance')
+            )
+            if lb_stats['digitized'] is not None:
+                total_expected = len(lb_booth_ids) * 1200
+                breakdown.append({
+                    "id": lb.id,
+                    "name": lb.name,
+                    "sub": lb.get_body_type_display(),
+                    "digitized": lb_stats['digitized'] or 0,
+                    "udf": lb_stats['udf'] or 0,
+                    "daily_dig": lb_stats['daily_dig'] or 0,
+                    "daily_udf": lb_stats['daily_udf'] or 0,
+                    "win_prob": round(lb_stats['win_prob'] or 0, 1),
+                    "coverage": round((lb_stats['digitized'] / total_expected) * 100, 1) if total_expected > 0 else 0
+                })
+
+    return {
+        "summary": current,
+        "daily_change": {
+            "digitized": max(0, current['digitized'] - prev_day['digitized']),
+            "udf": max(0, current['udf'] - prev_day['udf']),
+        },
+        "weekly_change": {
+            "digitized": max(0, current['digitized'] - prev_week['digitized']),
+            "udf": max(0, current['udf'] - prev_week['udf']),
+        },
+        "history": history,
+        "breakdown": breakdown
     }
 

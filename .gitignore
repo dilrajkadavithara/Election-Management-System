@@ -61,3 +61,8 @@ docker-compose.override.yml
 intelhub_deploy_key
 intelhub_deploy_key.pub
 certbot/
+
+# Django Static
+voter_vault/static/
+var/
+.vite/
