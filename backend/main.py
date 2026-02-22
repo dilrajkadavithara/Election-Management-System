@@ -424,14 +424,38 @@ async def export_voters(
     
     import csv, io
     from fastapi.responses import StreamingResponse
-    output = io.StringIO()
-    if results:
-        writer = csv.DictWriter(output, fieldnames=results[0].keys())
+
+    def generate():
+        output = io.StringIO()
+        if not results:
+            yield "No records found"
+            return
+
+        # Use fixed fieldnames to ensure order and consistency
+        fieldnames = [
+            'serial_no', 'full_name', 'epic_id', 'gender', 'age', 
+            'relation_name', 'relation_type', 'house_name', 'house_no', 
+            'phone_no', 'voter_leaning', 'current_location', 'booth_no', 
+            'constituency', 'local_body', 'ps_name', 'voting_probability'
+        ]
+        
+        # Add a UTF-8 BOM for Excel compatibility
+        yield '\ufeff'
+        
+        writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction='ignore')
         writer.writeheader()
-        writer.writerows(results)
-    output.seek(0)
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+        for voter in results:
+            writer.writerow(voter)
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
     return StreamingResponse(
-        io.BytesIO(output.getvalue().encode("utf-8-sig")),
+        generate(),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=voters_export.csv"}
     )

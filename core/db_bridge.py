@@ -256,8 +256,14 @@ def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency
     if serial_to: voters = voters.filter(serial_no__lte=int(serial_to))
     
     total_count = voters.count()
-    start = (page - 1) * page_size
-    voters_slice = voters.select_related('booth', 'booth__local_body', 'booth__constituency')[start:start+page_size]
+    
+    # Handle pagination for UI or full export for download
+    if page is not None and page_size is not None and page_size > 0:
+        start = (page - 1) * page_size
+        voters_slice = voters.select_related('booth', 'booth__local_body', 'booth__constituency')[start:start+page_size]
+    else:
+        # Full list for export
+        voters_slice = voters.select_related('booth', 'booth__local_body', 'booth__constituency')
 
     results = []
     for v in voters_slice:
