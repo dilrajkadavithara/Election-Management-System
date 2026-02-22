@@ -45,7 +45,10 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout, isV2, setIsV
                 </div>
             </nav>
 
-            <button onClick={handleLogout} className="mt-12 flex-shrink-0 flex items-center gap-5 px-8 py-5 rounded-[1.5rem] text-rose-500 font-black text-[10px] tracking-[0.2em] hover:bg-rose-500/10 transition-all group">
+            <div className="mt-8 px-8 opacity-20 hover:opacity-100 transition-opacity">
+                <p className="text-[7px] font-black text-white tracking-[0.4em] uppercase">Build: v5.2-Strategic</p>
+            </div>
+            <button onClick={handleLogout} className="mt-4 flex-shrink-0 flex items-center gap-5 px-8 py-5 rounded-[1.5rem] text-rose-500 font-black text-[10px] tracking-[0.2em] hover:bg-rose-500/10 transition-all group">
                 <span className="text-2xl group-hover:rotate-12 transition-transform">🚪</span>
                 <span>DEACTIVATE CORE</span>
             </button>
