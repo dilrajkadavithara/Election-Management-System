@@ -853,16 +853,21 @@ async def get_system_health(user_info=Depends(get_current_user)):
         "active_batches": len(state_manager.list_all_batches()),
     }
 
-@app.get("/api/analytics/strategic")
-async def fetch_strategic_analytics(constituency_id: str = None, user_info: dict = Depends(get_current_user)):
-    try:
-        data = await sync_to_async(sync_strategic_analytics_wrapper)(
-            user_info["username"], 
-            constituency_id
-        )
-        return data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.post("/api/admin/seed-demo")
+async def seed_demo_data(background_tasks: BackgroundTasks, user_info=Depends(get_current_user)):
+    if user_info['role'] != 'SUPERUSER':
+        raise HTTPException(403, "Deployment authorization required.")
+    
+    def run_seeder():
+        try:
+            # We import inside to avoid circular deps or early loading issues
+            from scripts.populate_full_demo import generate_full_demo
+            generate_full_demo()
+        except Exception as e:
+            print(f"FAILED TO SEED DEMO: {str(e)}")
+
+    background_tasks.add_task(run_seeder)
+    return {"success": True, "message": "Neural Command initialization sequence started in background. Full sync will complete in ~3 minutes."}
 
 # Django Admin Integration
 from voter_vault.wsgi import application as django_app
