@@ -15,20 +15,27 @@ if PROJECT_DIR not in sys.path:
 if __name__ == "__main__":
     print(f"Starting Server from: {ROOT_DIR}")
     
-    # --- MIGRATION GATE ---
-    # In production, we need to ensure the DB schema is up to date before starting
+    # --- DEPLOYMENT GATES ---
+    # In production, we need to ensure the DB schema is up to date and static files are collected
     if os.getenv("RUN_MIGRATIONS", "True").lower() == "true":
-        print("🚀 Running Database Migrations...")
+        print("🚀 Running Deployment Gates (Migrations & Static)...")
         os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'voter_vault.settings')
         try:
             import django
             django.setup()
             from django.core.management import execute_from_command_line
-            # Run migrate command
+            
+            # 1. Run migrate command
+            print("   - Applying database migrations...")
             execute_from_command_line([sys.argv[0], "migrate", "--noinput"])
-            print("✅ Migrations Complete.")
+            
+            # 2. Run collectstatic
+            print("   - Collecting static files...")
+            execute_from_command_line([sys.argv[0], "collectstatic", "--noinput", "--clear"])
+            
+            print("✅ Deployment Gates Complete.")
         except Exception as e:
-            print(f"⚠️ Migration Error: {e}")
+            print(f"⚠️ Deployment Gate Error: {e}")
 
     # Run Uvicorn
     # reload=False is safer here because uploading files to data/ 

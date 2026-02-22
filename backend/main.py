@@ -118,6 +118,7 @@ save_booth_data_async = sync_to_async(save_booth_data, thread_sensitive=True)
 get_stats_async = sync_to_async(sync_dashboard_wrapper, thread_sensitive=True)
 get_voters_async = sync_to_async(sync_voter_list_wrapper, thread_sensitive=True)
 edit_voter_async = sync_to_async(update_voter_in_db, thread_sensitive=True)
+get_strategic_analytics_async = sync_to_async(sync_strategic_analytics_wrapper, thread_sensitive=True)
 
 # Admin Async Wrappers
 get_all_locations_async = sync_to_async(sync_locations_wrapper, thread_sensitive=True)
@@ -359,15 +360,20 @@ async def get_stats(constituency: str = None, lb: str = None, booth: str = None,
     b_id = int(booth) if booth and str(booth).isdigit() else None
     return await get_stats_async(user_info['username'], c_id, l_id, b_id)
 
+@app.get("/api/analytics/strategic")
+async def get_strategic_analytics_api(constituency_id: str = None, user_info=Depends(get_current_user)):
+    c_id = int(constituency_id) if constituency_id and str(constituency_id).isdigit() else None
+    return await get_strategic_analytics_async(user_info['username'], c_id)
+
 @app.get("/api/war-room/stats")
 async def get_war_stats(
-    constituency: str = None, lb: str = None, booth: str = None,
+    constituency_id: str = None, lb: str = None, booth: str = None,
     gender: str = None, age_group: str = None, 
     location: str = None, probability: str = None,
     perspective: str = 'UDF',
     user_info=Depends(get_current_user)
 ):
-    c_id = int(constituency) if constituency and str(constituency).isdigit() else None
+    c_id = int(constituency_id) if constituency_id and str(constituency_id).isdigit() else None
     l_id = int(lb) if lb and str(lb).isdigit() else None
     b_id = int(booth) if booth and str(booth).isdigit() else None
     

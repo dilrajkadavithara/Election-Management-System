@@ -99,7 +99,18 @@ const DashboardV2 = ({
                             const pStrength = booth[perspective.toLowerCase()] || 0;
                             const pCoverage = Math.round((pStrength / booth.total) * 100);
                             return (
-                                <div key={i} onClick={() => { setListFilters({ ...listFilters, booth: booth.id }); setView('voters'); }} className="lux-glass group p-6 rounded-[1.5rem] border-white/5 transition-all duration-500 hover:bg-white/10 cursor-pointer shadow-lg">
+                                <div key={i} onClick={() => { setListFilters({ ...listFilters, booth: booth.id }); setView('voters'); }} className="lux-glass group p-6 rounded-[1.5rem] border-white/5 transition-all duration-500 hover:bg-white/10 cursor-pointer shadow-lg relative perspective-1000">
+                                    {/* Intelligence Tooltip */}
+                                    <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 lux-glass bg-slate-900 p-4 rounded-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 z-50 border-indigo-500/30 -translate-y-2 group-hover:translate-y-0 shadow-[0_0_30px_rgba(0,0,0,0.8)]">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="text-[7px] font-black uppercase tracking-widest text-blue-400">UDF: <span className="text-white ml-1">{booth.udf}</span></div>
+                                            <div className="text-[7px] font-black uppercase tracking-widest text-rose-400">LDF: <span className="text-white ml-1">{booth.ldf}</span></div>
+                                            <div className="text-[7px] font-black uppercase tracking-widest text-amber-500">NDA: <span className="text-white ml-1">{booth.nda}</span></div>
+                                            <div className="text-[7px] font-black uppercase tracking-widest text-slate-400">NEU: <span className="text-white ml-1">{booth.neutral}</span></div>
+                                        </div>
+                                        <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900 rotate-45 border-r border-b border-indigo-500/30" />
+                                    </div>
+
                                     <span className="text-[8px] font-black px-3 py-1 bg-white/5 text-slate-400 rounded-full mb-4 inline-block group-hover:bg-indigo-500 group-hover:text-white transition-all tracking-widest uppercase">Unit {booth.number}</span>
                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-200 line-clamp-1 mb-6">{booth.name}</h4>
                                     <div className="space-y-3">
