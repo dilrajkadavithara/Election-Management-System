@@ -5,8 +5,14 @@ import random
 import json
 from datetime import datetime, timedelta
 
+from pathlib import Path
+
 # 1. SETUP DJANGO
-project_root = r'C:\Users\dilra\OneDrive\Desktop\Voterslist\voter_vault'
+# Dynamic path detection for cross-platform compatibility
+SCRIPT_DIR = Path(__file__).resolve().parent
+BASE_DIR = SCRIPT_DIR.parent
+project_root = str(BASE_DIR / 'voter_vault')
+
 if project_root not in sys.path:
     sys.path.append(project_root)
 
@@ -55,7 +61,7 @@ def generate_full_demo():
 
     # --- Step 2: Booth Setup (Excel Import) ---
     print("📋 Importing Polling Stations from Excel...")
-    excel_path = r'C:\Users\dilra\OneDrive\Desktop\Voterslist\Paravur_Polling_Stations_list (1).xlsx'
+    excel_path = str(BASE_DIR / 'Paravur_Polling_Stations_list (1).xlsx')
     df = pd.read_excel(excel_path)
     
     booth_count = 0
