@@ -83,69 +83,78 @@ const WarRoom = ({ allLocations, dashFilters }) => {
                                 <button
                                     key={p}
                                     onClick={() => setPerspective(p)}
-                                    className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${perspective === p ? 'bg-white text-black shadow-lg scale-105' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                                    className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${perspective === p ? 'bg-indigo-600 text-white shadow-[0_0_20px_#6366f1]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
                                 >
                                     {p}
                                 </button>
                             ))}
                         </div>
 
-                        {/* Filters Dropdowns */}
-                        <div className="flex gap-4 bg-white/5 p-4 rounded-3xl border border-white/5 backdrop-blur-xl">
-                            {/* Constituency Filter */}
-                            <div className="flex flex-col gap-1">
-                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Constituency</label>
-                                <select
-                                    className="bg-transparent text-white text-sm font-black uppercase tracking-widest outline-none cursor-pointer hover:text-indigo-400 transition-colors px-2"
-                                    value={filters.constituencyId}
-                                    onChange={(e) => setFilters({ ...filters, constituencyId: e.target.value, lbId: '', boothId: '' })}
-                                >
-                                    <option value="" className="bg-slate-900 text-white">All Areas</option>
-                                    {allLocations.map(c => <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>)}
-                                </select>
-                            </div>
-
-                            <div className="w-px h-10 bg-white/5 self-center" />
-
-                            {/* LB Filter */}
-                            <div className="flex flex-col gap-1">
-                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Local Body</label>
-                                <select
-                                    disabled={!filters.constituencyId}
-                                    className="bg-transparent text-white text-sm font-black uppercase tracking-widest outline-none cursor-pointer hover:text-indigo-400 transition-colors disabled:opacity-20 px-2"
-                                    value={filters.lbId}
-                                    onChange={(e) => setFilters({ ...filters, lbId: e.target.value, boothId: '' })}
-                                >
-                                    <option value="" className="bg-slate-900">All Panchayats</option>
-                                    {activeConst?.local_bodies.map(l => <option key={l.id} value={l.id} className="bg-slate-900">{l.name}</option>)}
-                                </select>
-                            </div>
-
-                            <div className="w-px h-10 bg-white/5 self-center" />
-
-                            {/* Booth Filter */}
-                            <div className="flex flex-col gap-1">
-                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Booth</label>
-                                <select
-                                    disabled={!filters.lbId}
-                                    className="bg-transparent text-white text-sm font-black uppercase tracking-widest outline-none cursor-pointer hover:text-indigo-400 transition-colors disabled:opacity-20 px-2"
-                                    value={filters.boothId}
-                                    onChange={(e) => setFilters({ ...filters, boothId: e.target.value })}
-                                >
-                                    <option value="" className="bg-slate-900">All Booths</option>
-                                    {activeLB?.booths.map(b => <option key={b.id} value={b.id} className="bg-slate-900">#{b.number}</option>)}
-                                </select>
-                            </div>
-                        </div>
-
                         {/* Hard Sync Button */}
                         <button
                             onClick={() => { setStats(null); loadTacticalData(); }}
-                            className="bg-indigo-600 hover:bg-indigo-500 text-white p-4 rounded-2xl shadow-lg transition-all active:scale-95 flex flex-col items-center justify-center gap-1 min-w-[100px]"
+                            className="bg-white/5 hover:bg-white/10 text-white p-4 rounded-2xl border border-white/10 transition-all active:scale-95 flex flex-col items-center justify-center gap-1 min-w-[100px] group"
                         >
-                            <span className="text-xl">🔄</span>
-                            <span className="text-[9px] font-black uppercase tracking-widest">Hard Sync</span>
+                            <span className="text-xl group-hover:rotate-180 transition-transform duration-700">🔄</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Sync Intel</span>
                         </button>
+                    </div>
+                </div>
+
+                {/* 🛡️ Tactical Control Bar */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white/5 p-6 rounded-[2.5rem] border border-white/5 shadow-2xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/5 rounded-full blur-[80px] -mr-32 -mt-32 transition-all group-hover:bg-rose-500/10" />
+
+                    {/* Constituency Filter */}
+                    <div className="flex flex-col gap-2 relative z-10">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs">🗺️</span>
+                            <label className="text-[9px] font-black uppercase text-rose-400 tracking-[0.2em]">Constituency</label>
+                        </div>
+                        <select
+                            className="lux-glass text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-rose-500/50 cursor-pointer hover:bg-white/10 transition-all outline-none w-full appearance-none shadow-inner"
+                            value={filters.constituencyId}
+                            onChange={(e) => setFilters({ ...filters, constituencyId: e.target.value, lbId: '', boothId: '' })}
+                        >
+                            <option value="" className="bg-slate-900">All Areas</option>
+                            {allLocations.map(c => <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>)}
+                        </select>
+                    </div>
+
+                    {/* Local Body Filter */}
+                    <div className="flex flex-col gap-2 relative z-10">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs">🏘️</span>
+                            <label className="text-[9px] font-black uppercase text-rose-400 tracking-[0.2em]">Area / Local Body</label>
+                        </div>
+                        <select
+                            disabled={!filters.constituencyId}
+                            className="lux-glass text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-rose-500/50 cursor-pointer hover:bg-white/10 transition-all outline-none w-full appearance-none disabled:opacity-20 shadow-inner"
+                            value={filters.lbId}
+                            onChange={(e) => setFilters({ ...filters, lbId: e.target.value, boothId: '' })}
+                        >
+                            <option value="" className="bg-slate-900">All Panchayats</option>
+                            {activeConst?.local_bodies.map(l => <option key={l.id} value={l.id} className="bg-slate-900">{l.name}</option>)}
+                        </select>
+                    </div>
+
+                    {/* Booth Filter */}
+                    <div className="flex flex-col gap-2 relative z-10">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs">📍</span>
+                            <label className="text-[9px] font-black uppercase text-rose-400 tracking-[0.2em]">Specific Unit</label>
+                        </div>
+                        <select
+                            disabled={!filters.lbId}
+                            className="lux-glass text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-rose-500/50 cursor-pointer hover:bg-white/10 transition-all outline-none w-full appearance-none disabled:opacity-20 shadow-inner"
+                            value={filters.boothId}
+                            onChange={(e) => setFilters({ ...filters, boothId: e.target.value })}
+                        >
+                            <option value="" className="bg-slate-900">All Booths</option>
+                            {activeLB?.booths.map(b => (
+                                <option key={b.id} value={b.id} className="bg-slate-900">Booth {b.number}</option>
+                            ))}
+                        </select>
                     </div>
                 </div>
             </div>

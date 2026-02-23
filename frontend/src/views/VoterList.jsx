@@ -60,21 +60,27 @@ const VoterList = ({
                 </div>
             </header>
 
-            <div className="lux-glass p-8 rounded-[2.5rem] border-white/5 shadow-2xl space-y-8">
-                <div className="flex flex-wrap gap-6 items-end">
+            {/* 🛡️ Intelligence Filter Bar */}
+            <div className="lux-glass px-8 py-10 rounded-[2.5rem] border border-white/5 shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-[100px] -mr-40 -mt-40 transition-all group-hover:bg-indigo-500/10" />
+
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 items-end relative z-10">
                     {[
-                        { label: 'Constituency', key: 'constituency', type: 'select', options: allLocations },
-                        { label: 'Local Body', key: 'lb', type: 'select', options: allLocations.find(c => String(c.id) === String(listFilters.constituency))?.local_bodies, disabled: !listFilters.constituency },
-                        { label: 'Booth Unit', key: 'booth', type: 'select', options: allLocations.find(c => String(c.id) === String(listFilters.constituency))?.local_bodies.find(l => String(l.id) === String(listFilters.lb))?.booths, disabled: !listFilters.lb },
-                        { label: 'Gender', key: 'gender', type: 'select', options: [{ id: 'MALE', name: 'MALE' }, { id: 'FEMALE', name: 'FEMALE' }, { id: 'TRANSGENDER', name: 'TRANSGENDER' }] },
-                        { label: 'Sentiment', key: 'leaning', type: 'select', options: [{ id: 'UDF', name: 'UDF' }, { id: 'LDF', name: 'LDF' }, { id: 'NDA', name: 'NDA' }, { id: 'NEUTRAL', name: 'NEUTRAL' }] },
-                        { label: 'Location', key: 'location', type: 'select', options: [{ id: 'LOCAL', name: 'LOCAL' }, { id: 'ABROAD', name: 'ABROAD' }, { id: 'STATE', name: 'OTHER STATE' }, { id: 'DISTRICT', name: 'OTHER DIST' }] }
+                        { label: 'Constituency', key: 'constituency', icon: '🗺️', options: allLocations },
+                        { label: 'Local Body', key: 'lb', icon: '🏘️', options: allLocations.find(c => String(c.id) === String(listFilters.constituency))?.local_bodies, disabled: !listFilters.constituency },
+                        { label: 'Booth Unit', key: 'booth', icon: '📍', options: allLocations.find(c => String(c.id) === String(listFilters.constituency))?.local_bodies?.find(l => String(l.id) === String(listFilters.lb))?.booths, disabled: !listFilters.lb },
+                        { label: 'Gender Alignment', key: 'gender', icon: '👤', options: [{ id: 'MALE', name: 'MALE' }, { id: 'FEMALE', name: 'FEMALE' }, { id: 'TRANSGENDER', name: 'TRANSGENDER' }] },
+                        { label: 'Voter Sentiment', key: 'leaning', icon: '⚖️', options: [{ id: 'UDF', name: 'UDF' }, { id: 'LDF', name: 'LDF' }, { id: 'NDA', name: 'NDA' }, { id: 'NEUTRAL', name: 'NEUTRAL' }] },
+                        { label: 'Status/Loc', key: 'location', icon: '🌎', options: [{ id: 'LOCAL', name: 'LOCAL' }, { id: 'ABROAD', name: 'ABROAD' }, { id: 'STATE', name: 'OTHER STATE' }, { id: 'DISTRICT', name: 'OTHER DIST' }] }
                     ].map(f => (
-                        <div key={f.key} className="flex-1 min-w-[150px] space-y-2">
-                            <label className="text-[9px] font-black uppercase text-slate-300 tracking-[0.2em] ml-1">{f.label}</label>
+                        <div key={f.key} className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs">{f.icon}</span>
+                                <label className="text-[9px] font-black uppercase text-indigo-400 tracking-[0.2em]">{f.label}</label>
+                            </div>
                             <select
                                 disabled={f.disabled}
-                                className="w-full bg-slate-900/50 text-slate-300 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all disabled:opacity-30 appearance-none"
+                                className="lux-glass text-white border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/50 cursor-pointer hover:bg-white/10 transition-all outline-none w-full appearance-none disabled:opacity-20 shadow-inner"
                                 value={listFilters[f.key]}
                                 onChange={(e) => {
                                     const val = e.target.value;
@@ -83,15 +89,30 @@ const VoterList = ({
                                     else setListFilters({ ...listFilters, [f.key]: val });
                                 }}
                             >
-                                <option value="" className="bg-slate-900">GLOBAL</option>
-                                {f.options?.map(o => <option key={o.id} value={o.id} className="bg-slate-900">{o.name || `BOOTH ${o.number}`}</option>)}
+                                <option value="" className="bg-slate-900">GLOBAL VIEW</option>
+                                {f.options?.map(o => (
+                                    <option key={o.id} value={o.id} className="bg-slate-900">
+                                        {o.name || `BOOTH ${o.number}`}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                     ))}
-                    <div className="flex gap-4 min-w-fit">
-                        <button onClick={() => { loadVoters(1); loadAdminData(); }} className="bg-white text-black px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-400 hover:text-white transition-all shadow-lg">Load Intelligence</button>
-                        <button onClick={() => { setListFilters({ constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '', serialFrom: '', serialTo: '', location: '' }); setSearchQuery(''); }} className="bg-white/5 text-slate-300 px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Reset</button>
-                    </div>
+                </div>
+
+                <div className="flex gap-4 mt-8 pt-8 border-t border-white/5 relative z-10">
+                    <button
+                        onClick={() => { loadVoters(1); loadAdminData(); }}
+                        className="bg-indigo-600 text-white px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-500 transition-all shadow-[0_10px_20px_rgba(99,102,241,0.2)] active:scale-95"
+                    >
+                        Synchronize Data
+                    </button>
+                    <button
+                        onClick={() => { setListFilters({ constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '', serialFrom: '', serialTo: '', location: '' }); setSearchQuery(''); }}
+                        className="bg-white/5 text-slate-400 px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-white/10 hover:text-white transition-all border border-white/5"
+                    >
+                        Reset Matrix
+                    </button>
                 </div>
             </div>
 
