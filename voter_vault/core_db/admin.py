@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Constituency, Booth, Voter, UserProfile
+from .models import Constituency, LocalBody, Booth, Voter, UserProfile
 
 @admin.register(Constituency)
 class ConstituencyAdmin(admin.ModelAdmin):
@@ -7,23 +7,33 @@ class ConstituencyAdmin(admin.ModelAdmin):
     search_fields = ('name', 'code')
     ordering = ('name',)
 
+@admin.register(LocalBody)
+class LocalBodyAdmin(admin.ModelAdmin):
+    list_display = ('name', 'body_type', 'constituency', 'head_name', 'created_at')
+    list_filter = ('constituency', 'body_type')
+    search_fields = ('name', 'head_name')
+    ordering = ('constituency', 'name')
+
 @admin.register(Booth)
 class BoothAdmin(admin.ModelAdmin):
-    list_display = ('number', 'constituency', 'name', 'created_at')
-    list_filter = ('constituency',)
-    search_fields = ('number', 'name', 'constituency__name')
+    list_display = ('number', 'constituency', 'local_body', 'name', 'created_at')
+    list_filter = ('constituency', 'local_body')
+    search_fields = ('number', 'name', 'constituency__name', 'local_body__name')
     ordering = ('constituency', 'number')
 
 @admin.register(Voter)
 class VoterAdmin(admin.ModelAdmin):
-    list_display = ('serial_no', 'epic_id', 'full_name', 'gender', 'age', 'booth', 'status')
-    list_filter = ('gender', 'status', 'booth__constituency')
+    list_display = ('serial_no', 'epic_id', 'full_name', 'voter_leaning', 'current_location', 'booth', 'status')
+    list_filter = ('voter_leaning', 'current_location', 'status', 'booth__constituency')
     search_fields = ('epic_id', 'full_name', 'house_name', 'relation_name')
     ordering = ('booth', 'serial_no')
     
     fieldsets = (
         ('Basic Information', {
             'fields': ('booth', 'serial_no', 'epic_id', 'full_name', 'status')
+        }),
+        ('Intelligence Alignment', {
+            'fields': ('voter_leaning', 'current_location', 'voting_probability', 'phone_no')
         }),
         ('Demographics', {
             'fields': ('gender', 'age', 'relation_type', 'relation_name')
