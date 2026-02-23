@@ -27,11 +27,11 @@ const AdminControl = ({
     dashboardStats
 }) => {
     return (
-        <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-12 lux-animate-in pb-32 text-white">
-            <header className="flex justify-between items-end border-b border-white/5 pb-10">
+        <div className="min-h-screen lux-mesh-bg p-12 pl-[420px] pr-16 space-y-16 lux-animate-in pb-32 text-white">
+            <header className="flex flex-wrap justify-between items-end border-b border-white/5 pb-10 gap-12">
                 <div>
-                    <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient">Neural Config Engine</h1>
-                    <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Elite Organizational Governance Protocol</p>
+                    <h1 className="text-7xl font-black tracking-tighter uppercase lux-text-gradient">Neural Config Engine</h1>
+                    <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[11px] mt-4 ml-1">Elite Organizational Governance Protocol</p>
                 </div>
                 <div className="flex gap-8">
                     <div className="lux-glass border-rose-500/20 px-10 py-6 rounded-[2rem] text-center shadow-2xl relative overflow-hidden group">

@@ -232,7 +232,9 @@ body {
     .pl-96,
     .p-12,
     .pl-80,
-    .space-y-12 {
+    .pl-\[420px\],
+    .space-y-12,
+    .space-y-16 {
         padding: 0 !important;
         margin: 0 !important;
         padding-left: 0 !important;

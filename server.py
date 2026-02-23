@@ -37,14 +37,15 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"⚠️ Deployment Gate Error: {e}")
 
-    # Run Uvicorn
-    # reload=False is safer here because uploading files to data/ 
-    # would trigger a restart if reload was True.
+    # Run Uvicorn PROD mode
+    # reload=False is mandatory for production to prevent restarts on file uploads
+    is_dev = os.getenv("DEV_MODE", "False").lower() == "true"
+    
     uvicorn.run(
         "backend.main:app",
         host="0.0.0.0",
         port=8000,
-        reload=False,
+        reload=is_dev,
         proxy_headers=True,
         forwarded_allow_ips="*"  
     )

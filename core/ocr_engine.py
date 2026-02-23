@@ -12,6 +12,14 @@ from dotenv import load_dotenv
 from pathlib import Path
 import time
 import logging
+import random
+import threading
+from contextlib import contextmanager
+
+try:
+    import redis
+except ImportError:
+    redis = None
 
 # Load env for API Key
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,7 +49,10 @@ class OCREngine:
         api_key = os.getenv("GOOGLE_API_KEY")
         if api_key:
             genai.configure(api_key=api_key)
-            self.gemini_model = genai.GenerativeModel('gemini-flash-latest')
+            self.gemini_model = genai.GenerativeModel(
+                'gemini-flash-latest',
+                generation_config={"response_mime_type": "application/json"}
+            )
         else:
             self.gemini_model = None
 
@@ -66,64 +77,110 @@ class OCREngine:
             logger.error(f"❌ Gemini Upload Error: {e}")
             return None
 
+    # Professional Redis-based Global Throttle for Multi-Container Production
+    # Ensures the 4GB server is protected even across multiple workers/users
+    @classmethod
+    @contextmanager
+    def get_throttle(cls):
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        
+        # 1. Try Redis Throttle (Production)
+        if redis:
+            try:
+                r = redis.from_url(redis_url, socket_timeout=2)
+                r.ping()
+                
+                # Global Limit of 12 for the entire server fleet
+                LIMIT = 12
+                POLL_INTERVAL = 0.5
+                
+                acquired = False
+                while not acquired:
+                    current = r.incr("global_ocr_active")
+                    if current <= LIMIT:
+                        acquired = True
+                    else:
+                        r.decr("global_ocr_active")
+                        time.sleep(POLL_INTERVAL)
+                try:
+                    yield
+                finally:
+                    r.decr("global_ocr_active")
+                return
+            except Exception as e:
+                logger.warning(f"Redis Throttle failed ({e}), falling back to local throttle.")
+
+        # 2. Local Throttle Fallback (Development/Windows)
+        if not hasattr(cls, "_local_throttle"):
+            cls._local_throttle = threading.Semaphore(12)
+        
+        with cls._local_throttle:
+            yield
+
     def extract_from_cached_file(self, google_file, page_num):
         """Ultra-fast, low-cost extraction using pre-uploaded file reference with retry logic."""
         if not self.gemini_model: return None
 
-        # Hyper-Targeted Page Prompt
+        # Hyper-Targeted Prompt optimized for Single-Page Vision
+        # We don't mention 'Page X' because the upload is a single image file now.
         prompt = f"""
-        Act as a professional Data Entry Specialist.
-        FOCUS ONLY ON PAGE {page_num} of the attached document. 
-        Ignore all other pages. 
-        Extract EVERY voter record from THIS PAGE ONLY.
+        Act as a professional Election Data Specialist.
+        Extract EVERY voter record from the attached document.
+        The document corresponds to Page {page_num} of the original roll.
         
-        Expected Format (JSON List):
+        Output EXACTLY this JSON List format:
         [{{ "serial_number": "number", "epic_id": "text", "name_malayalam": "text", "relation_name_malayalam": "text", "relation_type": "Father/Husband/Other", "house_number": "text", "house_name_malayalam": "text", "age": number, "gender": "Male/Female" }}]
 
-        IMPORTANT: If no records are found on Page {page_num}, return an empty list [].
-        Return ONLY the raw JSON.
+        IMPORTANT: If no records are found, return []. No analysis, just raw JSON.
         """
 
-        max_retries = 8 # Increased retries for heavy team usage
-        base_delay = 10 # Longer delay to let API burst quota reset
-        for attempt in range(max_retries):
-            try:
-                response = self.gemini_model.generate_content([prompt, google_file])
-                text = response.text.strip()
-                
-                # Clean possible markdown
-                if "```json" in text: text = text.split("```json")[1].split("```")[0].strip()
-                elif "```" in text: text = text.split("```")[1].split("```")[0].strip()
-                
-                # Find JSON boundaries
-                start = text.find('[')
-                if start == -1: start = text.find('{')
-                if start != -1:
-                    # Attempt robust parse
-                    try:
-                        parsed_json, _ = json.JSONDecoder().raw_decode(text[start:])
-                        return parsed_json
-                    except:
-                        # Fallback for simple fragments
-                        import json
-                        return json.loads(text[start:])
-                return [] 
-            except Exception as e:
-                err_str = str(e).lower()
-                if "429" in err_str or "quota" in err_str or "limit" in err_str:
-                    delay = base_delay * (1.5 ** attempt) # Slightly slower growth
-                    logger.warning(f"⏳ Page {page_num} waiting on Quota... ({delay}s) [{attempt+1}/{max_retries}]")
-                    time.sleep(delay)
-                    continue
-                
-                # If safety or internal error, wait briefly and retry
-                if "safety" in err_str or "internal" in err_str or "500" in err_str:
-                    time.sleep(5)
-                    continue
+        max_retries = 10 
+        base_delay = 3 
+        
+        # Use Global Fleet Throttle (Redis or Local)
+        with self.get_throttle():
+            for attempt in range(max_retries):
+                try:
+                    # Injected Jitter: Prevents "Thundering Herd" on retries
+                    import random
+                    if attempt > 0:
+                        wait_time = (base_delay * (1.5 ** attempt)) + random.uniform(1, 5)
+                        logger.warning(f"⏳ Page {page_num} Quota hit. Jittered sleep: {wait_time:.1f}s... [{attempt+1}/{max_retries}]")
+                        time.sleep(wait_time)
 
-                logger.error(f"❌ Page {page_num} Error: {e}")
-                return []
-        return None
+                    response = self.gemini_model.generate_content([prompt, google_file])
+                    text = response.text.strip()
+                    
+                    # Robust Clean & Parse
+                    if "```json" in text: text = text.split("```json")[1].split("```")[0].strip()
+                    elif "```" in text: text = text.split("```")[1].split("```")[0].strip()
+                    
+                    start = text.find('[')
+                    if start == -1: start = text.find('{')
+                    
+                    if start != -1:
+                        try:
+                            # Use JSONDecoder for fragments
+                            parsed_json, _ = json.JSONDecoder().raw_decode(text[start:])
+                            return parsed_json
+                        except:
+                            return json.loads(text[start:])
+                    return [] 
+                except Exception as e:
+                    err_str = str(e).lower()
+                    
+                    # Handle Rate Limits (429) and Server Flakiness (500/503)
+                    if any(x in err_str for x in ["429", "quota", "limit", "exhausted", "503", "500"]):
+                        continue
+                    
+                    # Handle Safety Filters or Internal AI Blocks
+                    if "safety" in err_str or "unfinish" in err_str:
+                        time.sleep(random.uniform(2, 4))
+                        continue
+
+                    logger.error(f"❌ Page {page_num} Connection Error: {e}")
+                    return []
+            return None
 
     def extract_from_pdf(self, pdf_path, page_num=None, pdf_data=None):
         """Processes specific pages or entire PDF using Gemini with retry logic. Targeted extraction avoids token limits."""

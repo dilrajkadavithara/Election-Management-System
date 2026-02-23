@@ -23,6 +23,8 @@ class LocalBody(models.Model):
     constituency = models.ForeignKey(Constituency, on_delete=models.CASCADE, related_name='local_bodies')
     name = models.CharField(max_length=200)
     body_type = models.CharField(max_length=20, choices=TYPES, default='PANCHAYAT')
+    head_name = models.CharField(max_length=200, blank=True, null=True, help_text="Official in charge of this Local Body")
+    head_phone = models.CharField(max_length=20, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -40,6 +42,8 @@ class Booth(models.Model):
     polling_station_no = models.CharField(max_length=100, blank=True, help_text="Polling Station Number (if different from booth number)")
     name = models.CharField(max_length=300, blank=True, help_text="Optional name/location of the booth")
     polling_station_name = models.CharField(max_length=500, blank=True, help_text="Physical location of the polling station")
+    head_name = models.CharField(max_length=200, blank=True, null=True, help_text="Primary contact person for this booth")
+    head_phone = models.CharField(max_length=20, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:

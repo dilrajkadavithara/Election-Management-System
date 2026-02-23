@@ -5,47 +5,80 @@ import logging
 import re
 from core.ocr_engine import OCREngine
 
+logger = logging.getLogger("BatchProcessor")
+
 class BatchProcessor:
     def __init__(self, tesseract_cmd=None):
         self.engine = OCREngine(tesseract_cmd=tesseract_cmd)
         self.results = []
 
     def process_pdf_directly(self, pdf_path, page_range=None, callback=None):
-        """Neural Parallel Upgrade: Processes multiple pages simultaneously using Gemini."""
+        """High-Precision Image Mode: Converts PDF pages to high-res images before AI extraction."""
         import concurrent.futures
+        from core.pdf_processor import PDFProcessor
+        import tempfile
+        import shutil
         all_standardized = []
         
-        # 1. Upload to Cloud ONCE (The Speed/Cost Optimizer)
-        google_file = self.engine.upload_file(pdf_path)
-        if not google_file:
-            logging.error("Failed to upload file to Gemini. Falling back to slow byte mode.")
+        # Cross-platform processor initialization
+        pdf_proc = PDFProcessor()
         
-        # Reduced concurrency to avoid 429 Rate Limit issues on Gemini Free Tier
-        max_workers = 5 
-        pages = page_range if page_range else [None]
+        # Concurrency Management: 12 is safe for JPEG-mode on 4GB+ systems
+        max_workers = 12 
+        
+        # Determine pages to process
+        if page_range:
+            if isinstance(page_range, (list, tuple)) and len(page_range) == 2:
+                start_page, end_page = page_range
+                pages = list(range(start_page, end_page + 1))
+            else:
+                pages = page_range
+        else:
+            # Correct method to get total pages safely
+            total_pages = pdf_proc.convert_to_images(pdf_path, "", total_pages_only=True)
+            pages = list(range(1, total_pages + 1))
+        
+        logger.info(f"🚀 Speed Boost Extraction: {len(pages)} pages | {max_workers} Workers | JPEG-95 Mode")
         
         def process_page(page_num):
+            temp_dir = tempfile.mkdtemp(prefix=f"ocr_page_{page_num}_")
             try:
-                # Use CACHED mode if upload succeeded, else fallback
-                if google_file:
-                    raw_data = self.engine.extract_from_cached_file(google_file, page_num)
-                else:
-                    raw_data = self.engine.extract_from_pdf(pdf_path, page_num=page_num)
+                # 1. Page-to-Image Burst (Targeted 'Sniper' Conversion)
+                # We convert ONLY the current page to protect RAM
+                page_imgs = pdf_proc.convert_to_images(
+                    pdf_path, temp_dir, dpi=300, 
+                    first_page=page_num, last_page=page_num
+                )
+                if not page_imgs: return page_num, []
                 
+                page_img_path = page_imgs[0]
+                
+                # 2. Page-level AI Extraction
+                # We upload the single image to keep tokens 30x cheaper
+                google_file = self.engine.upload_file(page_img_path)
+                if not google_file:
+                    return page_num, []
+
+                raw_data = self.engine.extract_from_cached_file(google_file, page_num)
+                
+                # Cleanup Cloud File immediately
+                try:
+                    import google.generativeai as genai
+                    genai.delete_file(google_file.name)
+                except: pass
+
                 if not raw_data:
                     return page_num, []
 
                 raw_list = []
-                if isinstance(raw_data, list):
-                    raw_list = raw_data
+                if isinstance(raw_data, list): raw_list = raw_data
                 elif isinstance(raw_data, dict):
                     for val in raw_data.values():
                         if isinstance(val, list):
                             raw_list = val
                             break
                 
-                if not raw_list:
-                    return page_num, []
+                if not raw_list: return page_num, []
 
                 page_results = []
                 for entry in raw_list:
@@ -61,19 +94,19 @@ class BatchProcessor:
                         "Gender": str(entry.get("gender") or entry.get("Gender", "")).title(),
                         "EPIC_ID": entry.get("epic_id") or entry.get("EPIC_ID", ""),
                         "Serial_OCR": str(entry.get("serial_number") or entry.get("Serial_OCR", "")),
-                        "Image_Path": f"pdf_page_{page_num if page_num else 'all'}",
+                        "Image_Path": f"extracted_p{page_num}", # Placeholder as images are ephemeral
                         "Filename": os.path.basename(pdf_path)
                     }
                     page_results.append(parsed_info)
                 return page_num, page_results
-            except Exception as e:
-                logging.error(f"Thread Error on Page {page_num}: {e}")
-                return page_num, []
 
-        # High-Performance Neural Parallelism
-        # Scaled to 30 workers for ultra-fast extraction.
-        max_workers = 5 
-        
+            except Exception as e:
+                logging.error(f"❌ Thread Error on Page {page_num}: {e}")
+                return page_num, []
+            finally:
+                # 3. Mandatory Housekeeping: Prevent Disk Bloat
+                shutil.rmtree(temp_dir, ignore_errors=True)
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_page = {executor.submit(process_page, p): p for p in pages}
             ordered_results = {}
@@ -91,13 +124,6 @@ class BatchProcessor:
                         self._apply_standardization(voter, voter["voter_id"])
                         all_standardized.append(voter)
         
-        # Cleanup: Remove file from Google Cloud to be a good citizen
-        try:
-            if google_file:
-                import google.generativeai as genai
-                genai.delete_file(google_file.name)
-        except: pass
-
         return all_standardized
 
     def _apply_standardization(self, parsed_info, expected_serial):

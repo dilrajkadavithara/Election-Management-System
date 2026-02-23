@@ -49,7 +49,11 @@ const Dashboard = ({
                         probability: warFilters.probability,
                         perspective: perspective
                     });
-                    setWarStats(data);
+                    setWarStats({
+                        probability: data.summary?.win_prob || 0,
+                        supporter_count: data.summary?.supporters || 0,
+                        total_pool: data.summary?.digitized || 0
+                    });
                 } catch (e) {
                     console.error("Failed to fetch War Room stats", e);
                 }
@@ -121,16 +125,16 @@ const Dashboard = ({
 
     if (viewMode === 'WAR_ROOM') {
         return (
-            <div className="min-h-screen lux-mesh-bg p-8 pl-96 flex gap-6 lux-animate-in">
+            <div className="min-h-screen lux-mesh-bg p-12 pl-[420px] pr-16 flex flex-col gap-10 lux-animate-in">
 
                 {/* LEFT: TACTICAL MAIN DISPLAY */}
-                <div className="flex-grow space-y-6">
-                    <header className="flex justify-between items-center border-b border-white/5 pb-6">
+                <div className="flex-grow space-y-8">
+                    <header className="flex flex-wrap justify-between items-center border-b border-white/5 pb-10 gap-10">
                         <div>
-                            <button onClick={() => setViewMode('CLASSIC')} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white mb-2 flex items-center gap-2 transition-colors">
+                            <button onClick={() => setViewMode('CLASSIC')} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white mb-4 flex items-center gap-2 transition-colors">
                                 ← Main Dashboard
                             </button>
-                            <h1 className="text-6xl font-black tracking-tighter uppercase leading-none">
+                            <h1 className="text-7xl font-black tracking-tighter uppercase leading-none">
                                 Victory <span className="lux-text-gradient">Analysis</span>
                             </h1>
                         </div>
@@ -328,13 +332,13 @@ const Dashboard = ({
 
     // --- CLASSIC DASHBOARD VIEW ---
     return (
-        <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-12 lux-animate-in pb-32 relative z-0">
+        <div className="min-h-screen lux-mesh-bg p-12 pl-[420px] pr-16 space-y-16 lux-animate-in pb-32 relative z-0">
 
             {/* --- CLASSIC VIEW: FILTER HEADER --- */}
-            <header className="flex justify-between items-center border-b border-white/5 pb-12 relative z-20">
+            <header className="flex flex-wrap justify-between items-center border-b border-white/5 pb-12 relative z-20 gap-12">
                 <div>
-                    <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-emerald-500 mb-2 italic">Official Campaign</h3>
-                    <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient">AI Dashboard</h1>
+                    <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-emerald-500 mb-3 italic">Official Campaign</h3>
+                    <h1 className="text-7xl font-black tracking-tighter uppercase lux-text-gradient">AI Dashboard</h1>
                 </div>
 
                 <div className="flex flex-col gap-4 items-end">
@@ -372,18 +376,28 @@ const Dashboard = ({
             {/* --- CLASSIC VIEW: METRICS GRID --- */}
             <div className="grid grid-cols-12 gap-10 relative z-10">
 
-                {/* 1. Total Registered Card */}
-                <div className="col-span-4 lux-card p-10 relative overflow-hidden group h-[220px] flex flex-col justify-center">
+                {/* 0. Total Voters Card */}
+                <div className="col-span-3 lux-card p-10 relative overflow-hidden group h-[220px] flex flex-col justify-center">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-slate-500/10 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-slate-500/20 transition-all duration-700" />
+                    <div className="text-[3rem] mb-2 z-10">👥</div>
+                    <div>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Total Voters</span>
+                        <span className="text-6xl font-black text-white tracking-tighter block leading-none">{(dashboardStats.total || 0).toLocaleString()}</span>
+                    </div>
+                </div>
+
+                {/* 1. Total Digitized Card */}
+                <div className="col-span-3 lux-card p-10 relative overflow-hidden group h-[220px] flex flex-col justify-center">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-indigo-500/20 transition-all duration-700" />
                     <div className="text-[3rem] mb-2 z-10">💎</div>
                     <div>
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Total Registered</span>
-                        <span className="text-6xl font-black text-white tracking-tighter block leading-none">{(dashboardStats.tagging_progress || total).toLocaleString()}</span>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Total Digitized</span>
+                        <span className="text-6xl font-black text-white tracking-tighter block leading-none">{(dashboardStats.tagging_progress || 0).toLocaleString()}</span>
                     </div>
                 </div>
 
                 {/* 2. Male Representation Card */}
-                <div className="col-span-4 lux-card p-10 relative overflow-hidden group h-[220px] flex flex-col justify-center">
+                <div className="col-span-3 lux-card p-10 relative overflow-hidden group h-[220px] flex flex-col justify-center">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-blue-500/20 transition-all duration-700" />
                     <div className="text-[3rem] text-blue-500/50 mb-2 z-10">🛡️</div>
                     <div>
@@ -393,7 +407,7 @@ const Dashboard = ({
                 </div>
 
                 {/* 3. Female Representation Card */}
-                <div className="col-span-4 lux-card p-10 relative overflow-hidden group h-[220px] flex flex-col justify-center">
+                <div className="col-span-3 lux-card p-10 relative overflow-hidden group h-[220px] flex flex-col justify-center">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-rose-500/20 transition-all duration-700" />
                     <div className="text-[3rem] text-rose-500/50 mb-2 z-10">✨</div>
                     <div>
@@ -463,7 +477,7 @@ const Dashboard = ({
                             <div className="flex justify-between items-end">
                                 <span className="text-5xl font-black text-white tracking-tighter">{(dashboardStats.tagging_progress || 0).toLocaleString()}</span>
                             </div>
-                            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mt-2 block">Records digitized</span>
+                            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mt-2 block">Intelligence Ready</span>
                         </div>
                     </div>
                     <div className="w-full bg-slate-800 h-1.5 rounded-full mt-4 overflow-hidden">

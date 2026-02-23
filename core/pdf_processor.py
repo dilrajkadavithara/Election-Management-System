@@ -1,53 +1,68 @@
 import os
+import logging
 from pdf2image import convert_from_path
 
-class PDFProcessor:
-    def __init__(self, poppler_path=r"C:\poppler\poppler-25.12.0\Library\bin"):
-        self.poppler_path = poppler_path
+logger = logging.getLogger("PDFProcessor")
 
-    def convert_to_images(self, pdf_path, output_dir, dpi=200):
+class PDFProcessor:
+    def __init__(self, poppler_path=None):
+        # Professional Cross-Platform Path Detection
+        # Local Windows defaults to the specific library path
+        # Linux Production defaults to system-installed binary
+        if not poppler_path:
+            if os.name == 'nt': # Windows
+                self.poppler_path = r"C:\poppler\poppler-25.12.0\Library\bin"
+            else: # Linux/Docker
+                self.poppler_path = None # Uses system PATH
+        else:
+            self.poppler_path = poppler_path
+
+    def convert_to_images(self, pdf_path, output_dir, dpi=200, first_page=None, last_page=None, total_pages_only=False):
         """
-        Converts PDF to images using a memory-efficient chunked approach.
-        Instead of loading all pages at once (which causes OOM crashes),
-        we process pages in small batches.
+        Converts PDF to images using a memory-efficient targeted approach.
+        If first_page and last_page are provided, it only converts that range.
         """
         if not os.path.exists(pdf_path):
             raise FileNotFoundError(f"PDF not found at {pdf_path}")
             
-        os.makedirs(output_dir, exist_ok=True)
-        
         from pdf2image import pdfinfo_from_path, convert_from_path
         
         # 1. Get total page count first (lightweight)
         info = pdfinfo_from_path(pdf_path, poppler_path=self.poppler_path)
         total_pages = info["Pages"]
         
+        if total_pages_only:
+            return total_pages
+
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Determine range
+        start = first_page if first_page else 1
+        end = last_page if last_page else total_pages
+        
         image_paths = []
         BATCH_SIZE = 1 # Process 1 page at a time for absolute safety
         
-        for start_page in range(1, total_pages + 1, BATCH_SIZE):
-            end_page = min(start_page + BATCH_SIZE - 1, total_pages)
+        for start_page in range(start, end + 1, BATCH_SIZE):
+            chunk_end = min(start_page + BATCH_SIZE - 1, end)
             
-            # Convert only this chunk
+            # Convert only this specific chunk/page
             pages = convert_from_path(
                 pdf_path,
                 dpi=dpi,
                 grayscale=True,
                 first_page=start_page,
-                last_page=end_page,
+                last_page=chunk_end,
                 poppler_path=self.poppler_path
             )
             
             for i, page in enumerate(pages):
                 page_num = start_page + i
-                path = os.path.abspath(os.path.join(output_dir, f"page_{page_num:03d}.png"))
-                page.save(path, "PNG")
+                path = os.path.abspath(os.path.join(output_dir, f"page_{page_num:03d}.jpg"))
+                page.save(path, "JPEG", quality=95)
                 image_paths.append(path)
-                
-                # Explicitly close/delete to free RAM immediately
                 page.close()
             
-            # Help Garbage Collector
             del pages
             import gc
             gc.collect()

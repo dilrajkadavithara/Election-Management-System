@@ -23,11 +23,11 @@ const VoterList = ({
     const totalPages = Math.max(1, Math.ceil(voterTotal / pageSize));
 
     return (
-        <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-12 lux-animate-in">
-            <header className="flex justify-between items-end border-b border-white/5 pb-10">
+        <div className="min-h-screen lux-mesh-bg p-12 pl-[420px] pr-16 space-y-12 lux-animate-in">
+            <header className="flex flex-wrap justify-between items-end border-b border-white/5 pb-10 gap-10">
                 <div>
-                    <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient">Voters Base</h1>
-                    <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[10px] mt-2 ml-1">Live Database: {voterTotal} Synchronized Profiles</p>
+                    <h1 className="text-7xl font-black tracking-tighter uppercase lux-text-gradient">Voters Base</h1>
+                    <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-[11px] mt-4 ml-1">Live Database: {voterTotal} Synchronized Profiles</p>
                 </div>
                 <div className="flex gap-6 items-center">
                     <button

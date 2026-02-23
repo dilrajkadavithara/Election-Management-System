@@ -5,6 +5,7 @@ import fastapi
 import shutil
 import uuid
 import jwt
+# Reload trigger
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from pathlib import Path
@@ -368,6 +369,7 @@ async def get_strategic_analytics_api(constituency_id: str = None, user_info=Dep
 @app.get("/api/war-room/stats")
 async def get_war_stats(
     constituency_id: str = None, lb: str = None, booth: str = None,
+    perspective: str = 'UDF',
     user_info=Depends(get_current_user)
 ):
     c_id = int(constituency_id) if constituency_id and str(constituency_id).isdigit() else None
@@ -378,7 +380,8 @@ async def get_war_stats(
         from core.db_bridge import get_war_room_tactical_stats
         from django.contrib.auth.models import User
         user = User.objects.get(username=user_info['username'])
-        return get_war_room_tactical_stats(user.profile, c_id, l_id, b_id)
+        res = get_war_room_tactical_stats(user.profile, c_id, l_id, b_id, perspective)
+        return res
         
     return await sync_to_async(sync_war_wrapper, thread_sensitive=True)()
 

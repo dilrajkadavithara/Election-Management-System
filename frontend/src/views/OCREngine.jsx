@@ -134,9 +134,9 @@ const OCREngine = ({
     const isLocationValid = !!(ocrTargetLoc.constId && ocrTargetLoc.lbId && (ocrTargetLoc.boothId || ocrTargetLoc.boothNo) && ocrTargetLoc.psNo && ocrTargetLoc.psName);
 
     return (
-        <div className="min-h-screen lux-mesh-bg p-12 pl-96 space-y-8 lux-animate-in pb-32" style={{ fontFamily: '"Inter", sans-serif' }}>
-            <header className="space-y-6">
-                <h1 className="text-6xl font-black tracking-tighter uppercase lux-text-gradient leading-none" style={{ fontFamily: '"Rajdhani", sans-serif' }}>Voter List Importer</h1>
+        <div className="min-h-screen lux-mesh-bg p-12 pl-[420px] pr-16 space-y-12 lux-animate-in pb-32" style={{ fontFamily: '"Inter", sans-serif' }}>
+            <header className="space-y-8">
+                <h1 className="text-7xl font-black tracking-tighter uppercase lux-text-gradient leading-none" style={{ fontFamily: '"Rajdhani", sans-serif' }}>Voter List Importer</h1>
 
                 <div className="lux-glass bg-slate-900/80 p-10 rounded-[2rem] border border-white/5 shadow-2xl space-y-10 relative overflow-hidden">
                     <h3 className="lux-tech-label mb-2 italic border-b border-white/5 pb-4">Select Location</h3>

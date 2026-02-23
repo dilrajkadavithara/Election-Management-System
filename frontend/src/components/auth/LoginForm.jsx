@@ -38,10 +38,11 @@ const LoginForm = ({
                                 <input
                                     type="text"
                                     placeholder="ENTER_UID"
+                                    autoComplete="off"
                                     required
                                     value={loginUser}
                                     onChange={(e) => setLoginUser(e.target.value)}
-                                    className="w-full bg-slate-900/50 text-white border border-white/10 rounded-2xl px-8 py-5 text-sm font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-800"
+                                    className="w-full bg-slate-900/50 text-white border border-white/10 rounded-2xl px-8 py-5 text-sm font-black tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-800"
                                 />
                                 <div className="absolute right-6 top-12 text-slate-700">👤</div>
                             </div>
@@ -54,7 +55,7 @@ const LoginForm = ({
                                     required
                                     value={loginPass}
                                     onChange={(e) => setLoginPass(e.target.value)}
-                                    className="w-full bg-slate-900/50 text-white border border-white/10 rounded-2xl px-8 py-5 text-sm font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-800"
+                                    className="w-full bg-slate-900/50 text-white border border-white/10 rounded-2xl px-8 py-5 text-sm font-black tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-800"
                                 />
                                 <div className="absolute right-6 top-12 text-slate-700">🔑</div>
                             </div>
