@@ -66,3 +66,5 @@ certbot/
 voter_vault/static/
 var/
 .vite/
+# Local Backups
+backups/

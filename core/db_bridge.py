@@ -177,13 +177,16 @@ def get_strategic_analytics(user_profile, constituency_id=None):
         "recent_activity": recent_activity
     }
 
-def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id=None):
+def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id=None, gender=None, leaning=None, location=None):
     from django.db.models import Count, Case, When, IntegerField, Value
     
     voters = user_profile.get_accessible_voters()
     if constituency_id: voters = voters.filter(booth__constituency_id=constituency_id)
     if lb_id: voters = voters.filter(booth__local_body_id=lb_id)
     if booth_id: voters = voters.filter(booth_id=booth_id)
+    if gender: voters = voters.filter(gender__iexact=gender)
+    if leaning: voters = voters.filter(voter_leaning=leaning)
+    if location: voters = voters.filter(current_location=location)
     
     # Single aggregated query for ALL counts
     stats = voters.aggregate(

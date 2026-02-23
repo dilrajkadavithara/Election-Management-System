@@ -499,67 +499,97 @@ const DashboardV2 = ({
                         const isLastCol = i % 5 === 4;
 
                         return (
-                            <div key={i} onClick={() => { setListFilters({ ...listFilters, booth: booth.id }); setView('voters'); }} className="group relative cursor-pointer shadow-lg perspective-1000 z-10 hover:z-[100]">
-                                {/* Glass background separated to prevent CSS backdrop-filter from implicitly clipping the tooltip */}
-                                <div className="absolute inset-0 lux-glass rounded-[1.5rem] border-white/5 transition-all duration-500 group-hover:bg-white/10 pointer-events-none" />
+                            <div
+                                key={i}
+                                onClick={() => { setListFilters({ ...listFilters, booth: booth.id }); setView('voters'); }}
+                                className="group relative cursor-pointer shadow-lg perspective-1000 z-10 hover:z-[100]"
+                            >
+                                {(() => {
+                                    const scores = [
+                                        { party: 'UDF', val: booth.udf || 0, color: 'indigo' },
+                                        { party: 'LDF', val: booth.ldf || 0, color: 'rose' },
+                                        { party: 'NDA', val: booth.nda || 0, color: 'amber' },
+                                        { party: 'NEUTRAL', val: booth.neutral || 0, color: 'slate' }
+                                    ].sort((a, b) => b.val - a.val);
 
-                                {/* Massive White External Tooltip */}
-                                <div className={`absolute ${i < 5 ? 'top-[calc(100%+15px)]' : 'bottom-[calc(100%+15px)]'} ${isFirstCol ? 'left-0 translate-x-0' : isLastCol ? 'right-0 translate-x-0' : 'left-1/2 -translate-x-1/2'} w-[300px] bg-white p-6 rounded-3xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 shadow-[0_30px_60px_rgba(0,0,0,0.6)] flex flex-col gap-4 border-4 border-indigo-100 ${i < 5 ? '-translate-y-4 group-hover:translate-y-0' : 'translate-y-4 group-hover:translate-y-0'}`}>
-                                    <div className="border-b border-slate-200 pb-3">
-                                        <div className="flex justify-between items-start gap-4">
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-1">Booth {booth.number}</p>
-                                                <p className="text-sm font-black text-slate-900 leading-snug mb-2 break-words">{booth.name}</p>
-                                            </div>
-                                            <div className="text-right shrink-0 bg-slate-50 p-2 rounded-xl border border-slate-100 min-w-[70px]">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Total</p>
-                                                <p className="text-xl font-black text-slate-900 leading-none">{booth.total}</p>
-                                            </div>
-                                        </div>
+                                    const dom = (scores[0].val > 0 && scores[0].val > scores[1].val) ? scores[0] : { party: 'NEUTRAL', color: 'slate' };
+                                    const domColor = dom.color;
 
-                                        {/* 👤 Booth Leadership Section */}
-                                        <div className="mt-3 pt-3 border-t border-slate-100">
-                                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-indigo-500 mb-1.5 italic">Field Leadership</p>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-lg">👤</span>
-                                                    <span className="text-xs font-black text-slate-800 uppercase tracking-tight">{booth.head_name || booth.h_name || 'Unassigned'}</span>
+                                    return (
+                                        <>
+                                            {/* Glass background with Dynamic Dominance Border/Glow */}
+                                            <div className={`absolute inset-0 lux-glass rounded-[1.5rem] border transition-all duration-500 group-hover:bg-white/10 pointer-events-none ${domColor === 'indigo' ? 'border-indigo-500/40 shadow-[0_0_25px_rgba(99,102,241,0.15)]' :
+                                                    domColor === 'rose' ? 'border-rose-500/40 shadow-[0_0_25px_rgba(244,63,94,0.15)]' :
+                                                        domColor === 'amber' ? 'border-amber-500/40 shadow-[0_0_25px_rgba(245,158,11,0.15)]' :
+                                                            'border-white/5 shadow-none'
+                                                }`} />
+
+                                            {/* Massive White External Tooltip */}
+                                            <div className={`absolute ${i < 5 ? 'top-[calc(100%+15px)]' : 'bottom-[calc(100%+15px)]'} ${isFirstCol ? 'left-0 translate-x-0' : isLastCol ? 'right-0 translate-x-0' : 'left-1/2 -translate-x-1/2'} w-[300px] bg-white p-6 rounded-3xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 shadow-[0_30px_60px_rgba(0,0,0,0.6)] flex flex-col gap-4 border-4 border-indigo-100 ${i < 5 ? '-translate-y-4 group-hover:translate-y-0' : 'translate-y-4 group-hover:translate-y-0'}`}>
+                                                <div className="border-b border-slate-200 pb-3">
+                                                    <div className="flex justify-between items-start gap-4">
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-1">Booth {booth.number}</p>
+                                                            <p className="text-sm font-black text-slate-900 leading-snug mb-2 break-words">{booth.name}</p>
+                                                        </div>
+                                                        <div className="text-right shrink-0 bg-slate-50 p-2 rounded-xl border border-slate-100 min-w-[70px]">
+                                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Total</p>
+                                                            <p className="text-xl font-black text-slate-900 leading-none">{booth.total}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 👤 Booth Leadership Section */}
+                                                    <div className="mt-3 pt-3 border-t border-slate-100">
+                                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-indigo-500 mb-1.5 italic">Field Leadership</p>
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-lg">👤</span>
+                                                                <span className="text-xs font-black text-slate-800 uppercase tracking-tight">{booth.head_name || booth.h_name || 'Unassigned'}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+                                                                <span className="text-[12px]">📞</span>
+                                                                <span className="text-[13px] font-mono font-black text-slate-700">{booth.head_phone || booth.h_phone || 'N/A'}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
-                                                    <span className="text-[12px]">📞</span>
-                                                    <span className="text-[13px] font-mono font-black text-slate-700">{booth.head_phone || booth.h_phone || 'N/A'}</span>
+                                                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                                                    <div className="flex justify-between items-center text-sm font-black uppercase tracking-widest"><span className="text-blue-600">UDF:</span> <span className="text-slate-900 text-xl">{booth.udf}</span></div>
+                                                    <div className="flex justify-between items-center text-sm font-black uppercase tracking-widest"><span className="text-rose-600">LDF:</span> <span className="text-slate-900 text-xl">{booth.ldf}</span></div>
+                                                    <div className="flex justify-between items-center text-sm font-black uppercase tracking-widest"><span className="text-amber-500">NDA:</span> <span className="text-slate-900 text-xl">{booth.nda}</span></div>
+                                                    <div className="flex justify-between items-center text-sm font-black uppercase tracking-widest"><span className="text-slate-400">NEU:</span> <span className="text-slate-900 text-xl">{booth.neutral}</span></div>
+                                                </div>
+                                                <div className="border-t border-slate-200 pt-4 flex justify-between items-center bg-slate-50 -mx-6 -mb-6 p-5 rounded-b-[1.25rem]">
+                                                    <span className="text-xs font-black uppercase tracking-widest text-indigo-600">{perspective} Win Prob:</span>
+                                                    <span className={`text-2xl font-black ${pCoverage > 50 ? 'text-emerald-500' : pCoverage > 35 ? 'text-amber-500' : 'text-rose-500'}`}>{pCoverage}%</span>
+                                                </div>
+                                                {/* Tooltip Arrow */}
+                                                <div className={`absolute ${i < 5 ? '-top-3 border-t-4 border-l-4' : '-bottom-3 border-b-4 border-r-4'} ${isFirstCol ? 'left-8 translate-x-0' : isLastCol ? 'right-8 translate-x-0' : 'left-1/2 -translate-x-1/2'} w-6 h-6 bg-white border-indigo-100 rotate-45`} />
+                                            </div>
+
+                                            {/* Content Elements Container */}
+                                            <div className="relative z-10 p-6 flex flex-col pointer-events-none">
+                                                <span className={`text-[8px] font-black px-3 py-1 text-white rounded-full mb-4 inline-block tracking-widest uppercase self-start shadow-lg ${domColor === 'indigo' ? 'bg-indigo-600 shadow-indigo-900/50' :
+                                                        domColor === 'rose' ? 'bg-rose-600 shadow-rose-900/50' :
+                                                            domColor === 'amber' ? 'bg-amber-500 shadow-amber-900/50' :
+                                                                'bg-white/10 text-slate-400'
+                                                    }`}>
+                                                    Booth {booth.number} {dom.party !== 'NEUTRAL' && `- ${dom.party}`}
+                                                </span>
+                                                <h4 className="text-[11px] font-black uppercase tracking-widest text-white mb-6 min-h-[60px] leading-relaxed break-words">{booth.name}</h4>
+                                                <div className="space-y-3">
+                                                    <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-slate-300">
+                                                        <span>{perspective} Strength</span>
+                                                        <span className={pCoverage > 40 ? 'text-emerald-400' : 'text-rose-400'}>{pCoverage}%</span>
+                                                    </div>
+                                                    <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                                        <div className={`h-full transition-all duration-1000 ${perspective === 'UDF' ? 'bg-blue-500 shadow-[0_0_10px_#3b82f6]' : perspective === 'LDF' ? 'bg-rose-500 shadow-[0_0_10px_#f43f5e]' : 'bg-amber-500 shadow-[0_0_10px_#f59e0b]'}`} style={{ width: `${pCoverage}%` }} />
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="flex justify-between items-center text-sm font-black uppercase tracking-widest"><span className="text-blue-600">UDF:</span> <span className="text-slate-900 text-xl">{booth.udf}</span></div>
-                                        <div className="flex justify-between items-center text-sm font-black uppercase tracking-widest"><span className="text-rose-600">LDF:</span> <span className="text-slate-900 text-xl">{booth.ldf}</span></div>
-                                        <div className="flex justify-between items-center text-sm font-black uppercase tracking-widest"><span className="text-amber-500">NDA:</span> <span className="text-slate-900 text-xl">{booth.nda}</span></div>
-                                        <div className="flex justify-between items-center text-sm font-black uppercase tracking-widest"><span className="text-slate-400">NEU:</span> <span className="text-slate-900 text-xl">{booth.neutral}</span></div>
-                                    </div>
-                                    <div className="border-t border-slate-200 pt-4 flex justify-between items-center bg-slate-50 -mx-6 -mb-6 p-5 rounded-b-[1.25rem]">
-                                        <span className="text-xs font-black uppercase tracking-widest text-indigo-600">{perspective} Win Prob:</span>
-                                        <span className={`text-2xl font-black ${pCoverage > 50 ? 'text-emerald-500' : pCoverage > 35 ? 'text-amber-500' : 'text-rose-500'}`}>{pCoverage}%</span>
-                                    </div>
-                                    {/* Tooltip Arrow */}
-                                    <div className={`absolute ${i < 5 ? '-top-3 border-t-4 border-l-4' : '-bottom-3 border-b-4 border-r-4'} ${isFirstCol ? 'left-8 translate-x-0' : isLastCol ? 'right-8 translate-x-0' : 'left-1/2 -translate-x-1/2'} w-6 h-6 bg-white border-indigo-100 rotate-45`} />
-                                </div>
-
-                                {/* Content Elements Container */}
-                                <div className="relative z-10 p-6 flex flex-col pointer-events-none">
-                                    <span className="text-[8px] font-black px-3 py-1 bg-white/5 text-slate-400 rounded-full mb-4 inline-block group-hover:bg-indigo-500 group-hover:text-white transition-all tracking-widest uppercase self-start">Booth {booth.number}</span>
-                                    <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-200 mb-6 min-h-[60px] leading-relaxed break-words">{booth.name}</h4>
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-slate-300">
-                                            <span>Support Level</span>
-                                            <span className={pCoverage > 40 ? 'text-emerald-400' : 'text-rose-400'}>{pCoverage}%</span>
-                                        </div>
-                                        <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                                            <div className={`h-full transition-all duration-1000 ${pCoverage > 40 ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${pCoverage}%` }} />
-                                        </div>
-                                    </div>
-                                </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         );
                     })}
