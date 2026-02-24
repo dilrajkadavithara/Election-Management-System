@@ -826,10 +826,9 @@ async def sync_parties(user_info=Depends(get_current_user)):
         {'name': 'Revolutionary Socialist Party', 'short_label': 'RSP', 'symbol_image': 'rsp_spade.png', 'primary_color': '#ED1B24', 'accent_gradient': 'linear-gradient(to bottom, #ED1B24, #ffffff, #ED1B24)'}
     ]
     
-    from core.db_bridge import add_party
     results = []
     for p_data in PARTIES:
-        res = add_party(
+        res = await add_party_async(
             p_data['name'], 
             p_data['symbol_image'], 
             p_data['short_label'], 
