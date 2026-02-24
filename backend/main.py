@@ -50,7 +50,8 @@ from core.db_bridge import (
     get_constituencies, get_local_bodies, check_booth_exists, save_booth_data,
     get_dashboard_stats, get_strategic_analytics, get_voter_list, update_voter_in_db,
     get_all_locations, add_constituency, add_local_body, add_booth,
-    get_all_users, create_managed_user, delete_user, update_user_profile, get_parties, add_party
+    get_all_users, create_managed_user, delete_user, update_user_profile, 
+    change_user_password, get_parties, add_party
 )
 
 SYMBOLS_DIR = BASE_DIR / "data" / "party_symbols"
@@ -130,6 +131,7 @@ get_all_users_async = sync_to_async(get_all_users, thread_sensitive=True)
 create_user_async = sync_to_async(create_managed_user, thread_sensitive=True)
 delete_user_async = sync_to_async(delete_user, thread_sensitive=True)
 update_user_async = sync_to_async(update_user_profile, thread_sensitive=True)
+change_password_async = sync_to_async(change_user_password, thread_sensitive=True)
 get_parties_async = sync_to_async(get_parties, thread_sensitive=True)
 add_party_async = sync_to_async(add_party, thread_sensitive=True)
 
@@ -353,6 +355,18 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         "role": user_info['role'], 
         "username": user_info['username']
     }
+
+@app.post("/api/user/change-password")
+async def change_user_pass(data: dict, user_info=Depends(get_current_user)):
+    old_pass = data.get('old_password')
+    new_pass = data.get('new_password')
+    if not old_pass or not new_pass:
+        raise HTTPException(400, "Both old and new passwords are required")
+    
+    success, msg = await change_password_async(user_info['username'], old_pass, new_pass)
+    if not success:
+        raise HTTPException(400, msg)
+    return {"success": True, "message": msg}
 
 @app.get("/api/stats")
 async def get_stats(constituency: str = None, lb: str = None, booth: str = None, user_info=Depends(get_current_user)):

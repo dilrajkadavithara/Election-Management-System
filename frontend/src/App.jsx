@@ -10,6 +10,7 @@ import CommunicationHub from './views/CommunicationHub';
 import OCREngine from './views/OCREngine';
 import SlipDesign from './views/SlipDesign';
 import EditProfileModal from './components/modals/EditProfileModal';
+import ChangePasswordModal from './components/modals/ChangePasswordModal';
 import WarRoom from './views/WarRoom';
 
 const PARTY_PRESETS = [
@@ -81,6 +82,7 @@ const App = () => {
     const [error, setError] = useState(null);
     const [editMode, setEditMode] = useState(false);
     const [editData, setEditData] = useState({});
+    const [showChangePassword, setShowChangePassword] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
 
     useEffect(() => {
@@ -464,7 +466,7 @@ const App = () => {
 
     return (
         <div className={`min-h-screen ${isV2 && view === 'dashboard' ? 'v2-bg-obsidian' : 'bg-slate-50'} flex font-sans transition-colors duration-700`}>
-            <Sidebar view={view} setView={setView} userRole={userRole} username={username} handleLogout={handleLogout} isV2={isV2} setIsV2={setIsV2} />
+            <Sidebar view={view} setView={setView} userRole={userRole} username={username} handleLogout={handleLogout} isV2={isV2} setIsV2={setIsV2} setShowChangePassword={setShowChangePassword} />
 
             <main className={`flex-1 flex flex-col overflow-y-auto ${view === 'design' ? 'bg-slate-200 p-0' : (isV2 && view === 'dashboard' ? 'p-0' : 'p-12')}`}>
                 {view === 'dashboard' && (
@@ -502,6 +504,7 @@ const App = () => {
             </main>
 
             {editMode && <EditProfileModal editData={editData} setEditData={setEditData} setEditMode={setEditMode} saveCorrection={saveCorrection} ocrBatch={ocrBatch} />}
+            <ChangePasswordModal isOpen={showChangePassword} onClose={() => setShowChangePassword(false)} />
             {showSuccess && (
                 <div className="fixed inset-0 bg-emerald-600/90 backdrop-blur-md z-[200] flex flex-col items-center justify-center text-white animate-in">
                     <span className="text-8xl mb-8 animate-bounce">✅</span>

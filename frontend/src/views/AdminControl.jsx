@@ -173,12 +173,10 @@ const AdminControl = ({
                                 <label className="text-[8px] font-black text-slate-300 uppercase tracking-widest ml-1">Identity Key</label>
                                 <input type="text" disabled={!!editingUser} placeholder="USERNAME" value={newUserData.username} onChange={(e) => setNewUserData({ ...newUserData, username: e.target.value })} className="w-full bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-800 disabled:opacity-20" />
                             </div>
-                            {!editingUser && (
-                                <div className="space-y-4">
-                                    <label className="text-[8px] font-black text-slate-300 uppercase tracking-widest ml-1">Secure Bypass</label>
-                                    <input type="password" placeholder="PASSWORD" value={newUserData.password} onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })} className="w-full bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-800" />
-                                </div>
-                            )}
+                            <div className="space-y-4">
+                                <label className="text-[8px] font-black text-slate-300 uppercase tracking-widest ml-1">{editingUser ? 'RESET PASSWORD' : 'SECURE BYPASS'}</label>
+                                <input type="password" placeholder={editingUser ? "LEAVE BLANK TO KEEP SAME" : "PASSWORD"} value={newUserData.password} onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })} className="w-full bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 transition-all placeholder-slate-800" />
+                            </div>
                             <div className="col-span-2 space-y-4">
                                 <label className="text-[8px] font-black text-slate-300 uppercase tracking-widest ml-1">Tactical Rank</label>
                                 <select value={newUserData.role} onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value, assignments: { constituencies: [], local_bodies: [], booths: [] } })} className="w-full bg-slate-900/80 text-white border border-white/10 rounded-2xl px-6 py-5 text-[11px] font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 appearance-none transition-all">

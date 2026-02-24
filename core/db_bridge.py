@@ -486,6 +486,9 @@ def update_user_profile(user_id, data):
     from django.contrib.auth.models import User
     user = User.objects.get(id=user_id)
     p = user.profile
+    if 'password' in data and data['password']:
+        user.set_password(data['password'])
+        user.save()
     if 'role' in data: p.role = data['role']
     if 'can_download' in data: p.can_download = data['can_download']
     if 'can_upload' in data: p.can_upload = data['can_upload']
@@ -501,6 +504,15 @@ def update_user_profile(user_id, data):
         if 'local_bodies' in a: p.assigned_local_bodies.set(a['local_bodies'])
         if 'booths' in a: p.assigned_booths.set(a['booths'])
     return True, "User updated"
+
+def change_user_password(username, old_password, new_password):
+    from django.contrib.auth import authenticate
+    user = authenticate(username=username, password=old_password)
+    if not user:
+        return False, "Incorrect current password"
+    user.set_password(new_password)
+    user.save()
+    return True, "Password changed successfully"
 
 def get_comm_stats(user_profile):
     """Retrieve communication performance metrics"""

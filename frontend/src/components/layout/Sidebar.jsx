@@ -1,4 +1,4 @@
-const Sidebar = ({ view, setView, userRole, username, handleLogout, isV2, setIsV2 }) => {
+const Sidebar = ({ view, setView, userRole, username, handleLogout, isV2, setIsV2, setShowChangePassword }) => {
     return (
         <aside className="fixed left-6 top-6 bottom-6 w-[360px] lux-glass rounded-[3rem] p-10 flex flex-col z-[1000] border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-y-auto custom-scrollbar">
             <div className="flex items-center gap-5 mb-16 px-2 flex-shrink-0">
@@ -7,7 +7,16 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout, isV2, setIsV
                 </div>
                 <div>
                     <h1 className="font-black uppercase text-[10px] tracking-[0.3em] lux-text-gradient opacity-90">Election Manager</h1>
-                    <p className="text-[12px] text-white font-black uppercase tracking-widest mt-1">{username}</p>
+                    <div className="flex items-center gap-3 mt-1">
+                        <p className="text-[12px] text-white font-black uppercase tracking-widest">{username}</p>
+                        <button
+                            onClick={() => setShowChangePassword(true)}
+                            className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-[10px] hover:bg-white/20 transition-all border border-white/5"
+                            title="Change Password"
+                        >
+                            🔐
+                        </button>
+                    </div>
                 </div>
             </div>
 

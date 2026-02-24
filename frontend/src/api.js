@@ -254,6 +254,10 @@ const api = {
     getTemplates: async () => {
         const response = await client.get('/api/comm/templates');
         return response.data;
+    },
+    changePassword: async (old_password, new_password) => {
+        const response = await client.post('/api/user/change-password', { old_password, new_password });
+        return response.data;
     }
 };
 
