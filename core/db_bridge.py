@@ -432,9 +432,13 @@ def add_booth(const_id, lb_id, number, ps_name="", ps_no=""):
 def get_all_users():
     from django.contrib.auth.models import User
     users = []
-    for u in User.objects.all():
+    for u in User.objects.select_related('profile').all():
         if hasattr(u, 'profile'):
             p = u.profile
+            c_ids = list(p.assigned_constituencies.values_list('id', flat=True))
+            lb_ids = list(p.assigned_local_bodies.values_list('id', flat=True))
+            b_ids = list(p.assigned_booths.values_list('id', flat=True))
+            
             users.append({
                 "id": u.id,
                 "username": u.username,
@@ -445,36 +449,47 @@ def get_all_users():
                 "can_edit_voters": p.can_edit_voters,
                 "can_send_broadcasts": p.can_send_broadcasts,
                 "can_manage_system": p.can_manage_system,
+                "constituency_ids": c_ids,
+                "local_body_ids": lb_ids,
+                "booth_ids": b_ids,
+                "constituencies": list(p.assigned_constituencies.values_list('name', flat=True)),
+                "local_bodies": list(p.assigned_local_bodies.values_list('name', flat=True)),
+                "booths": list(p.assigned_booths.values_list('number', flat=True)), # number for display
                 "assignments": {
-                    "constituencies": list(p.assigned_constituencies.values_list('id', flat=True)),
-                    "local_bodies": list(p.assigned_local_bodies.values_list('id', flat=True)),
-                    "booths": list(p.assigned_booths.values_list('id', flat=True)),
+                    "constituencies": c_ids,
+                    "local_bodies": lb_ids,
+                    "booths": b_ids,
                 }
             })
     return users
 
-def create_managed_user(username, password, role, assignments):
+def create_managed_user(username, password, role, data):
     from django.contrib.auth.models import User
     user = User.objects.create_user(username=username, password=password)
     profile, _ = UserProfile.objects.get_or_create(user=user)
     profile.role = role
-    # Save permissions from assignments dict
-    if isinstance(assignments, dict):
-        profile.can_download = assignments.get('can_download', False)
-        profile.can_upload = assignments.get('can_upload', False)
-        profile.can_verify = assignments.get('can_verify', True)
-        profile.can_edit_voters = assignments.get('can_edit_voters', True)
-        profile.can_send_broadcasts = assignments.get('can_send_broadcasts', False)
-        profile.can_manage_system = assignments.get('can_manage_system', False)
+    
+    # Extract permissions (look in top level or assignments dict)
+    p_data = data if isinstance(data, dict) else {}
+    a_data = p_data.get('assignments', {}) if isinstance(p_data.get('assignments'), dict) else p_data
+    
+    profile.can_download = p_data.get('can_download', a_data.get('can_download', False))
+    profile.can_upload = p_data.get('can_upload', a_data.get('can_upload', False))
+    profile.can_verify = p_data.get('can_verify', a_data.get('can_verify', True))
+    profile.can_edit_voters = p_data.get('can_edit_voters', a_data.get('can_edit_voters', True))
+    profile.can_send_broadcasts = p_data.get('can_send_broadcasts', a_data.get('can_send_broadcasts', False))
+    profile.can_manage_system = p_data.get('can_manage_system', a_data.get('can_manage_system', False))
     profile.save()
+
     # Save scope assignments
-    if isinstance(assignments, dict):
-        const_ids = assignments.get('constituencies', [])
-        lb_ids = assignments.get('local_bodies', [])
-        booth_ids = assignments.get('booths', [])
-        if const_ids: profile.assigned_constituencies.set(const_ids)
-        if lb_ids: profile.assigned_local_bodies.set(lb_ids)
-        if booth_ids: profile.assigned_booths.set(booth_ids)
+    const_ids = a_data.get('constituencies', [])
+    lb_ids = a_data.get('local_bodies', [])
+    booth_ids = a_data.get('booths', [])
+    
+    if const_ids: profile.assigned_constituencies.set(const_ids)
+    if lb_ids: profile.assigned_local_bodies.set(lb_ids)
+    if booth_ids: profile.assigned_booths.set(booth_ids)
+    
     return True, "User created"
 
 def delete_user(user_id):
@@ -489,20 +504,23 @@ def update_user_profile(user_id, data):
     if 'password' in data and data['password']:
         user.set_password(data['password'])
         user.save()
+    
     if 'role' in data: p.role = data['role']
-    if 'can_download' in data: p.can_download = data['can_download']
-    if 'can_upload' in data: p.can_upload = data['can_upload']
-    if 'can_verify' in data: p.can_verify = data['can_verify']
-    if 'can_edit_voters' in data: p.can_edit_voters = data['can_edit_voters']
-    if 'can_send_broadcasts' in data: p.can_send_broadcasts = data['can_send_broadcasts']
-    if 'can_manage_system' in data: p.can_manage_system = data['can_manage_system']
+    
+    # Update permissions
+    for field in ['can_download', 'can_upload', 'can_verify', 'can_edit_voters', 'can_send_broadcasts', 'can_manage_system']:
+        if field in data:
+            setattr(p, field, data[field])
+    
     p.save()
-    # Update scope assignments if provided
-    if 'assignments' in data and isinstance(data['assignments'], dict):
-        a = data['assignments']
-        if 'constituencies' in a: p.assigned_constituencies.set(a['constituencies'])
-        if 'local_bodies' in a: p.assigned_local_bodies.set(a['local_bodies'])
-        if 'booths' in a: p.assigned_booths.set(a['booths'])
+
+    # Update scope assignments (handle both flat and nested 'assignments' key)
+    a_data = data.get('assignments', {}) if isinstance(data.get('assignments'), dict) else {}
+    
+    if 'constituencies' in a_data: p.assigned_constituencies.set(a_data['constituencies'])
+    if 'local_bodies' in a_data: p.assigned_local_bodies.set(a_data['local_bodies'])
+    if 'booths' in a_data: p.assigned_booths.set(a_data['booths'])
+    
     return True, "User updated"
 
 def change_user_password(username, old_password, new_password):

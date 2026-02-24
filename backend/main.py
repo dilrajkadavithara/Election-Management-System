@@ -305,7 +305,8 @@ async def admin_add_booth(data: dict, user_info=Depends(get_current_user)):
 
 @app.get("/api/admin/users")
 async def admin_get_users(user_info=Depends(get_current_user)):
-    if user_info['role'] != 'SUPERUSER': raise HTTPException(403)
+    allowed = ['SUPERUSER', 'MANAGER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER']
+    if user_info['role'] not in allowed: raise HTTPException(403)
     return await get_all_users_async()
 
 @app.post("/api/admin/create-user")
@@ -317,7 +318,7 @@ async def admin_create_user(data: dict, user_info=Depends(get_current_user)):
         raise HTTPException(403, "You do not have permission to create users")
     
     success, msg = await create_user_async(
-        data['username'], data['password'], data['role'], data.get('assignments', {})
+        data['username'], data['password'], data['role'], data
     )
     return {"success": success, "message": msg}
 
@@ -329,9 +330,8 @@ async def admin_delete_user(uid: int, user_info=Depends(get_current_user)):
 
 @app.put("/api/admin/update-user/{uid}")
 async def admin_update_user(uid: int, data: dict, user_info=Depends(get_current_user)):
-    # Only Superuser can modify any user
-    # Constituency Admin can modify their subordinates (future logic)
-    if user_info['role'] != 'SUPERUSER': raise HTTPException(403)
+    allowed = ['SUPERUSER', 'MANAGER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER']
+    if user_info['role'] not in allowed: raise HTTPException(403)
     success, msg = await update_user_async(uid, data)
     return {"success": success, "message": msg}
 

@@ -363,9 +363,14 @@ const App = () => {
                     can_edit_voters: true, can_send_broadcasts: false, can_manage_system: false,
                     assignments: { constituencies: [], local_bodies: [], booths: [] }
                 });
-                alert("User created successfully!");
-            } else alert(res.message);
-        } catch (e) { console.error(e); }
+                alert("✨ Staff account successfully activated and secured.");
+            } else {
+                alert("🛑 Creation Failed: " + res.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("⚠️ System Error: Unable to create user. Please check server logs.");
+        }
         finally { setLoading(false); }
     };
 
@@ -382,24 +387,33 @@ const App = () => {
     const handleUpdateUser = async () => {
         setLoading(true);
         try {
-            await api.updateManagedUser(editingUser.id, newUserData);
-            setEditingUser(null);
-            loadAdminData();
-        } catch (e) { console.error(e); }
+            const res = await api.updateManagedUser(editingUser.id, newUserData);
+            if (res.success) {
+                setEditingUser(null);
+                loadAdminData();
+                alert("✅ User profile and permissions updated successfully.");
+            } else {
+                alert("🛑 Update Failed: " + res.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("⚠️ Update Failed: " + (e.response?.data?.detail || e.message));
+        }
         finally { setLoading(false); }
     };
 
     const startEditUser = (u) => {
         setEditingUser(u);
+        const assignments = u.assignments || {};
         setNewUserData({
             username: u.username, role: u.role,
             can_download: u.can_download, can_upload: u.can_upload,
             can_verify: u.can_verify, can_edit_voters: u.can_edit_voters,
             can_send_broadcasts: u.can_send_broadcasts, can_manage_system: u.can_manage_system,
             assignments: {
-                constituencies: u.constituency_ids || [],
-                local_bodies: u.local_body_ids || [],
-                booths: u.booth_ids || []
+                constituencies: assignments.constituencies || u.constituency_ids || [],
+                local_bodies: assignments.local_bodies || u.local_body_ids || [],
+                booths: assignments.booths || u.booth_ids || []
             }
         });
     };

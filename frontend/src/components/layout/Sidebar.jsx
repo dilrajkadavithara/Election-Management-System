@@ -28,7 +28,7 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout, isV2, setIsV
                     { id: 'voters', label: 'Voter List', icon: '👥' },
                     { id: 'comm', label: 'Send Messages', icon: '💬' },
                     { id: 'design', label: 'Voter Slips', icon: '🎨' },
-                    ...(['SUPERUSER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER'].includes(userRole) ? [{ id: 'admin', label: 'User Settings', icon: '⚙️' }] : [])
+                    ...(['SUPERUSER', 'MANAGER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER'].includes(userRole) ? [{ id: 'admin', label: 'User Settings', icon: '⚙️' }] : [])
                 ].map(item => (
                     <button
                         key={item.id}
