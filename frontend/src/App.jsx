@@ -415,6 +415,18 @@ const App = () => {
         finally { setLoading(false); }
     };
 
+    const handleSyncParties = async () => {
+        setLoading(true);
+        try {
+            const res = await api.syncParties();
+            if (res.success) {
+                alert("Branding Synchronization Complete! System has been updated with official campaign assets.");
+                loadAdminData();
+            }
+        } catch (e) { alert("Synchronization Failed: " + e.message); }
+        finally { setLoading(false); }
+    };
+
     const handleCommunicationSend = async (payload) => {
         setLoading(true);
         try {
@@ -496,7 +508,7 @@ const App = () => {
                     </div>
                 )}
                 {view === 'voters' && <VoterList voterList={voterList} voterTotal={voterTotal} currentPage={currentPage} voterLoading={voterLoading} listFilters={listFilters} setListFilters={setListFilters} searchQuery={searchQuery} setSearchQuery={setSearchQuery} allLocations={allLocations} loadVoters={loadVoters} loadAdminData={loadAdminData} currentUser={currentUser} userRole={userRole} setEditData={setEditData} setEditMode={setEditMode} handleUpdateIntel={handleUpdateIntel} />}
-                {view === 'admin' && <AdminControl allLocations={allLocations} allUsers={allUsers} userRole={userRole} newLocData={newLocData} setNewLocData={setNewLocData} handleAddLocation={handleAddLocation} newUserData={newUserData} setNewUserData={setNewUserData} assignSelection={assignSelection} setAssignSelection={setAssignSelection} handleCreateUser={handleCreateUser} handleUpdateUser={handleUpdateUser} handleDeleteUser={handleDeleteUser} startEditUser={startEditUser} editingUser={editingUser} setEditingUser={setEditingUser} allParties={allParties} newPartyData={newPartyData} setNewPartyData={setNewPartyData} newPartyFile={newPartyFile} setNewPartyFile={setNewPartyFile} handleAddParty={handleAddParty} PARTY_PRESETS={PARTY_PRESETS} dashboardStats={dashboardStats} />}
+                {view === 'admin' && <AdminControl allLocations={allLocations} allUsers={allUsers} userRole={userRole} newLocData={newLocData} setNewLocData={setNewLocData} handleAddLocation={handleAddLocation} newUserData={newUserData} setNewUserData={setNewUserData} assignSelection={assignSelection} setAssignSelection={setAssignSelection} handleCreateUser={handleCreateUser} handleUpdateUser={handleUpdateUser} handleDeleteUser={handleDeleteUser} startEditUser={startEditUser} editingUser={editingUser} setEditingUser={setEditingUser} allParties={allParties} newPartyData={newPartyData} setNewPartyData={setNewPartyData} newPartyFile={newPartyFile} setNewPartyFile={setNewPartyFile} handleAddParty={handleAddParty} handleSyncParties={handleSyncParties} PARTY_PRESETS={PARTY_PRESETS} dashboardStats={dashboardStats} />}
                 {view === 'comm' && <CommunicationHub commType={commType} setCommType={setCommType} commMessage={commMessage} setCommMessage={setCommMessage} handleCommunicationSend={handleCommunicationSend} voterTotal={voterTotal} commStats={commStats} commTemplates={commTemplates} allLocations={allLocations} listFilters={listFilters} setListFilters={setListFilters} loadVoters={loadVoters} />}
                 {view === 'engine' && <OCREngine ocrBatch={ocrBatch} setOcrBatch={setOcrBatch} ocrLoading={ocrLoading} setOcrLoading={setOcrLoading} ocrError={ocrError} setOcrError={setOcrError} ocrRef={ocrRef} handleFileUpload={handleFileUpload} startExtraction={startExtraction} startOcr={startOcr} handleSaveBatch={handleSaveBatch} discardBatch={discardBatch} stopAndClearRAM={stopAndClearRAM} setEditData={setEditData} setEditMode={setEditMode} allLocations={allLocations} ocrTargetLoc={ocrTargetLoc} setOcrTargetLoc={setOcrTargetLoc} loadAdminData={loadAdminData} useGemini={useGemini} setUseGemini={setUseGemini} useDirectPdf={useDirectPdf} setUseDirectPdf={setUseDirectPdf} />}
                 {view === 'design' && <SlipDesign activePrintParty={activePrintParty} setActivePrintParty={setActivePrintParty} allParties={allParties} allLocations={allLocations} listFilters={listFilters} setListFilters={setListFilters} voterList={voterList} loadVoters={loadVoters} setSearchQuery={setSearchQuery} />}

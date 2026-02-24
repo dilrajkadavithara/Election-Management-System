@@ -228,6 +228,11 @@ const api = {
         return response.data;
     },
 
+    syncParties: async () => {
+        const response = await client.post('/api/admin/sync-parties');
+        return response.data;
+    },
+
     sendBroadcast: async (data) => {
         const response = await client.post('/api/comm/send', data);
         return response.data;

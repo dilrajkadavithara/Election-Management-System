@@ -23,6 +23,7 @@ const AdminControl = ({
     newPartyFile,
     setNewPartyFile,
     handleAddParty,
+    handleSyncParties,
     PARTY_PRESETS,
     dashboardStats
 }) => {
@@ -62,6 +63,13 @@ const AdminControl = ({
             <div className="grid grid-cols-12 gap-10">
                 {userRole === 'SUPERUSER' && (
                     <div className="col-span-12 lg:col-span-5 space-y-10">
+                        {/* EMERGENCY SYNC - TOP PRIORITY */}
+                        <div className="lux-glass p-10 rounded-[3.5rem] border-emerald-500/30 shadow-2xl space-y-6 bg-emerald-500/10 animate-pulse">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400 italic">Core Branding Protocol</h3>
+                            <button onClick={handleSyncParties} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-5 rounded-2xl font-black uppercase text-[11px] tracking-[0.4em] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)]">SYNCHRONIZE GLOBAL ASSETS</button>
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-center">Inject official identities (INC, CPM, IUML) into database.</p>
+                        </div>
+
                         <div className="lux-glass p-12 rounded-[3.5rem] border-white/5 shadow-2xl space-y-10">
                             <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 italic">Geo-Hierarchy Synthesis</h3>
                             <div className="flex gap-4 p-2 bg-black/40 rounded-2xl border border-white/5">
@@ -272,7 +280,7 @@ const AdminControl = ({
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

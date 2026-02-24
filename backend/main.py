@@ -810,6 +810,36 @@ async def get_voter_image(batch_id: str, image_name: str):
 async def list_parties(user_info=Depends(get_current_user)):
     return await get_parties_async()
 
+@app.post("/api/admin/sync-parties")
+async def sync_parties(user_info=Depends(get_current_user)):
+    """Force sync political parties with official branding assets."""
+    if user_info['role'] != 'SUPERUSER':
+        raise HTTPException(403, "Admin authorization required.")
+    
+    PARTIES = [
+        {'name': 'Indian National Congress', 'short_label': 'INC', 'symbol_image': 'inc_hand.png', 'primary_color': '#1e40af', 'accent_gradient': 'linear-gradient(to bottom, #1e40af, #ffffff, #16a34a)'},
+        {'name': 'Communist Party of India (Marxist)', 'short_label': 'CPIM', 'symbol_image': 'cpim_star.png', 'primary_color': '#DE0000', 'accent_gradient': 'linear-gradient(to bottom, #DE0000, #ffffff, #DE0000)'},
+        {'name': 'Communist Party of India', 'short_label': 'CPI', 'symbol_image': 'cpi_corn.png', 'primary_color': '#D40000', 'accent_gradient': 'linear-gradient(to bottom, #D40000, #ffffff, #D40000)'},
+        {'name': 'Indian Union Muslim League', 'short_label': 'IUML', 'symbol_image': 'iuml_ladder.png', 'primary_color': '#006600', 'accent_gradient': 'linear-gradient(to bottom, #006600, #ffffff, #006600)'},
+        {'name': 'Kerala Congress (M)', 'short_label': 'KCM', 'symbol_image': 'kcm_leaves.png', 'primary_color': '#FF6600', 'accent_gradient': 'linear-gradient(to bottom, #FF6600, #ffffff, #FF6600)'},
+        {'name': 'Kerala Congress (J)', 'short_label': 'KCJ', 'symbol_image': 'kcj_torch.png', 'primary_color': '#0050A0', 'accent_gradient': 'linear-gradient(to bottom, #0050A0, #ffffff, #0050A0)'},
+        {'name': 'Revolutionary Socialist Party', 'short_label': 'RSP', 'symbol_image': 'rsp_spade.png', 'primary_color': '#ED1B24', 'accent_gradient': 'linear-gradient(to bottom, #ED1B24, #ffffff, #ED1B24)'}
+    ]
+    
+    from core.db_bridge import add_party
+    results = []
+    for p_data in PARTIES:
+        res = add_party(
+            p_data['name'], 
+            p_data['symbol_image'], 
+            p_data['short_label'], 
+            p_data['primary_color'], 
+            p_data['accent_gradient']
+        )
+        results.append(res)
+    
+    return {"success": True, "synced": results}
+
 @app.post("/api/admin/parties")
 async def create_party(
     name: str = fastapi.Form(...), 

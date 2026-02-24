@@ -33,7 +33,8 @@ PRIVATE_SERVER_ACCESS.md
 test_*.py
 debug_*.py
 diagnostics.py
-data/
+data/*
+!data/party_symbols/
 PAGES/
 output/
 voter_crops/
