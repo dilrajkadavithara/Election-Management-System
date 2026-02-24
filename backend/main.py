@@ -596,11 +596,36 @@ def sync_save_batch_wrapper(payload_dict, user_id):
     except:
         lb_type = payload_dict.get('lgb_type') or "PANCHAYAT"
 
-    return save_booth_data(
+    success, msg = save_booth_data(
         c_name, lb_type, lb_name, b_num,
         batch['results'], batch['filename'],
         payload_dict.get('ps_no', ""), payload_dict.get('ps_name', ""), user_id
     )
+
+    if success:
+        try:
+            # 🧹 Automatic Storage Cleanup
+            pdf_path = batch.get('file_path')
+            if pdf_path and os.path.exists(pdf_path):
+                os.remove(pdf_path)
+                print(f"✅ Cleaned up raw PDF: {pdf_path}")
+            
+            p_dir = PAGES_DIR / batch_id
+            if p_dir.exists():
+                shutil.rmtree(p_dir)
+                print(f"✅ Cleaned up page images: {p_dir}")
+                
+            c_dir = CROPS_DIR / batch_id
+            if c_dir.exists():
+                shutil.rmtree(c_dir)
+                print(f"✅ Cleaned up voter crops: {c_dir}")
+
+            # Note: We keep the session in state_manager so the UI can show the success message,
+            # but the heavy-lifting files are gone.
+        except Exception as e:
+            print(f"⚠️ Cleanup error (non-fatal): {e}")
+
+    return success, msg
 
 save_batch_async = sync_to_async(sync_save_batch_wrapper, thread_sensitive=True)
 
@@ -875,6 +900,22 @@ async def get_party_symbol(image_name: str):
 
 @app.post("/api/clear-session/{batch_id}")
 async def clear_session(batch_id: str, user_info=Depends(get_current_user)):
+    batch = state_manager.get_batch(batch_id)
+    if batch:
+        try:
+            # 🧹 Automatic Storage Cleanup on session discard
+            pdf_path = batch.get('file_path')
+            if pdf_path and os.path.exists(pdf_path):
+                os.remove(pdf_path)
+            
+            p_dir = PAGES_DIR / batch_id
+            if p_dir.exists(): shutil.rmtree(p_dir)
+                
+            c_dir = CROPS_DIR / batch_id
+            if c_dir.exists(): shutil.rmtree(c_dir)
+        except Exception as e:
+            print(f"⚠️ Discard cleanup error: {e}")
+
     state_manager.delete_batch(batch_id)
     state_manager.remove_cancelled(batch_id)
     return {"success": True}
