@@ -22,13 +22,13 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout, isV2, setIsV
 
             <nav className="space-y-4 flex-grow">
                 {[
-                    { id: 'dashboard', label: 'Main Dashboard', icon: '📊' },
-                    { id: 'warroom', label: 'TACTICAL WAR ROOM', icon: '⚔️' },
-                    ...(userRole !== 'BOOTH_AGENT' ? [{ id: 'engine', label: 'Batch Upload', icon: '⚡' }] : []),
+                    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+                    { id: 'warroom', label: 'Campaign Map', icon: '⚔️' },
+                    ...(userRole !== 'BOOTH_AGENT' ? [{ id: 'engine', label: 'Upload Voter List', icon: '⚡' }] : []),
                     { id: 'voters', label: 'Voter List', icon: '👥' },
-                    { id: 'comm', label: 'Send Messages', icon: '📡' },
+                    { id: 'comm', label: 'Send Messages', icon: '💬' },
                     { id: 'design', label: 'Voter Slips', icon: '🎨' },
-                    ...(['SUPERUSER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER'].includes(userRole) ? [{ id: 'admin', label: 'USER SETTINGS', icon: '🛡️' }] : [])
+                    ...(['SUPERUSER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER'].includes(userRole) ? [{ id: 'admin', label: 'User Settings', icon: '⚙️' }] : [])
                 ].map(item => (
                     <button
                         key={item.id}
