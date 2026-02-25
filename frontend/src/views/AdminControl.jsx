@@ -120,7 +120,7 @@ const AdminControl = ({
             <div className="flex gap-2 mb-8 bg-black/30 p-1.5 rounded-2xl w-fit border border-white/5">
                 {[
                     { key: 'users', label: '👤 Staff Accounts' },
-                    ...(userRole === 'SUPERUSER' ? [
+                    ...(['SUPERUSER', 'MANAGER'].includes(userRole) ? [
                         { key: 'locations', label: '📍 Locations' },
                         { key: 'parties', label: '🏳️ Party Branding' },
                     ] : [])
@@ -340,7 +340,7 @@ const AdminControl = ({
             )}
 
             {/* ── TAB: LOCATIONS ── */}
-            {activeTab === 'locations' && userRole === 'SUPERUSER' && (
+            {activeTab === 'locations' && ['SUPERUSER', 'MANAGER'].includes(userRole) && (
                 <div className="grid grid-cols-12 gap-8">
                     <div className="col-span-12 lg:col-span-5">
                         <div className="lux-glass p-8 rounded-3xl border-white/5 space-y-6">
@@ -461,7 +461,7 @@ const AdminControl = ({
             )}
 
             {/* ── TAB: PARTIES ── */}
-            {activeTab === 'parties' && userRole === 'SUPERUSER' && (
+            {activeTab === 'parties' && ['SUPERUSER', 'MANAGER'].includes(userRole) && (
                 <div className="grid grid-cols-12 gap-8">
                     <div className="col-span-12 lg:col-span-5 space-y-6">
 

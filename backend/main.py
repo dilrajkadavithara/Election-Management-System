@@ -313,7 +313,7 @@ async def admin_get_users(user_info=Depends(get_current_user)):
 async def admin_create_user(data: dict, user_info=Depends(get_current_user)):
     # Hierarchical user creation: Superuser, Constituency Admin, Local Body Head, and Zone Commander can create users
     # But they can only create users at their level or below
-    allowed_roles = ['SUPERUSER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER']
+    allowed_roles = ['SUPERUSER', 'MANAGER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER']
     if user_info['role'] not in allowed_roles:
         raise HTTPException(403, "You do not have permission to create users")
     
@@ -324,7 +324,7 @@ async def admin_create_user(data: dict, user_info=Depends(get_current_user)):
 
 @app.delete("/api/admin/delete-user/{uid}")
 async def admin_delete_user(uid: int, user_info=Depends(get_current_user)):
-    if user_info['role'] != 'SUPERUSER': raise HTTPException(403)
+    if user_info['role'] not in ['SUPERUSER', 'MANAGER']: raise HTTPException(403)
     success, msg = await delete_user_async(uid)
     return {"success": success, "message": msg}
 
@@ -838,7 +838,7 @@ async def list_parties(user_info=Depends(get_current_user)):
 @app.post("/api/admin/sync-parties")
 async def sync_parties(user_info=Depends(get_current_user)):
     """Force sync political parties with official branding assets."""
-    if user_info['role'] != 'SUPERUSER':
+    if user_info['role'] not in ['SUPERUSER', 'MANAGER']:
         raise HTTPException(403, "Admin authorization required.")
     
     PARTIES = [
@@ -873,8 +873,8 @@ async def create_party(
     accent_gradient: str = fastapi.Form("linear-gradient(to bottom, #FF9933, #ffffff, #138808)"),
     user_info=Depends(get_current_user)
 ):
-    if user_info['role'] != 'SUPERUSER':
-        raise HTTPException(403, "Only superusers can manage parties.")
+    if user_info['role'] not in ['SUPERUSER', 'MANAGER']:
+        raise HTTPException(403, "Only elevated roles can manage parties.")
     
     ext = Path(file.filename).suffix
     sym_name = f"{uuid.uuid4()}{ext}"
