@@ -580,6 +580,23 @@ async def get_latest_batch(user_info=Depends(get_current_user)):
     best = max(user_batches, key=lambda b: len(b.get('results', [])))
     return {"found": True, "batch": best}
 
+@app.get("/api/system-logs")
+async def get_system_logs(user_info=Depends(get_current_user)):
+    """Return the last 30 lines of the system activity log for the frontend terminal."""
+    try:
+        log_file = BASE_DIR / "data" / "logs" / "production.log"
+        if not log_file.exists():
+            return {"logs": ["System initializing..."]}
+        
+        with open(log_file, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        
+        # Get last 30 lines and reverse them so newest is at the bottom of the array
+        last_lines = [line.strip() for line in lines[-30:] if line.strip()]
+        return {"logs": last_lines}
+    except Exception as e:
+        return {"logs": [f"Error reading logs: {e}"]}
+
 # --- New Save Bridge to handle ID vs Name resolution ---
 def sync_save_batch_wrapper(payload_dict, user_id):
     from core_db.models import Constituency, LocalBody, Booth

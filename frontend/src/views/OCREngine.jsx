@@ -35,16 +35,21 @@ const OCREngine = ({
     const [newPSNo, setNewPSNo] = useState('');
     const [isAddingBooth, setIsAddingBooth] = useState(true);
     const [systemHealth, setSystemHealth] = useState(null);
+    const [systemLogs, setSystemLogs] = useState([]);
 
     useEffect(() => {
         const checkSystem = async () => {
             try {
                 const health = await api.checkHealth();
                 setSystemHealth(health);
+                const logsRes = await api.getSystemLogs();
+                if (logsRes && logsRes.logs) {
+                    setSystemLogs(logsRes.logs);
+                }
             } catch (e) { console.error("Health Monitor Error:", e); }
         };
         checkSystem();
-        const interval = setInterval(checkSystem, 10000); // Check every 10s
+        const interval = setInterval(checkSystem, 2500); // Check every 2.5s for real-time logs
         return () => clearInterval(interval);
     }, []);
 
@@ -456,6 +461,30 @@ const OCREngine = ({
                                     <button onClick={() => api.exportBatchCSV(ocrBatch.id)} className="px-12 lux-glass rounded-2xl font-bold text-white text-[11px] uppercase tracking-widest border-white/10 hover:bg-white/10" style={{ fontFamily: '"Rajdhani", sans-serif' }}>Export Result</button>
                                 </div>
                             )}
+                        </div>
+
+                        {/* Live Activity Terminal */}
+                        <div className="mt-12 bg-[#09090b] border border-white/10 rounded-xl p-4 font-mono text-xs overflow-hidden shadow-2xl">
+                            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/10 opacity-60">
+                                <div className="flex gap-1.5">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-rose-500/80"></div>
+                                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
+                                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></div>
+                                </div>
+                                <span className="uppercase tracking-[0.2em] text-[9px] text-white font-bold ml-2">Live System Activity Feed</span>
+                                <div className="ml-auto w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                            </div>
+                            <div className="space-y-1.5 h-[160px] overflow-y-auto pr-2 custom-scrollbar flex flex-col-reverse">
+                                {systemLogs && systemLogs.map((log, i) => (
+                                    <div key={i} className={`opacity-${Math.max(20, 100 - (i * 5))} ${log.includes('❌') || log.includes('ERROR') ? 'text-rose-400 font-bold' : log.includes('⚠️') || log.includes('Quota') ? 'text-yellow-400' : 'text-emerald-400/80'}`}>
+                                        <span className="opacity-40 mr-3">[{new Date().toLocaleTimeString()}]</span>
+                                        {log}
+                                    </div>
+                                ))}
+                                {(!systemLogs || systemLogs.length === 0) && (
+                                    <div className="text-white/20 italic text-center mt-10">Awaiting system activity...</div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

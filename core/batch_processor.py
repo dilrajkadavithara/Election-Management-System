@@ -23,8 +23,8 @@ class BatchProcessor:
         # Cross-platform processor initialization
         pdf_proc = PDFProcessor()
         
-        # Concurrency Management: 10 is high-speed but requires robust retry logic in the engine
-        max_workers = 10 
+        # Concurrency Management: 3 is the sweet spot for maximum stability without triggering token burst limits on AI endpoints
+        max_workers = 3
         
         # Determine pages to process
         if page_range:
@@ -60,18 +60,17 @@ class BatchProcessor:
                     return page_num, [], False
 
                 raw_data = self.engine.extract_from_cached_file(google_file, page_num)
-                
-                # Cleanup Cloud File immediately
-                try:
-                    import google.generativeai as genai
-                    genai.delete_file(google_file.name)
-                except: pass
 
                 if not raw_data:
                     # PANIC RETRY: If we got nothing, try one more time directly as a fallback
                     logger.warning(f"🔄 Page {page_num} returned no data. Initiating deep-scan retry...")
                     raw_data = self.engine.extract_from_cached_file(google_file, page_num)
-                    if not raw_data: return page_num, [], False
+                
+                # Cleanup Cloud File only after all extraction attempts
+                try:
+                    import google.generativeai as genai
+                    genai.delete_file(google_file.name)
+                except: pass
 
                 raw_list = []
                 if isinstance(raw_data, list): raw_list = raw_data

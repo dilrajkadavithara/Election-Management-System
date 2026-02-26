@@ -59,6 +59,12 @@ const api = {
         return response.data;
     },
 
+    getSystemLogs: async () => {
+        const response = await client.get('/api/system-logs');
+        return response.data;
+    },
+
+
     uploadPDF: async (file) => {
         const formData = new FormData();
         formData.append('file', file);
