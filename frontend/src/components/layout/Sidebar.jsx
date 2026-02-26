@@ -23,7 +23,7 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout, isV2, setIsV
             <nav className="space-y-4 flex-grow">
                 {[
                     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-                    { id: 'warroom', label: 'Campaign Map', icon: '⚔️' },
+                    { id: 'warroom', label: 'War room', icon: '⚔️' },
                     ...(userRole !== 'BOOTH_AGENT' ? [{ id: 'engine', label: 'Upload Voter List', icon: '⚡' }] : []),
                     { id: 'voters', label: 'Voter List', icon: '👥' },
                     { id: 'comm', label: 'Send Messages', icon: '💬' },
