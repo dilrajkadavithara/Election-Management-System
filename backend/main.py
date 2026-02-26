@@ -43,9 +43,20 @@ class SaveBatchRequest(BaseModel):
     ps_name: str = ""
 
 # Pure Core Imports
+from backend.state_manager import state_manager
+
+# --- TOOL PATH DETECTION ---
+poppler_path = os.getenv("POPPLER_PATH")
+tesseract_path = os.getenv("TESSERACT_PATH")
+
+# Initialize Processors with explicit environment paths for local/fallback modes
 from core.pdf_processor import PDFProcessor
 from core.detector import VoterDetector
 from core.batch_processor import BatchProcessor
+
+pdf_processor = PDFProcessor(poppler_path=poppler_path)
+detector = VoterDetector()
+batch_processor = BatchProcessor(tesseract_cmd=tesseract_path)
 from core.db_bridge import (
     get_constituencies, get_local_bodies, check_booth_exists, save_booth_data,
     get_dashboard_stats, get_strategic_analytics, get_voter_list, update_voter_in_db,
@@ -200,24 +211,8 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
 
 # Professional Logging Configuration
-import logging.handlers
-
-LOG_DIR = BASE_DIR / "data" / "logs"
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-LOG_FILE = LOG_DIR / "production.log"
-
-# Rotating File Handler: Keep 5 back-ups of 5MB each
-file_handler = logging.handlers.RotatingFileHandler(
-    LOG_FILE, maxBytes=5*1024*1024, backupCount=5, encoding='utf-8'
-)
-stream_handler = logging.StreamHandler(sys.stdout)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[file_handler, stream_handler]
-)
-logger = logging.getLogger("ElectionEngine")
+from backend.logger_setup import setup_logger
+logger = setup_logger("ElectionEngine")
 
 app = FastAPI(title="Election Management System Backend")
 
@@ -258,10 +253,7 @@ CROPS_DIR = DATA_DIR / "voter_crops"
 for p in [UPLOAD_DIR, PAGES_DIR, CROPS_DIR]: p.mkdir(parents=True, exist_ok=True)
 
 # Processors
-poppler = os.getenv("POPPLER_PATH")
-pdf_processor = PDFProcessor(poppler_path=poppler) if poppler else PDFProcessor()
-detector = VoterDetector()
-batch_processor = BatchProcessor()
+# state_manager is already initialized above
 
 from backend.state_manager import state_manager
 
@@ -340,7 +332,35 @@ async def admin_update_user(uid: int, data: dict, user_info=Depends(get_current_
 # ----------------------------------------------------------------
 
 @app.get("/api/health")
-async def health(): return {"status": "healthy"}
+async def health():
+    """Enhanced Health Check: Monitors system critical path tools and services."""
+    health_data = {
+        "status": "healthy",
+        "redis": "connected" if state_manager.use_redis else "offline (fallback mode)",
+        "poppler": "missing",
+        "tesseract": "missing",
+        "google_ai": "ready" if os.getenv("GOOGLE_API_KEY") else "missing"
+    }
+    
+    # 1. Check Poppler (pdftoppm)
+    p_path = os.getenv("POPPLER_PATH")
+    if p_path and os.path.exists(os.path.join(p_path, "pdftoppm.exe")):
+        health_data["poppler"] = "ready"
+    elif not os.name == 'nt' or os.path.exists("/usr/bin/pdftoppm"): # Unix/Docker fallback
+        health_data["poppler"] = "ready (system)"
+        
+    # 2. Check Tesseract
+    t_path = os.getenv("TESSERACT_PATH")
+    if t_path and os.path.exists(t_path):
+        health_data["tesseract"] = "ready"
+    elif not os.name == 'nt' or os.path.exists("/usr/bin/tesseract"):
+        health_data["tesseract"] = "ready (system)"
+
+    # If critical path is broken, mark as degraded
+    if health_data["poppler"] == "missing" or health_data["tesseract"] == "missing":
+        health_data["status"] = "degraded"
+        
+    return health_data
 
 @app.post("/api/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):

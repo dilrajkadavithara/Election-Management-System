@@ -41,7 +41,7 @@ class PDFProcessor:
         end = last_page if last_page else total_pages
         
         image_paths = []
-        BATCH_SIZE = 1 # Process 1 page at a time for absolute safety
+        BATCH_SIZE = 5 # Safe balance: 5x faster than original, but uses half the RAM of the previous speed boost
         
         for start_page in range(start, end + 1, BATCH_SIZE):
             chunk_end = min(start_page + BATCH_SIZE - 1, end)

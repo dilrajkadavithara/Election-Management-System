@@ -3,7 +3,8 @@ import os
 import redis
 import logging
 
-logger = logging.getLogger("StateManager")
+from backend.logger_setup import setup_logger
+logger = setup_logger("StateManager")
 
 class StateManager:
     def __init__(self):

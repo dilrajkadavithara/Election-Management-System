@@ -30,18 +30,20 @@ from core.batch_processor import BatchProcessor
 from core.db_bridge import save_booth_data
 
 # Logging
-logger = logging.getLogger("CeleryTasks")
+from backend.logger_setup import setup_logger
+logger = setup_logger("CeleryTasks")
 
 # Constants
 DATA_DIR = BASE_DIR / "data"
 PAGES_DIR = DATA_DIR / "page_images"
 CROPS_DIR = DATA_DIR / "voter_crops"
 poppler = os.getenv("POPPLER_PATH")
+tesseract = os.getenv("TESSERACT_PATH")
 
-# Initialize Processors
-pdf_processor = PDFProcessor(poppler_path=poppler) if poppler else PDFProcessor()
+# Initialize Processors correctly for the worker process
+pdf_processor = PDFProcessor(poppler_path=poppler)
 detector = VoterDetector()
-batch_processor = BatchProcessor()
+batch_processor = BatchProcessor(tesseract_cmd=tesseract)
 
 def process_single_voter(args):
     """Helper for parallel processing"""
@@ -140,18 +142,25 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
             processor = BatchProcessor()
             
             completed_pages = set() # Track unique finished pages
-            def update_progress(page_num, page_results):
+            def update_progress(page_num, page_results, success=True):
                 current_batch = state_manager.get_batch(batch_id)
                 if not current_batch: return
                 
-                completed_pages.add(page_num)
+                if success:
+                    completed_pages.add(page_num)
+                else:
+                    logger.error(f"⚠️ Page {page_num} marked as FAILED in Integrity Shield.")
+                    # Track failed pages for UI warning
+                    if 'failed_pages' not in current_batch: current_batch['failed_pages'] = []
+                    if page_num not in current_batch['failed_pages']:
+                        current_batch['failed_pages'].append(page_num)
+                
                 existing_results = current_batch.get('results', [])
                 
-                # Critical Fix: Assign temporary tracer IDs to results so API doesn't crash on missing 'voter_id'
+                # Assign temporary tracer IDs to results
                 start_id = len(existing_results) + 1
                 for i, r in enumerate(page_results):
                     r['voter_id'] = f"tmp_{page_num}_{start_id + i}"
-                    # Basic status check if not already present
                     if 'Status' not in r: r['Status'] = '✅ OK'
                 
                 existing_results.extend(page_results)
@@ -160,12 +169,15 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
                 current_batch['results'] = existing_results
                 current_batch['total_voters'] = len(existing_results)
                 current_batch['voters_processed'] = len(existing_results)
+                
+                # Honest Progress: Only count successful pages
                 current_batch['pages_processed'] = len(completed_pages)
+                
                 current_batch['clean_count'] = len([r for r in existing_results if r.get('Status') == '✅ OK'])
                 current_batch['flagged_count'] = len([r for r in existing_results if r.get('Status') != '✅ OK'])
                 
                 state_manager.set_batch(batch_id, current_batch)
-                logger.info(f"Neural Sync: Page {page_num} -> +{len(page_results)} voters (Total: {len(existing_results)})")
+                logger.info(f"Neural Sync: Page {page_num} [{'OK' if success else 'FAIL'}] -> Total: {len(existing_results)} voters")
 
             # Page Range Logic: Skip cover pages (1 & 2) but process the rest
             total_pdf_pages = batch.get('total_pages', 0)
@@ -179,10 +191,18 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
                 batch['results'] = results
                 batch['total_voters'] = len(results)
                 batch['voters_processed'] = len(results)
-                batch['pages_processed'] = batch.get('total_pages', 0)
-                batch['status'] = 'processed'
+                
+                # If everything finished, mark as processed
+                num_failed = len(batch.get('failed_pages', []))
+                if num_failed == 0:
+                    batch['pages_processed'] = batch.get('total_pages', 0) # Honest 100%
+                    batch['status'] = 'processed'
+                else:
+                    batch['status'] = 'warning'
+                    batch['error'] = f"Missing data from {num_failed} pages. Check logs."
+                
                 state_manager.set_batch(batch_id, batch)
-                logger.info(f"Parallel Extraction Complete for {batch_id}: {len(results)} voters saved.")
+                logger.info(f"Extraction Cycle Finished for {batch_id}. Status: {batch['status']}")
             return
 
         # --- LEGACY IMAGE-BASED FLOW ---

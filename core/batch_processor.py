@@ -23,8 +23,8 @@ class BatchProcessor:
         # Cross-platform processor initialization
         pdf_proc = PDFProcessor()
         
-        # Concurrency Management: 12 is safe for JPEG-mode on 4GB+ systems
-        max_workers = 12 
+        # Concurrency Management: 10 is high-speed but requires robust retry logic in the engine
+        max_workers = 10 
         
         # Determine pages to process
         if page_range:
@@ -49,7 +49,7 @@ class BatchProcessor:
                     pdf_path, temp_dir, dpi=300, 
                     first_page=page_num, last_page=page_num
                 )
-                if not page_imgs: return page_num, []
+                if not page_imgs: return page_num, [], False
                 
                 page_img_path = page_imgs[0]
                 
@@ -57,7 +57,7 @@ class BatchProcessor:
                 # We upload the single image to keep tokens 30x cheaper
                 google_file = self.engine.upload_file(page_img_path)
                 if not google_file:
-                    return page_num, []
+                    return page_num, [], False
 
                 raw_data = self.engine.extract_from_cached_file(google_file, page_num)
                 
@@ -68,17 +68,24 @@ class BatchProcessor:
                 except: pass
 
                 if not raw_data:
-                    return page_num, []
+                    # PANIC RETRY: If we got nothing, try one more time directly as a fallback
+                    logger.warning(f"🔄 Page {page_num} returned no data. Initiating deep-scan retry...")
+                    raw_data = self.engine.extract_from_cached_file(google_file, page_num)
+                    if not raw_data: return page_num, [], False
 
                 raw_list = []
                 if isinstance(raw_data, list): raw_list = raw_data
                 elif isinstance(raw_data, dict):
+                    # Handle cases where AI wraps list in a key
                     for val in raw_data.values():
                         if isinstance(val, list):
                             raw_list = val
                             break
                 
-                if not raw_list: return page_num, []
+                if not raw_list: 
+                    # CRITICAL: 0 voters on a non-cover page is almost certainly an AI failure/filter hit
+                    logger.error(f"⚠️ Page {page_num} processed but returned 0 voters. Flagging as failure for integrity.")
+                    return page_num, [], False
 
                 page_results = []
                 for entry in raw_list:
@@ -98,11 +105,11 @@ class BatchProcessor:
                         "Filename": os.path.basename(pdf_path)
                     }
                     page_results.append(parsed_info)
-                return page_num, page_results
+                return page_num, page_results, True
 
             except Exception as e:
-                logging.error(f"❌ Thread Error on Page {page_num}: {e}")
-                return page_num, []
+                logger.error(f"❌ Thread Error on Page {page_num}: {e}")
+                return page_num, [], False
             finally:
                 # 3. Mandatory Housekeeping: Prevent Disk Bloat
                 shutil.rmtree(temp_dir, ignore_errors=True)
@@ -112,14 +119,15 @@ class BatchProcessor:
             ordered_results = {}
             
             for future in concurrent.futures.as_completed(future_to_page):
-                page, results = future.result()
-                ordered_results[page] = results
-                if callback and results:
-                    callback(page, results)
+                page, res, success = future.result()
+                ordered_results[page] = res
+                if callback:
+                    callback(page, res, success)
 
+            # 3. Final Serialization (Maintain Perfect Order)
             for p in pages:
                 if p in ordered_results:
-                    for i, voter in enumerate(ordered_results[p]):
+                    for voter in ordered_results[p]:
                         voter["voter_id"] = len(all_standardized) + 1
                         self._apply_standardization(voter, voter["voter_id"])
                         all_standardized.append(voter)

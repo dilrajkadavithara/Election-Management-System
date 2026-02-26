@@ -34,6 +34,19 @@ const OCREngine = ({
     const [newPSName, setNewPSName] = useState('');
     const [newPSNo, setNewPSNo] = useState('');
     const [isAddingBooth, setIsAddingBooth] = useState(true);
+    const [systemHealth, setSystemHealth] = useState(null);
+
+    useEffect(() => {
+        const checkSystem = async () => {
+            try {
+                const health = await api.checkHealth();
+                setSystemHealth(health);
+            } catch (e) { console.error("Health Monitor Error:", e); }
+        };
+        checkSystem();
+        const interval = setInterval(checkSystem, 10000); // Check every 10s
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         if (!allLocations || allLocations.length === 0) {
@@ -251,6 +264,24 @@ const OCREngine = ({
                     </div>
                 </div>
             </header>
+
+            {/* System Health Banner */}
+            {systemHealth && systemHealth.status !== 'healthy' && (
+                <div className="bg-amber-500/10 border border-amber-500/20 p-6 rounded-2xl flex items-center justify-between mb-8 animate-in fade-in slide-in-from-top-4">
+                    <div className="flex items-center gap-6">
+                        <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center text-2xl text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)]">⚠️</div>
+                        <div className="space-y-1">
+                            <p className="lux-tech-label !text-amber-500 !text-xs font-bold uppercase tracking-wider">System Alert: Environment Configuration Required</p>
+                            <p className="text-slate-400 text-[11px] leading-relaxed">
+                                {systemHealth.poppler === 'missing' && "PDF Engine (Poppler) is missing. "}
+                                {systemHealth.tesseract === 'missing' && "OCR Engine (Tesseract) is missing. "}
+                                {systemHealth.redis !== 'connected' && "Local Fallback Mode active (Redis offline). "}
+                                Please check server configuration to restore full processing speed.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {ocrError && (
                 <div className="bg-rose-500/10 border border-rose-500/20 p-6 rounded-2xl flex items-center justify-between animate-shake">
