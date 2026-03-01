@@ -245,7 +245,7 @@ const OCREngine = ({
                                 <label className={`lux-tech-label px-2 ${validationTriggered && !ocrTargetLoc.boothNo ? 'text-rose-500' : ''}`}>Booth Number</label>
                                 <div className="flex gap-4">
                                     {isAddingBooth ? (
-                                        <input autoFocus placeholder="NO." value={ocrTargetLoc.boothNo} onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, boothId: '', boothNo: e.target.value })} className="flex-1 lux-data-field border-indigo-500/40 text-center !px-0 h-[52px]" />
+                                        <input autoFocus placeholder="NO." value={ocrTargetLoc.boothNo} onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, boothId: '', boothNo: e.target.value })} className="flex-1 min-w-0 lux-data-field border-indigo-500/40 text-center h-[52px]" />
                                     ) : (
                                         <div className="relative flex-1">
                                             <select
@@ -262,7 +262,7 @@ const OCREngine = ({
                                             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-indigo-500/40 text-[10px]">▼</div>
                                         </div>
                                     )}
-                                    <button disabled={!ocrTargetLoc.lbId} onClick={() => setIsAddingBooth(!isAddingBooth)} className={`w-14 h-[52px] rounded-xl flex items-center justify-center text-xl transition-all border shadow-lg disabled:opacity-10 ${isAddingBooth ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-black/40 border-indigo-500/20 text-indigo-400 hover:border-indigo-500'}`}>
+                                    <button disabled={!ocrTargetLoc.lbId} onClick={() => setIsAddingBooth(!isAddingBooth)} className={`flex-shrink-0 w-14 h-[52px] rounded-xl flex items-center justify-center text-xl transition-all border shadow-lg disabled:opacity-10 ${isAddingBooth ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-black/40 border-indigo-500/20 text-indigo-400 hover:border-indigo-500'}`}>
                                         {isAddingBooth ? '✓' : '+'}
                                     </button>
                                 </div>
