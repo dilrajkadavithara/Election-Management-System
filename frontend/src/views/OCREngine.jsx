@@ -268,14 +268,14 @@ const OCREngine = ({
                                 </div>
                             </div>
 
-                            {/* PS No (1 col) */}
-                            <div className="col-span-1 space-y-4">
+                            {/* PS No (2 cols) */}
+                            <div className="col-span-2 space-y-4">
                                 <label className={`lux-tech-label text-center block ${validationTriggered && !ocrTargetLoc.psNo ? 'text-rose-500' : ''}`}>PS NO.</label>
-                                <input maxLength={3} placeholder="###" value={ocrTargetLoc.psNo} onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, psNo: e.target.value })} className={`w-full lux-data-field text-center !px-0 font-bold h-[52px] ${validationTriggered && !ocrTargetLoc.psNo ? 'border-rose-600' : ''}`} />
+                                <input maxLength={3} placeholder="###" value={ocrTargetLoc.psNo} onChange={e => setOcrTargetLoc({ ...ocrTargetLoc, psNo: e.target.value })} className={`w-full lux-data-field text-center font-bold h-[52px] ${validationTriggered && !ocrTargetLoc.psNo ? 'border-rose-600' : ''}`} />
                             </div>
 
-                            {/* Polling Station Name (Remaining 8 cols) */}
-                            <div className="col-span-8 space-y-4">
+                            {/* Polling Station Name (Remaining 7 cols) */}
+                            <div className="col-span-7 space-y-4">
                                 <label className={`lux-tech-label px-2 ${validationTriggered && !ocrTargetLoc.psName ? 'text-rose-500' : ''}`}>School / Building Name</label>
                                 <input
                                     placeholder="ENTER FULL INSTITUTIONAL POLLING STATION NAME..."
