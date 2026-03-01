@@ -31,8 +31,9 @@ const CommunicationHub = ({
     };
 
     const handleFilterChange = (updates) => {
-        setListFilters({ ...listFilters, ...updates });
-        setTimeout(() => loadVoters(), 100);
+        const newFilters = { ...listFilters, ...updates };
+        setListFilters(newFilters);
+        loadVoters(1, newFilters);
     };
 
     const onSend = () => {
@@ -49,23 +50,23 @@ const CommunicationHub = ({
     };
 
     return (
-        <div className="min-h-screen lux-mesh-bg p-12 pl-[420px] pr-16 space-y-16 lux-animate-in pb-32">
-            <header className="flex flex-wrap justify-between items-end border-b border-white/5 pb-10 gap-12">
+        <div className="min-h-screen lux-mesh-bg p-6 lg:p-12 pl-6 lg:pl-[420px] pr-6 lg:pr-16 space-y-8 lg:space-y-16 lux-animate-in pb-32 pt-24 lg:pt-12">
+            <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end border-b border-white/5 pb-6 lg:pb-10 gap-6 lg:gap-12">
                 <div>
-                    <h1 className="text-7xl font-black tracking-tight uppercase lux-text-gradient">Send Messages</h1>
-                    <p className="text-slate-300 font-bold uppercase tracking-widest text-sm mt-3 ml-1">Send SMS and WhatsApp to Voters</p>
+                    <h1 className="text-4xl lg:text-7xl font-black tracking-tight uppercase lux-text-gradient">Send Messages</h1>
+                    <p className="text-slate-300 font-bold uppercase tracking-widest text-xs lg:text-sm mt-3 ml-1">Send SMS and WhatsApp to Voters</p>
                 </div>
-                <div className="lux-glass border-indigo-500/20 px-8 py-5 rounded-[2rem] text-center shadow-2xl relative overflow-hidden group">
+                <div className="lux-glass border-indigo-500/20 px-8 py-5 rounded-[2rem] text-center shadow-2xl relative overflow-hidden group w-full lg:w-auto mt-4 lg:mt-0">
                     <div className="absolute inset-0 bg-indigo-500/5 group-hover:bg-indigo-500/10 transition-colors" />
                     <p className="text-[11px] font-black uppercase text-indigo-400 tracking-widest mb-1 relative z-10">Total Messages Sent</p>
                     <p className="text-3xl font-black text-white italic relative z-10">{commStats?.total_sent || 0}</p>
                 </div>
             </header>
 
-            <div className="grid grid-cols-12 gap-10">
-                <div className="col-span-12 lux-glass p-8 rounded-[2.5rem] border-white/5 shadow-2xl space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10">
+                <div className="col-span-1 lg:col-span-12 lux-glass p-6 lg:p-8 rounded-3xl lg:rounded-[2.5rem] border-white/5 shadow-2xl space-y-6 lg:space-y-8">
                     <h3 className="text-sm font-black uppercase text-indigo-400 tracking-widest border-b border-white/5 pb-4">Audience Filters</h3>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
                         {[
                             { label: 'Constituency', key: 'constituency', options: allLocations },
                             { label: 'Local Body', key: 'lb', options: allLocations.find(c => String(c.id) === String(listFilters.constituency))?.local_bodies, disabled: !listFilters.constituency },
@@ -102,18 +103,18 @@ const CommunicationHub = ({
                     </div>
                 </div>
 
-                <div className="col-span-12 lux-card !bg-indigo-600/10 border-indigo-500/30 p-8 flex items-center justify-between group overflow-hidden relative">
+                <div className="col-span-1 lg:col-span-12 lux-card !bg-indigo-600/10 border-indigo-500/30 p-6 lg:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group overflow-hidden relative">
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-                    <div className="flex items-center gap-6 relative z-10">
+                    <div className="flex items-center gap-4 lg:gap-6 relative z-10">
                         <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981] animate-pulse" />
-                        <p className="text-sm font-black text-indigo-100 uppercase tracking-widest">Audience Size: {voterTotal} Voters Selected</p>
+                        <p className="text-xs lg:text-sm font-black text-indigo-100 uppercase tracking-widest">Audience Size: <br className="sm:hidden" />{voterTotal} Voters Selected</p>
                     </div>
-                    <div className="text-sm font-black text-indigo-400 tracking-widest relative z-10 group-hover:text-white transition-colors">READY TO SEND</div>
+                    <div className="text-xs lg:text-sm font-black text-indigo-400 tracking-widest relative z-10 group-hover:text-white transition-colors">READY TO SEND</div>
                 </div>
 
-                <div className="col-span-12 grid grid-cols-2 gap-10">
-                    <div className="space-y-10">
-                        <div className="grid grid-cols-2 gap-6">
+                <div className="col-span-1 lg:col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
+                    <div className="space-y-6 lg:space-y-10">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
                             {[
                                 { id: 'WATI', name: 'WhatsApp', icon: '🟢', desc: 'With Images & Text' },
                                 { id: 'SMS', name: 'Direct SMS', icon: '🔵', desc: 'Text Only' }
@@ -129,7 +130,7 @@ const CommunicationHub = ({
                             ))}
                         </div>
 
-                        <div className="lux-glass p-10 rounded-[2.5rem] border-white/5 space-y-8">
+                        <div className="lux-glass p-6 lg:p-10 rounded-3xl lg:rounded-[2.5rem] border-white/5 space-y-6 lg:space-y-8">
                             <div className="space-y-3">
                                 <label className="text-xs font-black text-slate-300 uppercase tracking-widest ml-1">Message Title</label>
                                 <input type="text" value={heading} onChange={e => setHeading(e.target.value)} placeholder="ENTER CAMPAIGN TOPIC" className="w-full bg-slate-900/50 text-white border border-white/10 rounded-2xl px-6 py-4 text-sm font-bold tracking-wide outline-none focus:border-indigo-500/50 transition-all placeholder-slate-700" />
@@ -145,10 +146,10 @@ const CommunicationHub = ({
                         </div>
                     </div>
 
-                    <div className="lux-glass p-10 rounded-[2.5rem] border-white/5 flex flex-col shadow-[0_0_80px_rgba(0,0,0,0.5)]">
-                        <div className="flex justify-between items-center mb-8 border-b border-white/5 pb-6">
+                    <div className="lux-glass p-6 lg:p-10 rounded-3xl lg:rounded-[2.5rem] border-white/5 flex flex-col shadow-[0_0_80px_rgba(0,0,0,0.5)]">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 lg:mb-8 border-b border-white/5 pb-4 lg:pb-6 gap-4">
                             <label className="text-sm font-black text-indigo-400 uppercase tracking-widest">Message Templates</label>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                                 {commTemplates?.map(t => (
                                     <button key={t.id} onClick={() => setCommMessage(t.content)} className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all shadow-lg">{t.name}</button>
                                 ))}
@@ -160,7 +161,7 @@ const CommunicationHub = ({
                             placeholder="Type your message here..."
                             className="flex-1 w-full bg-transparent text-white text-lg font-medium outline-none resize-none placeholder-slate-800 leading-relaxed"
                         />
-                        <div className="mt-8 pt-8 border-t border-white/5">
+                        <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-white/5">
                             <button
                                 onClick={onSend}
                                 disabled={!commMessage || voterTotal === 0}

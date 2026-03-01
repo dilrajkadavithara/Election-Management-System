@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import api from './api';
 import Sidebar from './components/layout/Sidebar';
 import LoginForm from './components/auth/LoginForm';
-import Dashboard from './views/Dashboard';
 import DashboardV2 from './views/DashboardV2';
 import VoterList from './views/VoterList';
 import AdminControl from './views/AdminControl';
@@ -28,7 +27,6 @@ const App = () => {
     const [userRole, setUserRole] = useState(localStorage.getItem('voter_role'));
     const [username, setUsername] = useState(localStorage.getItem('voter_user'));
     const [view, setView] = useState('dashboard');
-    const [isV2, setIsV2] = useState(true);
     const [loginUser, setLoginUser] = useState('');
     const [loginPass, setLoginPass] = useState('');
     const [loginConsent, setLoginConsent] = useState(false);
@@ -97,12 +95,18 @@ const App = () => {
     }, [isLoggedIn]);
 
     useEffect(() => {
-        if (isLoggedIn && view === 'voters') loadVoters(currentPage);
+        const timer = setTimeout(() => {
+            if (isLoggedIn && view === 'voters') loadVoters(currentPage);
+        }, 500);
+        return () => clearTimeout(timer);
     }, [view, dashFilters, listFilters, searchQuery]);
 
     useEffect(() => {
-        if (isLoggedIn && view === 'dashboard') loadStats();
-        if (isLoggedIn && view === 'comm') loadCommData();
+        const timer = setTimeout(() => {
+            if (isLoggedIn && view === 'dashboard') loadStats();
+            if (isLoggedIn && view === 'comm') loadCommData();
+        }, 500);
+        return () => clearTimeout(timer);
     }, [view, dashFilters]);
 
     // Auto-reconnect to latest processed batch when opening AI Processor
@@ -164,18 +168,22 @@ const App = () => {
         } catch (e) { console.error("Global Stats Load Error:", e); }
     };
 
-    const loadVoters = async (page = 1) => {
+    const loadVoters = async (page = 1, overrideFilters = null) => {
         setVoterLoading(true);
+        const tf = overrideFilters || listFilters;
         try {
             const data = await api.getVoters({
                 search: searchQuery,
-                constituency: listFilters.constituency,
-                lb: listFilters.lb,
-                booth: listFilters.booth,
-                gender: listFilters.gender,
-                age_from: listFilters.ageFrom,
-                age_to: listFilters.ageTo,
-                location: listFilters.location,
+                constituency: tf.constituency,
+                lb: tf.lb,
+                booth: tf.booth,
+                gender: tf.gender,
+                age_from: tf.ageFrom,
+                age_to: tf.ageTo,
+                location: tf.location,
+                leaning: tf.leaning,
+                serial_from: tf.serialFrom,
+                serial_to: tf.serialTo,
                 page: page,
                 page_size: 50
             });
@@ -491,34 +499,22 @@ const App = () => {
     }
 
     return (
-        <div className={`min-h-screen ${isV2 && view === 'dashboard' ? 'v2-bg-obsidian' : 'bg-slate-50'} flex font-sans transition-colors duration-700`}>
-            <Sidebar view={view} setView={setView} userRole={userRole} username={username} handleLogout={handleLogout} isV2={isV2} setIsV2={setIsV2} setShowChangePassword={setShowChangePassword} />
+        <div className={`min-h-screen ${view === 'dashboard' ? 'v2-bg-obsidian' : 'bg-slate-50'} flex font-sans transition-colors duration-700`}>
+            <Sidebar view={view} setView={setView} userRole={userRole} username={username} handleLogout={handleLogout} setShowChangePassword={setShowChangePassword} />
 
-            <main className={`flex-1 flex flex-col overflow-y-auto ${view === 'design' ? 'bg-slate-200 p-0' : (isV2 && view === 'dashboard' ? 'p-0' : 'p-12')}`}>
+            <main className={`flex-1 flex flex-col overflow-y-auto ${view === 'design' ? 'bg-slate-200 p-0' : (view === 'dashboard' ? 'p-0' : 'p-12')}`}>
                 {view === 'dashboard' && (
                     <div className="relative">
-                        {isV2 ? (
-                            <DashboardV2
-                                dashboardStats={dashboardStats}
-                                strategicStats={strategicStats}
-                                dashFilters={dashFilters}
-                                setDashFilters={setDashFilters}
-                                allLocations={allLocations}
-                                listFilters={listFilters}
-                                setListFilters={setListFilters}
-                                setView={setView}
-                            />
-                        ) : (
-                            <Dashboard
-                                dashboardStats={dashboardStats}
-                                dashFilters={dashFilters}
-                                setDashFilters={setDashFilters}
-                                allLocations={allLocations}
-                                listFilters={listFilters}
-                                setListFilters={setListFilters}
-                                setView={setView}
-                            />
-                        )}
+                        <DashboardV2
+                            dashboardStats={dashboardStats}
+                            strategicStats={strategicStats}
+                            dashFilters={dashFilters}
+                            setDashFilters={setDashFilters}
+                            allLocations={allLocations}
+                            listFilters={listFilters}
+                            setListFilters={setListFilters}
+                            setView={setView}
+                        />
                     </div>
                 )}
                 {view === 'voters' && <VoterList voterList={voterList} voterTotal={voterTotal} currentPage={currentPage} voterLoading={voterLoading} listFilters={listFilters} setListFilters={setListFilters} searchQuery={searchQuery} setSearchQuery={setSearchQuery} allLocations={allLocations} loadVoters={loadVoters} loadAdminData={loadAdminData} currentUser={currentUser} userRole={userRole} setEditData={setEditData} setEditMode={setEditMode} handleUpdateIntel={handleUpdateIntel} />}
@@ -526,7 +522,7 @@ const App = () => {
                 {view === 'comm' && <CommunicationHub commType={commType} setCommType={setCommType} commMessage={commMessage} setCommMessage={setCommMessage} handleCommunicationSend={handleCommunicationSend} voterTotal={voterTotal} commStats={commStats} commTemplates={commTemplates} allLocations={allLocations} listFilters={listFilters} setListFilters={setListFilters} loadVoters={loadVoters} />}
                 {view === 'engine' && <OCREngine ocrBatch={ocrBatch} setOcrBatch={setOcrBatch} ocrLoading={ocrLoading} setOcrLoading={setOcrLoading} ocrError={ocrError} setOcrError={setOcrError} ocrRef={ocrRef} handleFileUpload={handleFileUpload} startExtraction={startExtraction} startOcr={startOcr} handleSaveBatch={handleSaveBatch} discardBatch={discardBatch} stopAndClearRAM={stopAndClearRAM} setEditData={setEditData} setEditMode={setEditMode} allLocations={allLocations} ocrTargetLoc={ocrTargetLoc} setOcrTargetLoc={setOcrTargetLoc} loadAdminData={loadAdminData} useGemini={useGemini} setUseGemini={setUseGemini} useDirectPdf={useDirectPdf} setUseDirectPdf={setUseDirectPdf} />}
                 {view === 'design' && <SlipDesign activePrintParty={activePrintParty} setActivePrintParty={setActivePrintParty} allParties={allParties} allLocations={allLocations} listFilters={listFilters} setListFilters={setListFilters} voterList={voterList} loadVoters={loadVoters} setSearchQuery={setSearchQuery} />}
-                {view === 'warroom' && <WarRoom allLocations={allLocations} dashFilters={dashFilters} />}
+                {view === 'warroom' && <WarRoom allLocations={allLocations} dashFilters={dashFilters} listFilters={listFilters} setListFilters={setListFilters} setView={setView} />}
             </main>
 
             {editMode && <EditProfileModal editData={editData} setEditData={setEditData} setEditMode={setEditMode} saveCorrection={saveCorrection} ocrBatch={ocrBatch} />}

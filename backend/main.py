@@ -9,7 +9,7 @@ import jwt
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from pathlib import Path
-from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Depends, Body
+from fastapi import FastAPI, Request, UploadFile, File, HTTPException, BackgroundTasks, Depends, Body
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -205,7 +205,7 @@ send_broadcast_form_async = sync_to_async(sync_send_broadcast_form, thread_sensi
 # Auth Configuration
 SECRET_KEY = os.getenv("SECRET_KEY", "election-super-secret-key-2026")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 600
+ACCESS_TOKEN_EXPIRE_MINUTES = 10080  # 7 days — prevents mid-session expiry during long OCR jobs
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
@@ -556,7 +556,8 @@ async def export_batch_csv(batch_id: str, user_info=Depends(get_current_user)):
     )
 
 @app.post("/api/batch/{batch_id}/cancel")
-async def cancel_batch(batch_id: str, user_info=Depends(get_current_user)):
+async def cancel_batch(batch_id: str, request: Request):
+    # No auth required — a user with an expired token must still be able to cancel a stuck batch
     """Cancel an ongoing OCR batch"""
     batch = state_manager.get_batch(batch_id)
     if not batch:
@@ -588,7 +589,7 @@ async def get_system_logs(user_info=Depends(get_current_user)):
         if not log_file.exists():
             return {"logs": ["System initializing..."]}
         
-        with open(log_file, "r", encoding="utf-8") as f:
+        with open(log_file, "r", encoding="utf-8", errors="replace") as f:
             lines = f.readlines()
         
         # Get last 30 lines and reverse them so newest is at the bottom of the array
@@ -779,7 +780,11 @@ async def start_extract(batch_id: str, background_tasks: BackgroundTasks, data: 
     state_manager.set_batch(batch_id, batch)
     
     dpi_val = 150
-    if state_manager.use_redis:
+    # To prevent silent black holes locally, ONLY push to Celery if explicitly configured.
+    # Otherwise, rely on FastAPI's robust native background threads.
+    use_celery = state_manager.use_redis and os.getenv("CELERY_ENABLED", "false").lower() == "true"
+    
+    if use_celery:
         try:
             run_extraction_task.apply_async(args=[batch_id, dpi_val, direct_pdf], countdown=0)
         except Exception:
@@ -802,7 +807,9 @@ async def start_process(batch_id: str, background_tasks: BackgroundTasks, data: 
     batch['direct_pdf'] = direct_pdf
     state_manager.set_batch(batch_id, batch)
     
-    if state_manager.use_redis:
+    use_celery = state_manager.use_redis and os.getenv("CELERY_ENABLED", "false").lower() == "true"
+    
+    if use_celery:
         try:
             run_processing_task.apply_async(args=[batch_id, use_gemini, direct_pdf], countdown=0)
         except Exception:

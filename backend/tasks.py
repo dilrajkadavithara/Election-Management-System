@@ -65,14 +65,17 @@ def run_extraction_task(batch_id: str, dpi: int, direct_pdf: bool = False):
         # 0. Bird's-Eye Synchronization: Prefer database state over passed arguments
         direct_pdf = batch.get('direct_pdf', direct_pdf)
 
-        # 1. Page Count (Using PyPDF2 or Info)
+        # 1. Page Count (Using PyPDF2 or Info) — persist immediately so UI always sees it
         try:
             from PyPDF2 import PdfReader
             with open(pdf_path, 'rb') as f:
                 reader = PdfReader(f)
                 batch['total_pages'] = len(reader.pages)
+                logger.info(f"Batch {batch_id}: PDF has {batch['total_pages']} pages.")
         except Exception as e:
             logger.error(f"Page count failure: {e}")
+        # Persist page count to state BEFORE any branching so the UI always reflects it
+        state_manager.set_batch(batch_id, batch)
 
         p_dir = PAGES_DIR / batch_id
         c_dir = CROPS_DIR / batch_id
@@ -139,6 +142,15 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
             processing_path = str(batch['file_path'])
             logger.info(f"Steaming Direct PDF for Batch {batch_id}. Source: {processing_path}")
 
+            # 🚨 Fallback fix: If total_pages was dropped in redis race conditions, lock it here
+            try:
+                from PyPDF2 import PdfReader
+                with open(processing_path, 'rb') as f:
+                    batch['total_pages'] = len(PdfReader(f).pages)
+                    state_manager.set_batch(batch_id, batch)
+            except Exception as page_check_err:
+                logger.error(f"Fallback page count failed: {page_check_err}")
+
             processor = BatchProcessor()
             
             completed_pages = set() # Track unique finished pages
@@ -179,9 +191,16 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
                 state_manager.set_batch(batch_id, current_batch)
                 logger.info(f"Neural Sync: Page {page_num} [{'OK' if success else 'FAIL'}] -> Total: {len(existing_results)} voters")
 
-            # Page Range Logic: Skip cover pages (1 & 2) but process the rest
+            # Page Range Logic: Skip cover pages (1 & 2) AND the last page (back-cover/certification).
+            # Both are structural pages in Kerala electoral rolls that contain no voter records.
             total_pdf_pages = batch.get('total_pages', 0)
-            target_pages = list(range(3, total_pdf_pages + 1)) if total_pdf_pages > 2 else [1]
+            if total_pdf_pages > 3:
+                target_pages = list(range(3, total_pdf_pages))  # excludes page 1, 2 AND last page
+            elif total_pdf_pages > 2:
+                target_pages = list(range(3, total_pdf_pages + 1))  # tiny PDF fallback
+            else:
+                target_pages = [1]
+            logger.info(f"Processing pages {target_pages[0]}–{target_pages[-1]} of {total_pdf_pages} total (skipping covers + back-cover)")
 
             results = processor.process_pdf_directly(processing_path, page_range=target_pages, callback=update_progress)
             

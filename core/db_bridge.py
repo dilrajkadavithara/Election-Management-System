@@ -17,6 +17,22 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'voter_vault.settings')
 django.setup()
 
 from core_db.models import Voter, Booth, Constituency, LocalBody, PoliticalParty, UserProfile, MessageTemplate, CommunicationLog
+import time
+
+_stats_cache = {}
+CACHE_TTL = 30  # 30 seconds
+
+def _get_cache(key):
+    if key in _stats_cache:
+        val, ts = _stats_cache[key]
+        if time.time() - ts < CACHE_TTL:
+            return val
+        else:
+            del _stats_cache[key]
+    return None
+
+def _set_cache(key, val):
+    _stats_cache[key] = (val, time.time())
 
 def get_parties():
     """Fetch list of active political parties"""
@@ -122,6 +138,10 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
 
 def get_strategic_analytics(user_profile, constituency_id=None):
     """Deep analytics aggregation for Command Center V2"""
+    cache_key = f"strategic_{user_profile.id}_{constituency_id}"
+    cached = _get_cache(cache_key)
+    if cached: return cached
+
     from django.db.models import Count, Case, When, IntegerField, F, Value
     
     voters = user_profile.get_accessible_voters()
@@ -172,12 +192,18 @@ def get_strategic_analytics(user_profile, constituency_id=None):
             "agent": rv.created_by.username if rv.created_by else "System"
         })
         
-    return {
+    result = {
         "booth_stats": booth_stats,
         "recent_activity": recent_activity
     }
+    _set_cache(cache_key, result)
+    return result
 
 def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id=None, gender=None, leaning=None, location=None):
+    cache_key = f"dash_{user_profile.id}_{constituency_id}_{lb_id}_{booth_id}_{gender}_{leaning}_{location}"
+    cached = _get_cache(cache_key)
+    if cached: return cached
+
     from django.db.models import Count, Case, When, IntegerField, Value
     
     voters = user_profile.get_accessible_voters()
@@ -320,6 +346,8 @@ def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id
             "Outside District": {"UDF": stats['mv_district_udf'], "LDF": stats['mv_district_ldf'], "NDA": stats['mv_district_nda'], "NEUTRAL": stats['mv_district_neu']},
         }
     }
+    _set_cache(cache_key, result)
+    return result
 
 def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None, serial_from=None, serial_to=None, location=None):
     voters = user_profile.get_accessible_voters()

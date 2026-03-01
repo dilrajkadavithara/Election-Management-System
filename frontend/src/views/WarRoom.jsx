@@ -4,7 +4,7 @@ import {
 } from 'recharts';
 import api from '../api';
 
-const WarRoom = ({ allLocations, dashFilters }) => {
+const WarRoom = ({ allLocations, dashFilters, listFilters, setListFilters, setView }) => {
     const [perspective, setPerspective] = useState('UDF');
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -21,6 +21,19 @@ const WarRoom = ({ allLocations, dashFilters }) => {
         NDA: { color: '#f59e0b', text: 'text-amber-500', shadow: 'shadow-[0_0_10px_#f59e0b]' }
     };
     const activeBrand = branding[perspective] || branding.UDF;
+
+    const handleCardClick = (baseFilters = {}) => {
+        setListFilters({
+            ...listFilters,
+            constituency: filters.constituencyId || '',
+            lb: filters.lbId || '',
+            booth: filters.boothId || '',
+            gender: '',
+            leaning: '',
+            ...baseFilters
+        });
+        setView('voters');
+    };
 
     const loadTacticalData = async () => {
         setLoading(true);
@@ -55,19 +68,19 @@ const WarRoom = ({ allLocations, dashFilters }) => {
     );
 
     return (
-        <div className="min-h-screen lux-mesh-bg p-12 pl-[420px] pr-16 space-y-16 animate-in overflow-x-hidden">
+        <div className="min-h-screen lux-mesh-bg p-6 pt-24 lg:p-12 lg:pl-[420px] lg:pr-16 space-y-8 lg:space-y-16 animate-in overflow-x-hidden">
             {/* 🛠️ HEADER & FILTERS */}
-            <div className="flex flex-col gap-10 border-b border-white/5 pb-10">
-                <div className="flex flex-wrap justify-between items-end gap-12">
-                    <div>
-                        <div className="flex items-center gap-3 mb-4">
+            <div className="flex flex-col gap-6 lg:gap-10 border-b border-white/5 pb-8 lg:pb-10">
+                <div className="flex flex-col lg:flex-row justify-between items-center lg:items-end gap-6 lg:gap-12 text-center lg:text-left">
+                    <div className="flex flex-col items-center lg:items-start">
+                        <div className="flex items-center justify-center lg:justify-start gap-3 mb-4">
                             <span className="w-3 h-3 rounded-full bg-rose-600 animate-pulse shadow-[0_0_15px_#e11d48]" />
                             <h4 className="font-bold uppercase tracking-[0.2em] text-sm text-rose-500">Live Field Tracking</h4>
                         </div>
-                        <h1 className="text-7xl font-black uppercase tracking-tight leading-none text-white">
+                        <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black uppercase tracking-tight leading-none text-white">
                             Tactical <span className="lux-text-gradient">Deployment HQ</span>
                         </h1>
-                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 mt-4 ml-1 flex items-center gap-2">
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 mt-4 ml-0 lg:ml-1 flex items-center justify-center lg:justify-start gap-2">
                             {stats?.performance?.top_win?.length > 0 ? (
                                 <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Intelligence Feed Active</>
                             ) : (
@@ -76,7 +89,7 @@ const WarRoom = ({ allLocations, dashFilters }) => {
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-6">
+                    <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-6">
                         {/* Perspective Toggle */}
                         <div className="bg-slate-900/80 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 flex gap-1">
                             {['UDF', 'LDF', 'NDA'].map(p => (
@@ -116,7 +129,7 @@ const WarRoom = ({ allLocations, dashFilters }) => {
                             value={filters.constituencyId}
                             onChange={(e) => setFilters({ ...filters, constituencyId: e.target.value, lbId: '', boothId: '' })}
                         >
-                            <option value="" className="bg-slate-900">All Areas</option>
+                            <option value="" className="bg-slate-900">All Local Bodies</option>
                             {allLocations.map(c => <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>)}
                         </select>
                     </div>
@@ -125,7 +138,7 @@ const WarRoom = ({ allLocations, dashFilters }) => {
                     <div className="flex flex-col gap-2 relative z-10">
                         <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs">🏘️</span>
-                            <label className="text-[9px] font-black uppercase text-rose-400 tracking-[0.2em]">Area / Local Body</label>
+                            <label className="text-[9px] font-black uppercase text-rose-400 tracking-[0.2em]">Local Body</label>
                         </div>
                         <select
                             disabled={!filters.constituencyId}
@@ -160,14 +173,14 @@ const WarRoom = ({ allLocations, dashFilters }) => {
             </div>
 
             {/* 🛡️ TACTICAL SUMMARY STRIP */}
-            <div className="grid grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
                 {[
-                    { label: 'Total Digitized', val: stats?.summary?.digitized || 0, change: stats?.daily_change?.digitized || 0, unit: 'Daily Progress' },
-                    { label: `Total Confirmed ${perspective}`, val: stats?.summary?.supporters || 0, change: stats?.daily_change?.supporters || 0, unit: `New ${perspective} Today` },
-                    { label: `${perspective} Weekly Gain`, val: (stats?.weekly_change?.supporters || 0).toLocaleString(), change: null, unit: 'Confirmed Last 7 Days' },
-                    { label: 'Winning Chance', val: `${Math.round(stats?.summary?.win_prob || 0)}%`, change: null, unit: `Based on ${perspective} data` }
+                    { label: 'Total Digitized', val: stats?.summary?.digitized || 0, change: stats?.daily_change?.digitized || 0, unit: 'Daily Progress', filter: {} },
+                    { label: `Total Confirmed ${perspective}`, val: stats?.summary?.supporters || 0, change: stats?.daily_change?.supporters || 0, unit: `New ${perspective} Today`, filter: { leaning: perspective } },
+                    { label: `${perspective} Weekly Gain`, val: (stats?.weekly_change?.supporters || 0).toLocaleString(), change: null, unit: 'Confirmed Last 7 Days', filter: { leaning: perspective } },
+                    { label: 'Winning Chance', val: `${Math.round(stats?.summary?.win_prob || 0)}%`, change: null, unit: `Based on ${perspective} data`, filter: {} }
                 ].map((card, i) => (
-                    <div key={i} className="lux-card p-8 bg-slate-900/40 border-white/5 flex flex-col justify-between">
+                    <div key={i} onClick={() => handleCardClick(card.filter)} className="lux-card p-8 bg-slate-900/40 border-white/5 flex flex-col justify-between cursor-pointer hover:bg-slate-800/40 transition-colors">
                         <div>
                             <h5 className="font-bold uppercase tracking-widest text-xs text-slate-400 mb-2">{card.label}</h5>
                             <div className="flex items-baseline gap-4">
@@ -185,7 +198,7 @@ const WarRoom = ({ allLocations, dashFilters }) => {
             </div>
 
             {/* 🎯 TACTICAL INSIGHTS: LEADERS & RISKS */}
-            <div className="grid grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
                 {[
                     { title: 'Top 5 - Winning Priority', icon: '🏆', data: stats?.performance?.top_win, valKey: 'win_prob', unit: '% Win', color: 'text-emerald-400' },
                     { title: 'Bottom 5 - Winning Priority', icon: '⚠️', data: stats?.performance?.bottom_win, valKey: 'win_prob', unit: '% Win', color: 'text-rose-400' },
@@ -268,14 +281,14 @@ const WarRoom = ({ allLocations, dashFilters }) => {
             </div>
 
             {/* 📊 MOMENTUM TIMELINE */}
-            <div className="grid grid-cols-12 gap-8">
-                <div className="col-span-12 lux-card p-10 bg-slate-900/40 border-white/5">
-                    <div className="flex justify-between items-center mb-10">
+            <div className="grid grid-cols-12 gap-4 lg:gap-8">
+                <div className="col-span-12 lux-card p-6 sm:p-10 bg-slate-900/40 border-white/5">
+                    <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-6 mb-10">
                         <div>
                             <h3 className={`font-black uppercase tracking-widest text-sm ${activeBrand.text} border-l-4 border-current pl-4`}>14-Day Progress Chart</h3>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-5 mt-1">Comparison of new voters digitized and confirmed supporters</p>
+                            <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-5 mt-1">Comparison of new voters digitized and confirmed supporters</p>
                         </div>
-                        <div className="flex gap-4">
+                        <div className="flex flex-wrap gap-4">
                             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-indigo-500 shadow-[0_0_10px_#6366f1]" /> <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Added Digitally</span></div>
                             <div className="flex items-center gap-2"><div className={`w-3 h-3 rounded-full bg-[${activeBrand.color}] ${activeBrand.shadow}`} style={{ backgroundColor: activeBrand.color }} /> <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Confirmed {perspective}</span></div>
                         </div>
@@ -308,17 +321,17 @@ const WarRoom = ({ allLocations, dashFilters }) => {
             </div>
 
             {/* 📋 UNIT-BY-UNIT TRACKING GRID */}
-            <div className="lux-card p-10 bg-slate-900/40 border-white/5">
-                <div className="flex justify-between items-center mb-8">
+            <div className="lux-card p-6 sm:p-10 bg-slate-900/40 border-white/5 overflow-hidden">
+                <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-6 mb-8">
                     <h3 className={`font-black uppercase tracking-widest text-sm ${activeBrand.text} border-l-4 border-current pl-4`}>
                         {filters.lbId || filters.boothId ? 'Booth-Wise Progress Report' : 'Panchayat-Wise Progress Report'}
                     </h3>
-                    <div className="flex items-center gap-3">
-                        <span className="text-xl">🔍</span>
+                    <div className="flex items-center gap-3 w-full lg:w-auto">
+                        <span className="text-xl shrink-0">🔍</span>
                         <input
                             type="text"
                             placeholder="Find specific booth or area..."
-                            className="bg-slate-900 border border-white/10 rounded-xl px-5 py-3 text-sm font-bold text-white outline-none focus:border-indigo-500 min-w-[300px]"
+                            className="bg-slate-900 border border-white/10 rounded-xl px-5 py-3 text-sm font-bold text-white outline-none focus:border-indigo-500 w-full lg:min-w-[300px]"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -333,45 +346,71 @@ const WarRoom = ({ allLocations, dashFilters }) => {
                         </p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-2">
-                        {/* Header */}
-                        <div className="grid grid-cols-7 px-8 py-4 text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] border-b border-white/5">
-                            <div className="col-span-2">Strategic Unit</div>
-                            <div className="text-right">Total Voters</div>
-                            <div className="text-right">Digitization</div>
-                            <div className="text-right">Confirmed {perspective}</div>
-                            <div className="text-right">Growth Today</div>
-                            <div className="text-right">Win Share</div>
-                        </div>
+                    <div className="w-full text-left">
+                        <div className="grid grid-cols-1 gap-4 lg:gap-2">
+                            {/* Header - Hidden on Mobile */}
+                            <div className="hidden lg:grid grid-cols-7 px-8 py-4 text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] border-b border-white/5">
+                                <div className="col-span-2 text-left">Strategic Unit</div>
+                                <div className="text-right">Total Voters</div>
+                                <div className="text-right">Digitization</div>
+                                <div className="text-right">Confirmed {perspective}</div>
+                                <div className="text-right">Growth Today</div>
+                                <div className="text-right">Win Share</div>
+                            </div>
 
-                        {/* Data Rows */}
-                        {(stats?.breakdown || [])
-                            .filter(item => !searchTerm || item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.sub.toLowerCase().includes(searchTerm.toLowerCase()))
-                            .map((item, i) => (
-                                <div key={i} className="grid grid-cols-7 px-8 py-6 bg-white/2 hover:bg-white/5 rounded-2xl border border-transparent hover:border-white/5 transition-all group items-center">
-                                    <div className="col-span-2">
-                                        <p className="text-sm font-black text-white group-hover:text-indigo-400 transition-colors">{item.name}</p>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 opacity-80">{item.sub}</p>
-                                    </div>
-                                    <div className="text-right font-black text-slate-200 text-sm">{item.total_voters?.toLocaleString()}</div>
-                                    <div className="text-right px-4">
-                                        <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                                            <div className="h-full bg-indigo-500 shadow-[0_0_10px_#6366f1]" style={{ width: `${item.coverage}%` }} />
+                            {/* Data Rows */}
+                            {(stats?.breakdown || [])
+                                .filter(item => !searchTerm || item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.sub.toLowerCase().includes(searchTerm.toLowerCase()))
+                                .map((item, i) => (
+                                    <div key={i} className="flex flex-col lg:grid lg:grid-cols-7 px-6 lg:px-8 py-5 lg:py-6 bg-white/5 lg:bg-white/2 hover:bg-white/10 lg:hover:bg-white/5 rounded-3xl lg:rounded-2xl border border-white/10 lg:border-transparent hover:border-white/5 transition-all group lg:items-center gap-4 lg:gap-0 shadow-lg lg:shadow-none">
+
+                                        <div className="col-span-2 flex justify-between lg:block items-center lg:items-start border-b border-white/10 lg:border-0 pb-4 lg:pb-0">
+                                            <div>
+                                                <p className="text-lg lg:text-sm font-black text-white group-hover:text-indigo-400 transition-colors uppercase">{item.name}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 opacity-80">{item.sub}</p>
+                                            </div>
+                                            <div className="lg:hidden text-right shrink-0">
+                                                <span className={`px-4 py-2 rounded-full text-xs font-black tracking-widest uppercase ${item.win_prob > 55 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                                                    {Math.round(item.win_prob)}% Win
+                                                </span>
+                                            </div>
                                         </div>
-                                        <p className="text-[9px] font-bold text-slate-400 mt-2 tracking-widest truncate">{item.digitized?.toLocaleString()} ({item.coverage}%)</p>
+
+                                        <div className="flex justify-between lg:contents items-center">
+                                            <span className="lg:hidden text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Voters</span>
+                                            <div className="lg:text-right font-black text-slate-200 text-sm lg:text-sm">{item.total_voters?.toLocaleString()}</div>
+                                        </div>
+
+                                        <div className="flex flex-col lg:block justify-between gap-3 lg:gap-0 lg:text-right lg:px-4">
+                                            <div className="flex justify-between lg:hidden">
+                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Digitization</span>
+                                                <span className="text-[10px] font-bold text-indigo-400">{item.digitized?.toLocaleString()} ({item.coverage}%)</span>
+                                            </div>
+                                            <div className="w-full h-2.5 lg:h-2 bg-white/10 rounded-full overflow-hidden">
+                                                <div className="h-full bg-indigo-500 shadow-[0_0_10px_#6366f1]" style={{ width: `${item.coverage}%` }} />
+                                            </div>
+                                            <p className="hidden lg:block text-[9px] font-bold text-slate-400 mt-2 tracking-widest truncate">{item.digitized?.toLocaleString()} ({item.coverage}%)</p>
+                                        </div>
+
+                                        <div className="flex justify-between lg:contents items-center">
+                                            <span className="lg:hidden text-[10px] font-black text-slate-500 uppercase tracking-widest">{perspective} Support</span>
+                                            <div className={`lg:text-right font-black ${activeBrand.text} text-sm lg:text-sm`}>{(item.perspective_total || 0).toLocaleString()}</div>
+                                        </div>
+
+                                        <div className="flex lg:flex-col justify-between items-center lg:items-end bg-black/20 lg:bg-transparent p-4 lg:p-0 rounded-xl mt-2 lg:mt-0 lg:border-0 border border-white/5">
+                                            <div className="text-xs lg:text-xs font-black text-emerald-500">+{item.daily_dig} <span className="hidden lg:inline">Added</span><span className="lg:hidden text-[9px] text-slate-400 uppercase tracking-widest ml-2">Newly Digitized</span></div>
+                                            <div className="text-[11px] lg:text-[10px] font-bold text-amber-500">+{item.daily_perspective} <span className="hidden lg:inline">Confirmed</span><span className="lg:hidden text-[9px] text-slate-400 uppercase tracking-widest ml-2">New Confirmations</span></div>
+                                        </div>
+
+                                        <div className="hidden lg:block text-right">
+                                            <span className={`px-4 py-2 rounded-full text-xs font-black ${item.win_prob > 55 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                                {Math.round(item.win_prob)}%
+                                            </span>
+                                        </div>
+
                                     </div>
-                                    <div className={`text-right font-black ${activeBrand.text} text-sm`}>{(item.perspective_total || 0).toLocaleString()}</div>
-                                    <div className="text-right flex flex-col items-end">
-                                        <div className="text-xs font-black text-emerald-500">+{item.daily_dig} Added</div>
-                                        <div className="text-[10px] font-bold text-amber-500">+{item.daily_perspective} Confirmed</div>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className={`px-4 py-2 rounded-full text-xs font-black ${item.win_prob > 55 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                                            {Math.round(item.win_prob)}%
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
+                                ))}
+                        </div>
                     </div>
                 )}
             </div>

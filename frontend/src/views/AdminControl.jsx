@@ -96,10 +96,10 @@ const AdminControl = ({
     };
 
     return (
-        <div className="min-h-screen lux-mesh-bg p-8 pl-[400px] pr-10 pb-24 lux-animate-in text-white">
+        <div className="min-h-screen lux-mesh-bg p-6 sm:p-8 pl-6 lg:pl-[400px] pr-6 lg:pr-10 pb-24 pt-24 lg:pt-8 lux-animate-in text-white">
 
             {/* Header */}
-            <div className="flex flex-wrap justify-between items-center border-b border-white/8 pb-8 mb-10 gap-6">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center border-b border-white/8 pb-8 mb-10 gap-6">
                 <div>
                     <h1 className="text-4xl font-black tracking-tight lux-text-gradient">User Settings</h1>
                     <p className="text-slate-400 text-sm mt-1">Manage staff accounts, locations, and party branding</p>
@@ -137,7 +137,7 @@ const AdminControl = ({
 
             {/* ── TAB: USERS ── */}
             {activeTab === 'users' && (
-                <div className="grid grid-cols-12 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
                     {/* Left: Add / Edit User Form */}
                     <div className="col-span-12 lg:col-span-5">
@@ -341,8 +341,8 @@ const AdminControl = ({
 
             {/* ── TAB: LOCATIONS ── */}
             {activeTab === 'locations' && ['SUPERUSER', 'MANAGER'].includes(userRole) && (
-                <div className="grid grid-cols-12 gap-8">
-                    <div className="col-span-12 lg:col-span-5">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <div className="col-span-1 lg:col-span-5">
                         <div className="lux-glass p-8 rounded-3xl border-white/5 space-y-6">
                             <div>
                                 <h2 className="text-base font-bold text-white">Add Location</h2>
@@ -462,8 +462,8 @@ const AdminControl = ({
 
             {/* ── TAB: PARTIES ── */}
             {activeTab === 'parties' && ['SUPERUSER', 'MANAGER'].includes(userRole) && (
-                <div className="grid grid-cols-12 gap-8">
-                    <div className="col-span-12 lg:col-span-5 space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <div className="col-span-1 lg:col-span-5 space-y-6">
 
                         {/* Sync Button */}
                         <div className="lux-glass p-6 rounded-3xl border-emerald-500/20 bg-emerald-500/5 space-y-4">

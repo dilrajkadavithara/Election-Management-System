@@ -106,6 +106,19 @@ const DashboardV2 = ({
     const [perspective, setPerspective] = React.useState('UDF');
     const [neutralConversion, setNeutralConversion] = React.useState(15);
 
+    const handleCardClick = (filters = {}) => {
+        setListFilters({
+            ...listFilters,
+            constituency: dashFilters.constituency || '',
+            lb: dashFilters.lb || '',
+            booth: dashFilters.booth || '',
+            gender: '',
+            leaning: '',
+            ...filters
+        });
+        setView('voters');
+    };
+
     if (!dashboardStats || !strategicStats) return (
         <div className="min-h-screen lux-mesh-bg flex items-center justify-center">
             <div className="flex flex-col items-center animate-pulse">
@@ -126,11 +139,11 @@ const DashboardV2 = ({
     const margin = confirmedSupporters - Math.ceil(totalConfirmed * 0.51); // Margin to simple majority
 
     return (
-        <div className="min-h-screen lux-mesh-bg p-12 pl-[420px] pr-16 space-y-16 lux-animate-in">
-            <header className="flex flex-col gap-10 border-b border-white/5 pb-10">
-                <div className="flex flex-wrap justify-between items-end gap-10">
-                    <div>
-                        <h1 className="text-7xl font-black tracking-tighter uppercase leading-none">
+        <div className="min-h-screen lux-mesh-bg p-6 pt-20 lg:p-12 lg:pl-[420px] lg:pr-16 space-y-8 lg:space-y-16 lux-animate-in">
+            <header className="flex flex-col gap-6 lg:gap-10 border-b border-white/5 pb-8 lg:pb-10">
+                <div className="flex flex-col lg:flex-row justify-between items-center lg:items-end gap-6 lg:gap-10 text-center lg:text-left">
+                    <div className="flex flex-col items-center lg:items-start">
+                        <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black tracking-tighter uppercase leading-none">
                             Main <span className="lux-text-gradient">Dashboard</span>
                         </h1>
                         <div className="flex items-center gap-3 mt-4">
@@ -141,7 +154,7 @@ const DashboardV2 = ({
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-6">
+                    <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-6">
                         {/* Perspective Switcher */}
                         <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/5">
                             {['UDF', 'LDF', 'NDA'].map(p => (
@@ -189,7 +202,7 @@ const DashboardV2 = ({
                     <div className="flex flex-col gap-2 relative z-10">
                         <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs">🏘️</span>
-                            <label className="text-[9px] font-black uppercase text-indigo-400 tracking-[0.2em]">Area / Local Body</label>
+                            <label className="text-[9px] font-black uppercase text-indigo-400 tracking-[0.2em]">Local Body</label>
                         </div>
                         <select
                             disabled={!dashFilters.constituency}
@@ -197,7 +210,7 @@ const DashboardV2 = ({
                             value={dashFilters.lb}
                             onChange={(e) => setDashFilters({ ...dashFilters, lb: e.target.value, booth: '' })}
                         >
-                            <option value="" className="bg-slate-900">All Areas</option>
+                            <option value="" className="bg-slate-900">All Local Bodies</option>
                             {allLocations.find(c => String(c.id) === String(dashFilters.constituency))?.local_bodies?.map(lb => (
                                 <option key={lb.id} value={lb.id} className="bg-slate-900">{lb.name}</option>
                             ))}
@@ -226,13 +239,13 @@ const DashboardV2 = ({
             </header>
 
             {/* 📋 KEY SNAPSHOT ROW 1 */}
-            <div className="grid grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
                 {[
-                    { label: 'Total Voters', value: (dashboardStats.total || 0).toLocaleString(), icon: '👥', color: 'text-white' },
-                    { label: 'Total Digitized', value: (dashboardStats.tagging_progress || 0).toLocaleString(), icon: '💎', color: 'text-indigo-400' },
-                    { label: 'Neutral Voters', value: (dashboardStats.sentiment?.NEUTRAL || 0).toLocaleString(), icon: '⚖️', color: 'text-amber-400' },
+                    { label: 'Total Voters', value: (dashboardStats.total || 0).toLocaleString(), icon: '👥', color: 'text-white', filter: {} },
+                    { label: 'Total Digitized', value: (dashboardStats.tagging_progress || 0).toLocaleString(), icon: '💎', color: 'text-indigo-400', filter: {} },
+                    { label: 'Neutral Voters', value: (dashboardStats.sentiment?.NEUTRAL || 0).toLocaleString(), icon: '⚖️', color: 'text-amber-400', filter: { leaning: 'NEUTRAL' } },
                 ].map((stat, i) => (
-                    <div key={i} className="lux-card p-8 flex items-center gap-6 border-white/5 shadow-xl bg-slate-900/40">
+                    <div key={i} onClick={() => handleCardClick(stat.filter)} className="lux-card p-8 flex items-center gap-6 border-white/5 shadow-xl bg-slate-900/40 cursor-pointer hover:bg-slate-800/40 transition-colors">
                         <div className="text-4xl bg-white/5 w-16 h-16 rounded-2xl flex items-center justify-center border border-white/5 shadow-inner">
                             {stat.icon}
                         </div>
@@ -245,12 +258,12 @@ const DashboardV2 = ({
             </div>
 
             {/* 📋 KEY SNAPSHOT ROW 2 */}
-            <div className="grid grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
                 {[
-                    { label: 'Male Voters', value: (dashboardStats.gender?.male || 0).toLocaleString(), icon: '🛡️', color: 'text-blue-400' },
-                    { label: 'Female Voters', value: (dashboardStats.gender?.female || 0).toLocaleString(), icon: '✨', color: 'text-rose-400' },
+                    { label: 'Male Voters', value: (dashboardStats.gender?.male || 0).toLocaleString(), icon: '🛡️', color: 'text-blue-400', filter: { gender: 'MALE' } },
+                    { label: 'Female Voters', value: (dashboardStats.gender?.female || 0).toLocaleString(), icon: '✨', color: 'text-rose-400', filter: { gender: 'FEMALE' } },
                 ].map((stat, i) => (
-                    <div key={i} className="lux-card p-8 flex items-center gap-6 border-white/5 shadow-xl bg-slate-900/40">
+                    <div key={i} onClick={() => handleCardClick(stat.filter)} className="lux-card p-8 flex items-center gap-6 border-white/5 shadow-xl bg-slate-900/40 cursor-pointer hover:bg-slate-800/40 transition-colors">
                         <div className="text-4xl bg-white/5 w-16 h-16 rounded-2xl flex items-center justify-center border border-white/5 shadow-inner">
                             {stat.icon}
                         </div>
@@ -267,15 +280,15 @@ const DashboardV2 = ({
                         <div className="text-4xl bg-white/5 w-16 h-16 rounded-2xl flex items-center justify-center border border-white/5 shadow-inner">🏛️</div>
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Supporters</p>
                     </div>
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center cursor-pointer hover:bg-white/5 p-2 rounded -mx-2 transition-colors" onClick={() => handleCardClick({ leaning: 'UDF' })}>
                         <span className="text-xs font-black uppercase tracking-widest text-blue-400">UDF</span>
                         <span className="text-2xl font-black tracking-tighter text-white">{(dashboardStats.sentiment?.UDF || 0).toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center cursor-pointer hover:bg-white/5 p-2 rounded -mx-2 transition-colors" onClick={() => handleCardClick({ leaning: 'LDF' })}>
                         <span className="text-xs font-black uppercase tracking-widest text-rose-400">LDF</span>
                         <span className="text-2xl font-black tracking-tighter text-white">{(dashboardStats.sentiment?.LDF || 0).toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center cursor-pointer hover:bg-white/5 p-2 rounded -mx-2 transition-colors" onClick={() => handleCardClick({ leaning: 'NDA' })}>
                         <span className="text-xs font-black uppercase tracking-widest text-amber-500">NDA</span>
                         <span className="text-2xl font-black tracking-tighter text-white">{(dashboardStats.sentiment?.NDA || 0).toLocaleString()}</span>
                     </div>
@@ -283,7 +296,7 @@ const DashboardV2 = ({
             </div>
 
             {/* 🎯 MIDDLE INTEL ROW */}
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
                 {/* 1. Winning Chance */}
                 <div className="lux-glass rounded-[2rem] !p-4 flex flex-col bg-indigo-600/5 border border-indigo-500/20 shadow-[0_0_50px_rgba(99,102,241,0.1)] relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[100px] -mr-32 -mt-32" />
@@ -491,18 +504,22 @@ const DashboardV2 = ({
                     </div>
                 </div>
 
-                <div className="grid grid-cols-5 gap-6 flex-1 relative z-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 flex-1 relative z-10 w-full mb-10">
                     {strategicStats.booth_stats?.map((booth, i) => {
                         const pStrength = booth[perspective.toLowerCase()] || 0;
                         const pCoverage = Math.round((pStrength / booth.total) * 100);
-                        const isFirstCol = i % 5 === 0;
-                        const isLastCol = i % 5 === 4;
+
+                        // Smart Tooltip Alignment bounds
+                        const colGroup = i % 5;
+                        const alignClass = colGroup < 2 ? 'left-0' : colGroup > 2 ? 'right-0' : 'left-1/2 -translate-x-1/2';
+                        const arrowAlign = colGroup < 2 ? 'left-8' : colGroup > 2 ? 'right-8' : 'left-1/2 -translate-x-1/2';
+                        const isTopRow = i < 5;
 
                         return (
                             <div
                                 key={i}
                                 onClick={() => { setListFilters({ ...listFilters, booth: booth.id }); setView('voters'); }}
-                                className="group relative cursor-pointer shadow-lg perspective-1000 z-10 hover:z-[100]"
+                                className="group relative cursor-pointer shadow-lg perspective-1000 z-10 hover:z-[100] w-full"
                             >
                                 {(() => {
                                     const scores = [
@@ -519,13 +536,13 @@ const DashboardV2 = ({
                                         <>
                                             {/* Glass background with Dynamic Dominance Border/Glow */}
                                             <div className={`absolute inset-0 lux-glass rounded-[1.5rem] border transition-all duration-500 group-hover:bg-white/10 pointer-events-none ${domColor === 'indigo' ? 'border-indigo-500/40 shadow-[0_0_25px_rgba(99,102,241,0.15)]' :
-                                                    domColor === 'rose' ? 'border-rose-500/40 shadow-[0_0_25px_rgba(244,63,94,0.15)]' :
-                                                        domColor === 'amber' ? 'border-amber-500/40 shadow-[0_0_25px_rgba(245,158,11,0.15)]' :
-                                                            'border-white/5 shadow-none'
+                                                domColor === 'rose' ? 'border-rose-500/40 shadow-[0_0_25px_rgba(244,63,94,0.15)]' :
+                                                    domColor === 'amber' ? 'border-amber-500/40 shadow-[0_0_25px_rgba(245,158,11,0.15)]' :
+                                                        'border-white/5 shadow-none'
                                                 }`} />
 
                                             {/* Massive White External Tooltip */}
-                                            <div className={`absolute ${i < 5 ? 'top-[calc(100%+15px)]' : 'bottom-[calc(100%+15px)]'} ${isFirstCol ? 'left-0 translate-x-0' : isLastCol ? 'right-0 translate-x-0' : 'left-1/2 -translate-x-1/2'} w-[300px] bg-white p-6 rounded-3xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 shadow-[0_30px_60px_rgba(0,0,0,0.6)] flex flex-col gap-4 border-4 border-indigo-100 ${i < 5 ? '-translate-y-4 group-hover:translate-y-0' : 'translate-y-4 group-hover:translate-y-0'}`}>
+                                            <div className={`absolute ${isTopRow ? 'top-[calc(100%+15px)]' : 'bottom-[calc(100%+15px)]'} ${alignClass} z-[200] w-[300px] bg-white p-6 rounded-3xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 shadow-[0_30px_60px_rgba(0,0,0,0.6)] flex flex-col gap-4 border-4 border-indigo-100 ${isTopRow ? '-translate-y-4 group-hover:translate-y-0' : 'translate-y-4 group-hover:translate-y-0'}`}>
                                                 <div className="border-b border-slate-200 pb-3">
                                                     <div className="flex justify-between items-start gap-4">
                                                         <div className="flex-1 min-w-0">
@@ -564,15 +581,15 @@ const DashboardV2 = ({
                                                     <span className={`text-2xl font-black ${pCoverage > 50 ? 'text-emerald-500' : pCoverage > 35 ? 'text-amber-500' : 'text-rose-500'}`}>{pCoverage}%</span>
                                                 </div>
                                                 {/* Tooltip Arrow */}
-                                                <div className={`absolute ${i < 5 ? '-top-3 border-t-4 border-l-4' : '-bottom-3 border-b-4 border-r-4'} ${isFirstCol ? 'left-8 translate-x-0' : isLastCol ? 'right-8 translate-x-0' : 'left-1/2 -translate-x-1/2'} w-6 h-6 bg-white border-indigo-100 rotate-45`} />
+                                                <div className={`absolute ${isTopRow ? '-top-3 border-t-4 border-l-4' : '-bottom-3 border-b-4 border-r-4'} ${arrowAlign} w-6 h-6 bg-white border-indigo-100 rotate-45`} />
                                             </div>
 
                                             {/* Content Elements Container */}
                                             <div className="relative z-10 p-6 flex flex-col pointer-events-none">
                                                 <span className={`text-[8px] font-black px-3 py-1 text-white rounded-full mb-4 inline-block tracking-widest uppercase self-start shadow-lg ${domColor === 'indigo' ? 'bg-indigo-600 shadow-indigo-900/50' :
-                                                        domColor === 'rose' ? 'bg-rose-600 shadow-rose-900/50' :
-                                                            domColor === 'amber' ? 'bg-amber-500 shadow-amber-900/50' :
-                                                                'bg-white/10 text-slate-400'
+                                                    domColor === 'rose' ? 'bg-rose-600 shadow-rose-900/50' :
+                                                        domColor === 'amber' ? 'bg-amber-500 shadow-amber-900/50' :
+                                                            'bg-white/10 text-slate-400'
                                                     }`}>
                                                     Booth {booth.number} {dom.party !== 'NEUTRAL' && `- ${dom.party}`}
                                                 </span>

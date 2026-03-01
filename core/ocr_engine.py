@@ -4,8 +4,8 @@ import numpy as np
 import os
 import re
 import json
-import google.generativeai as genai
-from google.generativeai import caching
+import google.genai as genai
+from google.genai import caching
 import datetime
 from PIL import Image
 from dotenv import load_dotenv
@@ -45,32 +45,29 @@ class OCREngine:
         self.config_mal = "--oem 3 --psm 6 -l mal+eng"
         self.config_epic = "-c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789. --psm 7"
 
-        # Gemini Config
+        self.gemini_client = None
         api_key = os.getenv("GOOGLE_API_KEY")
         if api_key:
-            genai.configure(api_key=api_key)
-            self.gemini_model = genai.GenerativeModel(
-                'gemini-flash-latest',
-                generation_config={"response_mime_type": "application/json"}
-            )
+            self.gemini_client = genai.Client(api_key=api_key)
+            self.gemini_model = "gemini-2.0-flash"
         else:
             self.gemini_model = None
 
     def upload_file(self, file_path):
         """Uploads a file to Gemini File API for caching and parallel processing."""
-        if not self.gemini_model: return None
+        if not self.gemini_client: return None
         try:
             logger.info(f"📤 Uploading {file_path} to Gemini File API...")
-            uploaded_file = genai.upload_file(path=file_path, display_name=os.path.basename(file_path))
-            
+            uploaded_file = self.gemini_client.files.upload(
+                path=file_path,
+                config={"display_name": os.path.basename(file_path)}
+            )
             # Wait for processing
             while uploaded_file.state.name == "PROCESSING":
                 time.sleep(1)
-                uploaded_file = genai.get_file(uploaded_file.name)
-            
+                uploaded_file = self.gemini_client.files.get(name=uploaded_file.name)
             if uploaded_file.state.name == "FAILED":
                 raise Exception("Gemini File Processing Failed")
-            
             logger.info(f"✅ File {uploaded_file.name} ready on Cloud.")
             return uploaded_file
         except Exception as e:
@@ -119,7 +116,7 @@ class OCREngine:
 
     def extract_from_cached_file(self, google_file, page_num):
         """Ultra-fast, low-cost extraction using pre-uploaded file reference with retry logic."""
-        if not self.gemini_model: return None
+        if not self.gemini_client: return None
 
         # Hyper-Targeted Prompt optimized for Single-Page Vision
         # We don't mention 'Page X' because the upload is a single image file now.
@@ -148,8 +145,22 @@ class OCREngine:
                         logger.warning(f"⏳ Page {page_num} Quota hit. Jittered sleep: {wait_time:.1f}s... [{attempt+1}/{max_retries}]")
                         time.sleep(wait_time)
 
-                    response = self.gemini_model.generate_content([prompt, google_file])
-                    text = response.text.strip()
+                    response = self.gemini_client.models.generate_content(
+                        model=self.gemini_model,
+                        contents=[prompt, google_file],
+                        config={"response_mime_type": "application/json"}
+                    )
+                    
+                    try:
+                        text = response.text.strip()
+                    except ValueError:
+                        # If the prompt or image triggers a filter, accessing .text raises ValueError
+                        logger.error(f"⚠️ Page {page_num} Blocked. Gemini Feedback: {getattr(response, 'prompt_feedback', 'No feedback')}")
+                        return []
+                        
+                    if not text:
+                        logger.warning(f"⚠️ Page {page_num} Gemini returned empty string. No data found.")
+                        return []
                     
                     # Robust Clean & Parse
                     if "```json" in text: text = text.split("```json")[1].split("```")[0].strip()
@@ -163,28 +174,38 @@ class OCREngine:
                             # Use JSONDecoder for fragments
                             parsed_json, _ = json.JSONDecoder().raw_decode(text[start:])
                             return parsed_json
-                        except:
-                            return json.loads(text[start:])
+                        except Exception as parse_err:
+                            try:
+                                return json.loads(text[start:])
+                            except:
+                                logger.error(f"⚠️ Page {page_num} JSON Parse Error: {parse_err}. Raw Text: {text[:100]}...")
+                                return []
+                    
+                    logger.warning(f"⚠️ Page {page_num} Format mismatch. Raw Text: {text[:100]}...")
                     return [] 
                 except Exception as e:
                     err_str = str(e).lower()
                     
                     # Handle Rate Limits (429) and Server Flakiness (500/503)
                     if any(x in err_str for x in ["429", "quota", "limit", "exhausted", "503", "500"]):
+                        logger.warning(f"⏳ Page {page_num} Hit Quota/Limit: {e}")
                         continue
                     
                     # Handle Safety Filters or Internal AI Blocks
                     if "safety" in err_str or "unfinish" in err_str:
+                        logger.warning(f"⚠️ Page {page_num} Hit Safety/Unfinish Error: {e}")
                         time.sleep(random.uniform(2, 4))
                         continue
 
                     logger.error(f"❌ Page {page_num} Connection Error: {e}")
                     return []
+            
+            logger.error(f"❌ Page {page_num} EXHAUSTED ALL RETRIES")
             return None
 
     def extract_from_pdf(self, pdf_path, page_num=None, pdf_data=None):
-        """Processes specific pages or entire PDF using Gemini with retry logic. Targeted extraction avoids token limits."""
-        if not self.gemini_model:
+        """Processes specific pages or entire PDF using Gemini with retry logic."""
+        if not self.gemini_client:
             return None
         
         prompt = f"""
@@ -206,13 +227,11 @@ class OCREngine:
                     with open(pdf_path, 'rb') as f:
                         pdf_data = f.read()
 
-                response = self.gemini_model.generate_content([
-                    prompt,
-                    {
-                        "mime_type": "application/pdf",
-                        "data": pdf_data
-                    }
-                ])
+                response = self.gemini_client.models.generate_content(
+                    model=self.gemini_model,
+                    contents=[prompt, {"mime_type": "application/pdf", "data": pdf_data}],
+                    config={"response_mime_type": "application/json"}
+                )
                 text = response.text.strip()
                 
                 # Clean possible markdown
@@ -248,7 +267,7 @@ class OCREngine:
 
     def extract_with_gemini(self, img_np):
         """High-precision extraction using Gemini AI with exponential backoff."""
-        if not self.gemini_model:
+        if not self.gemini_client:
             return None
 
         # Convert CV2 (BGR) to PIL (RGB)
@@ -279,8 +298,11 @@ class OCREngine:
         
         for attempt in range(max_retries):
             try:
-                # Use gemini-flash-latest which is confirmed to work with this SDK/Key
-                response = self.gemini_model.generate_content([prompt, pil_img])
+                response = self.gemini_client.models.generate_content(
+                    model=self.gemini_model,
+                    contents=[prompt, pil_img],
+                    config={"response_mime_type": "application/json"}
+                )
                 text = response.text.strip()
                 
                 # Clean possible markdown

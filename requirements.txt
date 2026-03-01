@@ -15,11 +15,11 @@ PyJWT==2.8.0
 passlib[bcrypt]==1.7.4
 
 # OCR & Image Processing
-pytesseract==0.3.10
-pdf2image==1.16.3
-opencv-python-headless==4.8.1.78
-numpy==1.26.2
-Pillow==10.1.0
+pytesseract>=0.3.10
+pdf2image>=1.16.3
+opencv-python-headless>=4.8.1.78
+numpy>=1.26.2
+Pillow>=10.1.0
 
 # Document Handling
 PyPDF2==3.0.1
@@ -28,7 +28,7 @@ PyPDF2==3.0.1
 requests==2.31.0
 dj-database-url==2.1.0
 psutil==5.9.6
-google-generativeai>=0.7.2
+google-genai>=1.0.0
 redis==5.0.1
 celery==5.3.6
 pandas==2.1.3

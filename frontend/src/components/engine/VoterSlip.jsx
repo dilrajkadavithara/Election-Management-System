@@ -1,13 +1,13 @@
 import React from 'react';
 
 const THEME_CONFIG = {
-    'INC': { primary: '#1e40af', secondary: '#eff6ff', accent: '#6366f1', text: 'text-indigo-800' },
-    'CPIM': { primary: '#DE0000', secondary: '#fff1f1', accent: '#DE0000', text: 'text-red-700' },
-    'CPI': { primary: '#D40000', secondary: '#fff1f1', accent: '#D40000', text: 'text-red-800' },
-    'IUML': { primary: '#006600', secondary: '#f0fdf4', accent: '#006600', text: 'text-emerald-800' },
-    'KCM': { primary: '#FF6600', secondary: '#fff7ed', accent: '#ea580c', text: 'text-orange-700' },
-    'KCJ': { primary: '#0050A0', secondary: '#f0f9ff', accent: '#0050A0', text: 'text-blue-800' },
-    'RSP': { primary: '#ED1B24', secondary: '#fff1f2', accent: '#ED1B24', text: 'text-rose-700' }
+    'INC': { primary: '#1e40af', secondary: '#eff6ff', accent: '#3b82f6', text: 'text-indigo-900', grad: 'from-[#1e40af] to-[#3b82f6]', shadow: 'shadow-indigo-500/30' },
+    'CPIM': { primary: '#dc2626', secondary: '#fef2f2', accent: '#ef4444', text: 'text-red-900', grad: 'from-[#dc2626] to-[#ef4444]', shadow: 'shadow-red-500/30' },
+    'CPI': { primary: '#b91c1c', secondary: '#fef2f2', accent: '#dc2626', text: 'text-red-900', grad: 'from-[#b91c1c] to-[#ef4444]', shadow: 'shadow-red-500/30' },
+    'IUML': { primary: '#15803d', secondary: '#f0fdf4', accent: '#22c55e', text: 'text-green-900', grad: 'from-[#15803d] to-[#22c55e]', shadow: 'shadow-green-500/30' },
+    'KCM': { primary: '#ea580c', secondary: '#fff7ed', accent: '#f97316', text: 'text-orange-900', grad: 'from-[#ea580c] to-[#f97316]', shadow: 'shadow-orange-500/30' },
+    'KCJ': { primary: '#0369a1', secondary: '#f0f9ff', accent: '#0ea5e9', text: 'text-sky-900', grad: 'from-[#0369a1] to-[#0ea5e9]', shadow: 'shadow-sky-500/30' },
+    'RSP': { primary: '#be123c', secondary: '#fff1f2', accent: '#f43f5e', text: 'text-rose-900', grad: 'from-[#be123c] to-[#f43f5e]', shadow: 'shadow-rose-500/30' }
 };
 
 const VoterSlip = ({ voterName, serialNo, epicNo, boothNo, pollingStation, party }) => {
@@ -25,94 +25,84 @@ const VoterSlip = ({ voterName, serialNo, epicNo, boothNo, pollingStation, party
 
     // If no party selected, use a plain slate theme
     const isPlain = !party;
-    const activeTheme = isPlain ? { primary: '#475569', secondary: '#f8fafc', accent: '#64748b', text: 'text-slate-600' } : theme;
+    const activeTheme = isPlain ? { primary: '#475569', secondary: '#f8fafc', accent: '#64748b', text: 'text-slate-800', grad: 'from-[#475569] to-[#64748b]', shadow: 'shadow-slate-500/30' } : theme;
 
     return (
-        <div className="w-[102mm] h-[48mm] bg-white border border-slate-300 relative flex overflow-hidden shrink-0 print:border print:border-slate-500 font-sans" style={{ pageBreakInside: 'avoid' }}>
+        <div className={`w-[102mm] h-[48mm] bg-white rounded-xl shadow-xl border border-slate-200 relative flex overflow-hidden shrink-0 print:border print:shadow-none print:border-slate-300 print:rounded-none font-sans`} style={{ pageBreakInside: 'avoid' }}>
 
-            {/* BRANDING STRIP (Top emphasis) */}
+            {/* BRANDING STRIP */}
             {!isPlain && (
-                <div className="absolute top-0 right-0 left-0 h-[2px]" style={{ backgroundColor: activeTheme.primary }}></div>
+                <div className={`absolute top-0 right-0 left-0 h-1 bg-gradient-to-r ${activeTheme.grad}`}></div>
             )}
 
             {/* DETACHABLE SYMBOL SECTION (26mm) */}
-            <div className="w-[26mm] flex-shrink-0 flex flex-col items-center justify-center relative py-2" style={{ backgroundColor: isPlain ? '#f8fafc' : activeTheme.secondary }}>
-                <div className="w-[18mm] h-[18mm] bg-white rounded-lg border border-white/50 flex items-center justify-center p-1.5 mb-1 relative overflow-hidden shadow-sm">
+            <div className={`w-[26mm] flex-shrink-0 flex flex-col items-center justify-center relative py-2 overflow-hidden bg-gradient-to-b from-white to-${isPlain ? 'slate-50' : 'slate-50'}`} style={{ backgroundColor: activeTheme.secondary }}>
+                {party?.symbol_image && (
+                    <div className="absolute top-0 left-0 w-full h-full opacity-10" style={{ background: `radial-gradient(circle at center, ${activeTheme.primary} 0%, transparent 70%)` }}></div>
+                )}
+                <div className={`w-[18mm] h-[18mm] bg-white rounded-full border-2 border-white flex items-center justify-center p-2 mb-1 relative overflow-hidden shadow-lg ${activeTheme.shadow} z-10`}>
                     {party?.symbol_image ? (
-                        <img src={`/api/party-symbol/${party.symbol_image}`} className="w-full h-full object-contain" alt="symbol" />
+                        <img src={`/api/party-symbol/${party.symbol_image}`} className="w-full h-full object-contain mix-blend-multiply" alt="symbol" />
                     ) : (
-                        <div className="text-[10px] font-black text-slate-300 uppercase rotate-[-20deg]">NO LOGO</div>
+                        <div className="text-[10px] font-black text-slate-300 uppercase rotate-[-20deg]">LOG</div>
                     )}
                 </div>
 
                 {/* Perforation guide */}
-                <div className="absolute top-0 right-[-1px] bottom-0 w-[1px] border-r border-dashed border-slate-300 h-full"></div>
+                <div className="absolute top-0 right-[-1px] bottom-0 w-[2px] border-r-2 border-dashed border-slate-300 h-full opacity-50 z-20"></div>
 
-                <span className="text-[6.5px] font-black uppercase tracking-tighter mt-1 opacity-40" style={{ color: activeTheme.primary }}>Detach Section</span>
+                <span className="text-[6.5px] font-black uppercase tracking-widest mt-1 opacity-70 z-10" style={{ color: activeTheme.primary }}>മുറിച്ചു മാറ്റുക</span>
             </div>
 
             {/* MAIN SLIP DATA */}
-            <div className="flex-1 flex flex-col bg-white overflow-hidden relative pr-4">
+            <div className="flex-1 flex flex-col bg-white overflow-hidden relative">
 
-                {/* Background Watermark (Subtle symbol in background) */}
-                {party?.symbol_image && (
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 opacity-[0.03] pointer-events-none select-none grayscale invert">
-                        <img src={`/api/party-symbol/${party.symbol_image}`} className="w-full h-full object-contain" alt="" />
-                    </div>
-                )}
+                {/* Subtle Geometric Background */}
+                <div className="absolute top-[-50%] right-[-10%] w-[120px] h-[120px] rounded-full opacity-[0.03] blur-xl pointer-events-none" style={{ backgroundColor: activeTheme.primary }}></div>
 
-                {/* TOP BAR */}
-                <div className="flex w-full h-11 border-b border-slate-200">
-                    <div className="flex-[0.8] px-3 flex items-center justify-between border-r border-slate-200" style={{ backgroundColor: activeTheme.secondary }}>
-                        <div className="flex flex-col">
-                            <span className="text-[8px] font-black uppercase malayalam-font opacity-60" style={{ color: activeTheme.primary }}>ക്രമ നമ്പർ</span>
-                            <span className="text-[6px] font-bold text-slate-400 -mt-1 uppercase">Serial No.</span>
-                        </div>
-                        <span className="text-3xl font-black leading-none" style={{ color: activeTheme.primary }}>{serialNo}</span>
+
+                {/* HEADER ROW */}
+                <div className="flex w-full mt-1.5 px-3">
+                    <div className={`flex items-center justify-between px-3 py-1.5 rounded-l-lg border-y border-l bg-gradient-to-r ${activeTheme.grad} border-transparent flex-[0.7] text-white shadow-inner`}>
+                        <span className="text-[8px] font-black uppercase malayalam-font opacity-90">ക്രമ നമ്പർ</span>
+                        <span className="text-2xl font-black leading-none bg-white/20 px-2 py-0.5 rounded-md drop-shadow-sm">{serialNo}</span>
                     </div>
-                    <div className="flex-1 px-4 flex items-center justify-between">
-                        <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-slate-500 uppercase malayalam-font opacity-60">ബൂത്ത്</span>
-                            <span className="text-[6px] font-bold text-slate-400 -mt-1 uppercase">Booth</span>
-                        </div>
-                        <span className="text-2xl font-black text-slate-900 leading-none">{boothNo}</span>
+                    <div className="flex items-center justify-between px-3 py-1.5 rounded-r-lg border border-slate-200 bg-slate-50 flex-1">
+                        <span className="text-[8px] font-black uppercase malayalam-font text-slate-500">ബൂത്ത്</span>
+                        <span className="text-xl font-black leading-none text-slate-800">{boothNo}</span>
                     </div>
                 </div>
 
                 {/* DATA AREA */}
-                <div className="px-5 flex-grow flex flex-col pt-2 pb-1.5 overflow-hidden z-10">
+                <div className="px-4 flex-grow flex flex-col mt-2.5 pb-5 z-10">
 
                     {/* Name Row */}
-                    <div className="flex flex-col mb-1 group">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                            <span className="text-[7px] font-black uppercase malayalam-font" style={{ color: activeTheme.primary }}>വോട്ടറുടെ പേര് (Voter's Name)</span>
-                            <div className="h-[0.5px] flex-1 opacity-10" style={{ backgroundColor: activeTheme.primary }}></div>
-                        </div>
-                        <h2 className="text-[14px] font-bold text-slate-900 malayalam-font leading-[1.15] line-clamp-1 uppercase tracking-tight">
+                    <div className="flex flex-col mb-1 relative">
+                        <span className="text-[6.5px] font-black uppercase malayalam-font mb-0.5 tracking-wider" style={{ color: activeTheme.primary }}>വോട്ടറുടെ പേര്</span>
+                        <h2 className="text-[16px] font-black text-slate-900 malayalam-font leading-none line-clamp-1 uppercase tracking-tight drop-shadow-sm">
                             {voterName}
                         </h2>
                     </div>
 
                     {/* Voter ID and Metadata Row */}
-                    <div className="flex justify-between items-end mb-2">
+                    <div className="flex justify-between items-center mb-auto mt-0.5">
                         <div className="flex flex-col">
-                            <span className="text-[7px] font-black text-slate-400 uppercase malayalam-font leading-none mb-0.5">വോട്ടർ ഐഡി (Voter ID)</span>
-                            <span className={`text-[11px] font-black font-mono tracking-widest ${activeTheme.text}`}>{epicNo}</span>
-                        </div>
-                        {!isPlain && (
-                            <div className="flex items-center gap-1 px-2 py-1 rounded bg-slate-50 border border-slate-100 mb-0.5">
-                                <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest leading-none">{party.name}</span>
+                            <span className="text-[6.5px] font-black text-slate-400 uppercase malayalam-font leading-none mb-1 tracking-wider">വോട്ടർ ഐഡി</span>
+                            <div className="flex items-center">
+                                <span className={`text-[12px] font-black font-mono tracking-widest px-2 py-0.5 rounded border bg-white shadow-sm ${activeTheme.text} border-slate-200`}>
+                                    {epicNo}
+                                </span>
                             </div>
-                        )}
+                        </div>
                     </div>
 
                     {/* Polling Station */}
-                    <div className="mt-auto border-t border-slate-100 pt-1.5 flex flex-col">
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[7px] font-black text-white uppercase malayalam-font px-2 py-0.5 rounded shadow-sm" style={{ backgroundColor: activeTheme.primary }}>പോളിംഗ് സ്റ്റേഷൻ</span>
-                            <span className="text-[6.5px] font-bold text-slate-400 uppercase tracking-wider">Polling Station</span>
+                    <div className="border-t border-slate-100 pt-1.5 flex flex-col mt-2 mb-3">
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: activeTheme.accent }}></div>
+                            <span className="text-[6.5px] font-black uppercase malayalam-font tracking-wider" style={{ color: activeTheme.primary }}>പോളിംഗ് സ്റ്റേഷൻ</span>
                         </div>
-                        <p className="text-[9px] font-black text-slate-800 malayalam-font leading-[1.2] line-clamp-2">
+                        <p className="text-[8.5px] font-black text-slate-700 malayalam-font leading-[1.3] line-clamp-2">
                             {pollingStation || "---"}
                         </p>
                     </div>
