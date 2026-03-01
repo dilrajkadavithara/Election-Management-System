@@ -5,7 +5,6 @@ import os
 import re
 import json
 import google.genai as genai
-from google.genai import caching
 import datetime
 from PIL import Image
 from dotenv import load_dotenv
