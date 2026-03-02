@@ -4,6 +4,11 @@ on:
   push:
     branches: [ master ]
 
+# Only one deploy runs at a time. A newer push cancels an in-progress deploy.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
