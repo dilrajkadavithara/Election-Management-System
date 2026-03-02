@@ -173,6 +173,9 @@ class OCREngine:
                         logger.warning(f"⚠️ Page {page_num} Gemini returned empty string")
                         return []
 
+                    # DEBUG: Log raw response to diagnose extraction issues
+                    logger.info(f"🔍 Page {page_num} RAW RESPONSE (first 500 chars): {text[:500]}")
+
                     if "```json" in text: text = text.split("```json")[1].split("```")[0].strip()
                     elif "```" in text: text = text.split("```")[1].split("```")[0].strip()
 
