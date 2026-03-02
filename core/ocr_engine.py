@@ -54,7 +54,7 @@ class OCREngine:
                 api_key=api_key,
                 http_options=genai_types_internal.HttpOptions(api_version='v1')
             )
-            self.gemini_model = "gemini-1.5-flash"
+            self.gemini_model = "gemini-2.5-flash"
         else:
             self.gemini_model = None
 
