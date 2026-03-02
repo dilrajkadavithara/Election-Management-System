@@ -24,7 +24,7 @@ class BatchProcessor:
         pdf_proc = PDFProcessor()
         
         # Concurrency Management: 3 is the sweet spot for maximum stability without triggering token burst limits on AI endpoints
-        max_workers = 5  # 5 parallel workers: cuts processing rounds from 7 → 4 on a 22-page file
+        max_workers = 8  # Increased from 5 to 8: leverages 4GB RAM for faster parallel extraction
         
         # Determine pages to process
         if page_range:

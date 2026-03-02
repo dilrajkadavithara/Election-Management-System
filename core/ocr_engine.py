@@ -146,7 +146,7 @@ class OCREngine:
             return None
 
         max_retries = 10
-        base_delay = 3
+        base_delay = 1.5 # seconds (reduced from 3s for faster recovery)
 
         with self.get_throttle():
             for attempt in range(max_retries):
