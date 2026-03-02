@@ -25,17 +25,32 @@ if __name__ == "__main__":
             django.setup()
             from django.core.management import execute_from_command_line
             
-            # 1. Run migrate command
+            # 1. Run migrations with retry (guards against transient postgres startup lag)
             print("   - Applying database migrations...")
-            execute_from_command_line([sys.argv[0], "migrate", "--noinput"])
-            
-            # 2. Run collectstatic
-            print("   - Collecting static files...")
-            execute_from_command_line([sys.argv[0], "collectstatic", "--noinput", "--clear"])
-            
+            migrated = False
+            for attempt in range(1, 4):
+                try:
+                    execute_from_command_line([sys.argv[0], "migrate", "--noinput"])
+                    migrated = True
+                    break
+                except Exception as migrate_err:
+                    print(f"   ⚠️ Migration attempt {attempt}/3 failed: {migrate_err}")
+                    if attempt < 3:
+                        import time; time.sleep(5)
+            if not migrated:
+                print("   ❌ All migration attempts failed — check DB connection and migration lock.")
+
+            # 2. Collect static files (incremental — no --clear, avoids 30-60s full rebuild)
+            print("   - Collecting static files (incremental)...")
+            try:
+                execute_from_command_line([sys.argv[0], "collectstatic", "--noinput"])
+            except Exception as static_err:
+                print(f"   ⚠️ collectstatic warning: {static_err}")
+
             print("✅ Deployment Gates Complete.")
+
         except Exception as e:
-            print(f"⚠️ Deployment Gate Error: {e}")
+            print(f"❌ Deployment Gate fatal error (Django setup failed): {e}")
 
     # Run Uvicorn PROD mode
     # reload=False is mandatory for production to prevent restarts on file uploads
