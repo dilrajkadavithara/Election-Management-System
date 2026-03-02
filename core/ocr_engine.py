@@ -54,7 +54,7 @@ class OCREngine:
                 api_key=api_key,
                 http_options=genai_types_internal.HttpOptions(api_version='v1')
             )
-            self.gemini_model = "gemini-2.5-flash"
+            self.gemini_model = "models/gemini-1.5-flash"
         else:
             self.gemini_model = None
 
@@ -123,25 +123,29 @@ class OCREngine:
         if not self.gemini_client: return None
 
         prompt = f"""
-        Act as a professional Election Data Specialist.
-        Extract EVERY voter record from the attached Malayalam/English document.
-        The document corresponds to Page {page_num} of the original roll.
+        Act as a high-precision literal OCR engine.
+        The attached image is Page {page_num} of an Indian Electoral Roll, formatted in a grid of 30 boxes.
+        
+        TASK:
+        1. Identify each of the 30 voter boxes in the grid.
+        2. Within each box, extract the data EXACTLY as printed. 
+        3. DO NOT use any external knowledge to guess names or details. 
+        4. Capture Malayalam text character-by-character as it appears.
+        5. Exclude prefixes like "പേര് :" (Name), "വീട്ടു നമ്പർ :" (House No), etc.
         
         Strict Field Mapping:
-        - serial_number: The sequential number (e.g., 1, 2, 3).
-        - epic_id: The alphanumeric ID (e.g., ABC1234567).
-        - name_malayalam: The full name in Malayalam.
-        - relation_name_malayalam: The parent/spouse name in Malayalam.
-        - relation_type: Father, Husband, Mother, or Other.
-        - house_number: The numeric/alphanumeric house number.
-        - house_name_malayalam: The specific house name in Malayalam.
-        - age: The numeric age.
-        - gender: Male or Female.
+        - serial_number: The small number at the top left of each box.
+        - epic_id: The alphanumeric ID at the top right of each box.
+        - name_malayalam: The Malayalam text immediately following "പേര് :".
+        - relation_name_malayalam: The Malayalam text following "ഭർത്താവിന്റെ പേര് :" or "അച്ഛന്റെ പേര് :" or "അമ്മയുടെ പേര് :".
+        - relation_type: "Husband", "Father", "Mother", or "Other" based on the prefix.
+        - house_number: The numeric/alphanumeric part of the house address.
+        - house_name_malayalam: The Malayalam house name found in the address line.
+        - age: The numeric age at the bottom.
+        - gender: "Male" or "Female" (Malayalam: സ്ത്രീ=Female, പുരുഷൻ=Male).
         
-        Output format: RAW JSON list. 
-        Return ONLY the JSON. No markdown backticks, no text before or after.
-        
-        IMPORTANT: If no records are found, return []. 
+        Output: A RAW JSON list of 30 records. Return ONLY the JSON. No preamble.
+        If a box is empty or not a voter record, skip it.
         """
 
         import base64 as _b64  # kept for any legacy path; inline uses raw bytes
@@ -375,33 +379,35 @@ class OCREngine:
         pil_img = Image.fromarray(rgb_img)
 
         prompt = """
-        Extract the voter details from this image. 
-        The image is a single box from an Indian Voter List.
-        Return the data in EXACTLY this JSON format:
-        {
-            "serial_number": "string",
-            "epic_id": "string",
-            "name_malayalam": "string",
-            "relation_name_malayalam": "string",
-            "relation_type": "FATHER/HUSBAND/MOTHER/OTHER",
-            "house_number": "string",
-            "house_name_malayalam": "string",
-            "age": "number",
-            "gender": "MALE/FEMALE"
-        }
-        If any field is missing, use "". Do not include markdown blocks, just raw JSON.
+        Act as a high-precision literal OCR engine specializing in Malayalam/English election rolls.
+        Extract voter details from this single box EXACTLY as printed. 
+        
+        Strict Field Mapping:
+        - serial_number: Top-left number.
+        - epic_id: Top-right alphanumeric ID.
+        - name_malayalam: Text after "പേര് :".
+        - relation_name_malayalam: Text after parent/spouse prefix.
+        - relation_type: "Husband", "Father", "Mother", or "Other".
+        - house_number: Numeric house ID.
+        - house_name_malayalam: Malayalam house name string.
+        - age: Numeric age at bottom.
+        - gender: "Male" or "Female" (സ്ത്രീ=Female, പുരുഷൻ=Male).
+
+        CRITICAL: Capture Malayalam characters exactly as they appear. DO NOT use external knowledge to fix/guess names.
+        Return ONLY a JSON object.
         """
 
         import time
-        max_retries = 3
-        base_delay = 2 # seconds
+        max_retries = 5
+        base_delay = 1.0
         
         for attempt in range(max_retries):
             try:
+                # Use standard genai.types.GenerateContentConfig for reliability
+                from google.genai import types as genai_types_internal
                 response = self.gemini_client.models.generate_content(
                     model=self.gemini_model,
-                    contents=[prompt, pil_img],
-                    config={"response_mime_type": "application/json"}
+                    contents=[prompt, pil_img]
                 )
                 text = response.text.strip()
                 

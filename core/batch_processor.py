@@ -4,12 +4,14 @@ import json
 import logging
 import re
 from core.ocr_engine import OCREngine
+from core.detector import VoterDetector
 
 logger = logging.getLogger("BatchProcessor")
 
 class BatchProcessor:
     def __init__(self, tesseract_cmd=None):
         self.engine = OCREngine(tesseract_cmd=tesseract_cmd)
+        self.detector = VoterDetector()
         self.results = []
 
     def process_pdf_directly(self, pdf_path, page_range=None, callback=None):
@@ -38,47 +40,40 @@ class BatchProcessor:
             total_pages = pdf_proc.convert_to_images(pdf_path, "", total_pages_only=True)
             pages = list(range(1, total_pages + 1))
         
-        logger.info(f"🚀 Speed Boost Extraction: {len(pages)} pages | {max_workers} Workers | 200 DPI | JPEG-95 Mode")
+        logger.info(f"🎯 High-Precision Box Mode: {len(pages)} pages | {max_workers} Workers | 300 DPI")
         
         def process_page(page_num):
             temp_dir = tempfile.mkdtemp(prefix=f"ocr_page_{page_num}_")
             try:
-                # 1. Page-to-Image Burst (Targeted 'Sniper' Conversion)
-                # We convert ONLY the current page to protect RAM
+                # 1. Page-to-Image (300 DPI for box detection accuracy)
                 page_imgs = pdf_proc.convert_to_images(
-                    pdf_path, temp_dir, dpi=300,  # 300 DPI: Industry standard for high-accuracy Malayalam OCR
+                    pdf_path, temp_dir, dpi=300, 
                     first_page=page_num, last_page=page_num
                 )
                 if not page_imgs: return page_num, [], False
                 
                 page_img_path = page_imgs[0]
                 
-                # 2. Page-level AI Extraction — inline bytes mode (no File API URI issues)
-                raw_data = self.engine.extract_from_image_path(page_img_path, page_num)
-
-                if not raw_data:
-                    # PANIC RETRY: If we got nothing, try one more time directly as a fallback
-                    logger.warning(f"🔄 Page {page_num} returned no data. Initiating deep-scan retry...")
-                    raw_data = self.engine.extract_from_image_path(page_img_path, page_num)
-
-                raw_list = []
-                if isinstance(raw_data, list): raw_list = raw_data
-                elif isinstance(raw_data, dict):
-                    # Handle cases where AI wraps list in a key
-                    for val in raw_data.values():
-                        if isinstance(val, list):
-                            raw_list = val
-                            break
-                
-                if not raw_list: 
-                    # 0 voters likely means a structural/non-data page slipped through — log as WARNING not ERROR
-                    logger.warning(f"⚠️ Page {page_num} returned 0 voters (likely structural page). Skipping.")
+                # 2. Detect individual voter boxes
+                boxes = self.detector.detect_voter_boxes(page_img_path)
+                if not boxes:
+                    logger.warning(f"⚠️ Page {page_num}: No voter boxes detected.")
                     return page_num, [], False
 
                 page_results = []
-                for entry in raw_list:
-                    if not isinstance(entry, dict): continue
+                img = cv2.imread(page_img_path)
+                
+                # 3. Process each box individually for high precision
+                for i, (x, y, w, h) in enumerate(boxes):
+                    crop = img[y:y+h, x:x+w]
                     
+                    # Extract using the single-box Gemini flow
+                    entry = self.engine.extract_with_gemini(crop)
+                    
+                    if not entry:
+                        logger.warning(f"⚠️ Page {page_num} Box {i+1}: Extraction failed.")
+                        continue
+
                     parsed_info = {
                         "Full Name": entry.get("name_malayalam") or entry.get("Full Name", ""),
                         "Relation Name": entry.get("relation_name_malayalam") or entry.get("Relation Name", ""),
@@ -89,17 +84,17 @@ class BatchProcessor:
                         "Gender": str(entry.get("gender") or entry.get("Gender", "")).title(),
                         "EPIC_ID": entry.get("epic_id") or entry.get("EPIC_ID", ""),
                         "Serial_OCR": str(entry.get("serial_number") or entry.get("Serial_OCR", "")),
-                        "Image_Path": f"extracted_p{page_num}", # Placeholder as images are ephemeral
+                        "Image_Path": f"p{page_num}_b{i}",
                         "Filename": os.path.basename(pdf_path)
                     }
                     page_results.append(parsed_info)
+                
                 return page_num, page_results, True
 
             except Exception as e:
                 logger.error(f"❌ Thread Error on Page {page_num}: {e}")
                 return page_num, [], False
             finally:
-                # 3. Mandatory Housekeeping: Prevent Disk Bloat
                 shutil.rmtree(temp_dir, ignore_errors=True)
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
