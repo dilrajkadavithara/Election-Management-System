@@ -4,8 +4,7 @@ import numpy as np
 import os
 import re
 import json
-import google.genai as genai
-from google.genai import types as genai_types
+import google.generativeai as genai
 import datetime
 from PIL import Image
 from dotenv import load_dotenv
@@ -45,31 +44,27 @@ class OCREngine:
         self.config_mal = "--oem 3 --psm 6 -l mal+eng"
         self.config_epic = "-c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789. --psm 7"
 
-        self.gemini_client = None
+        self.model = None
         api_key = os.getenv("GOOGLE_API_KEY")
         if api_key:
-            # Force stable v1 API version to avoid 'model not found' on v1beta
-            from google.genai import types as genai_types_internal
-            self.gemini_client = genai.Client(
-                api_key=api_key,
-                http_options=genai_types_internal.HttpOptions(api_version='v1')
-            )
-            self.gemini_model = "models/gemini-1.5-flash"
+            genai.configure(api_key=api_key)
+            self.gemini_model = "gemini-2.5-flash"
+            self.model = genai.GenerativeModel(self.gemini_model)
         else:
             self.gemini_model = None
 
     def upload_file(self, file_path):
-        """Uploads a file to Gemini File API. Kept for compatibility but inline mode is preferred."""
-        if not self.gemini_client: return None
+        """Uploads a file to Gemini File API."""
+        if not self.model: return None
         try:
             logger.info(f"📤 Uploading {file_path} to Gemini File API...")
-            uploaded_file = self.gemini_client.files.upload(
-                file=file_path,
-                config=genai_types.UploadFileConfig(display_name=os.path.basename(file_path))
+            uploaded_file = genai.upload_file(
+                path=file_path,
+                display_name=os.path.basename(file_path)
             )
             while uploaded_file.state.name == "PROCESSING":
                 time.sleep(1)
-                uploaded_file = self.gemini_client.files.get(uploaded_file.name)
+                uploaded_file = genai.get_file(uploaded_file.name)
             if uploaded_file.state.name == "FAILED":
                 raise Exception("Gemini File Processing Failed")
             logger.info(f"✅ File {uploaded_file.name} ready on Cloud.")
@@ -120,7 +115,7 @@ class OCREngine:
 
     def extract_from_image_path(self, image_path, page_num):
         """Extract voters from an image file using inline bytes — no Files API, no URI issues."""
-        if not self.gemini_client: return None
+        if not self.model: return None
 
         prompt = f"""
         Act as a high-precision literal OCR engine.
@@ -169,14 +164,13 @@ class OCREngine:
                         logger.warning(f"⏳ Page {page_num} Quota hit. Jittered sleep: {wait_time:.1f}s... [{attempt+1}/{max_retries}]")
                         time.sleep(wait_time)
 
-                    response = self.gemini_client.models.generate_content(
-                        model=self.gemini_model,
-                        contents=[
+                    response = self.model.generate_content(
+                        [
                             prompt,
-                            genai_types.Part.from_bytes(
-                                data=image_bytes,
-                                mime_type="image/jpeg"
-                            )
+                            {
+                                "mime_type": "image/jpeg",
+                                "data": image_bytes
+                            }
                         ]
                     )
 
@@ -218,7 +212,7 @@ class OCREngine:
 
     def extract_from_cached_file(self, google_file, page_num):
         """Legacy: extract using a pre-uploaded File object. Calls extract_from_image_path is preferred."""
-        if not self.gemini_client: return None
+        if not self.model: return None
 
         # Hyper-Targeted Prompt optimized for Single-Page Vision
         # We don't mention 'Page X' because the upload is a single image file now.
@@ -247,12 +241,8 @@ class OCREngine:
                         logger.warning(f"⏳ Page {page_num} Quota hit. Jittered sleep: {wait_time:.1f}s... [{attempt+1}/{max_retries}]")
                         time.sleep(wait_time)
 
-                    response = self.gemini_client.models.generate_content(
-                        model=self.gemini_model,
-                        contents=[prompt, google_file],
-                        config=genai_types.GenerateContentConfig(
-                            response_mime_type="application/json"
-                        )
+                    response = self.model.generate_content(
+                        [prompt, google_file]
                     )
                     
                     try:
@@ -309,7 +299,7 @@ class OCREngine:
 
     def extract_from_pdf(self, pdf_path, page_num=None, pdf_data=None):
         """Processes specific pages or entire PDF using Gemini with retry logic."""
-        if not self.gemini_client:
+        if not self.model:
             return None
         
         prompt = f"""
@@ -331,10 +321,14 @@ class OCREngine:
                     with open(pdf_path, 'rb') as f:
                         pdf_data = f.read()
 
-                response = self.gemini_client.models.generate_content(
-                    model=self.gemini_model,
-                    contents=[prompt, {"mime_type": "application/pdf", "data": pdf_data}],
-                    config={"response_mime_type": "application/json"}
+                response = self.model.generate_content(
+                    [
+                        prompt,
+                        {
+                            "mime_type": "application/pdf",
+                            "data": pdf_data
+                        }
+                    ]
                 )
                 text = response.text.strip()
                 
@@ -371,7 +365,7 @@ class OCREngine:
 
     def extract_with_gemini(self, img_np):
         """High-precision extraction using Gemini AI with exponential backoff."""
-        if not self.gemini_client:
+        if not self.model:
             return None
 
         # Convert CV2 (BGR) to PIL (RGB)
@@ -403,11 +397,10 @@ class OCREngine:
         
         for attempt in range(max_retries):
             try:
-                # Use standard genai.types.GenerateContentConfig for reliability
-                from google.genai import types as genai_types_internal
-                response = self.gemini_client.models.generate_content(
-                    model=self.gemini_model,
-                    contents=[prompt, pil_img]
+                # Pil Image to RGB if needed
+                rgb_pil = pil_img.convert('RGB')
+                response = self.model.generate_content(
+                    [prompt, rgb_pil]
                 )
                 text = response.text.strip()
                 
