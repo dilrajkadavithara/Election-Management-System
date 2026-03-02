@@ -54,7 +54,7 @@ class OCREngine:
             self.gemini_model = None
 
     def upload_file(self, file_path):
-        """Uploads a file to Gemini File API for caching and parallel processing."""
+        """Uploads a file to Gemini File API. Kept for compatibility but inline mode is preferred."""
         if not self.gemini_client: return None
         try:
             logger.info(f"📤 Uploading {file_path} to Gemini File API...")
@@ -62,7 +62,6 @@ class OCREngine:
                 file=file_path,
                 config=genai_types.UploadFileConfig(display_name=os.path.basename(file_path))
             )
-            # Wait for processing
             while uploaded_file.state.name == "PROCESSING":
                 time.sleep(1)
                 uploaded_file = self.gemini_client.files.get(uploaded_file.name)
@@ -114,8 +113,94 @@ class OCREngine:
         with cls._local_throttle:
             yield
 
+    def extract_from_image_path(self, image_path, page_num):
+        """Extract voters from an image file using inline bytes — no Files API, no URI issues."""
+        if not self.gemini_client: return None
+
+        prompt = f"""
+        Act as a professional Election Data Specialist.
+        Extract EVERY voter record from the attached document.
+        The document corresponds to Page {page_num} of the original roll.
+        
+        Output EXACTLY this JSON List format:
+        [{{ "serial_number": "number", "epic_id": "text", "name_malayalam": "text", "relation_name_malayalam": "text", "relation_type": "Father/Husband/Other", "house_number": "text", "house_name_malayalam": "text", "age": number, "gender": "Male/Female" }}]
+
+        IMPORTANT: If no records are found, return []. No analysis, just raw JSON.
+        """
+
+        import base64
+        try:
+            with open(image_path, 'rb') as f:
+                image_bytes = f.read()
+            image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+            logger.info(f"📸 Page {page_num}: Sending {len(image_bytes)//1024}KB inline to Gemini")
+        except Exception as e:
+            logger.error(f"❌ Page {page_num} image read error: {e}")
+            return None
+
+        max_retries = 10
+        base_delay = 3
+
+        with self.get_throttle():
+            for attempt in range(max_retries):
+                try:
+                    import random
+                    if attempt > 0:
+                        wait_time = (base_delay * (1.5 ** attempt)) + random.uniform(1, 5)
+                        logger.warning(f"⏳ Page {page_num} Quota hit. Jittered sleep: {wait_time:.1f}s... [{attempt+1}/{max_retries}]")
+                        time.sleep(wait_time)
+
+                    response = self.gemini_client.models.generate_content(
+                        model=self.gemini_model,
+                        contents=[
+                            prompt,
+                            genai_types.Part(
+                                inline_data=genai_types.Blob(
+                                    mime_type="image/jpeg",
+                                    data=image_b64
+                                )
+                            )
+                        ],
+                        config=genai_types.GenerateContentConfig(
+                            response_mime_type="application/json"
+                        )
+                    )
+
+                    try:
+                        text = response.text.strip()
+                    except ValueError:
+                        logger.error(f"⚠️ Page {page_num} Blocked by Gemini safety filter")
+                        return []
+
+                    if not text:
+                        logger.warning(f"⚠️ Page {page_num} Gemini returned empty string")
+                        return []
+
+                    if "```json" in text: text = text.split("```json")[1].split("```")[0].strip()
+                    elif "```" in text: text = text.split("```")[1].split("```")[0].strip()
+
+                    start = text.find('[')
+                    if start == -1: start = text.find('{')
+                    if start != -1:
+                        try:
+                            parsed_json, _ = json.JSONDecoder().raw_decode(text[start:])
+                            logger.info(f"✅ Page {page_num}: Extracted {len(parsed_json) if isinstance(parsed_json, list) else 1} records")
+                            return parsed_json
+                        except Exception as e:
+                            logger.warning(f"⚠️ Page {page_num} JSON parse error: {e}")
+                            return []
+                    return []
+
+                except Exception as e:
+                    err_str = str(e)
+                    if "429" in err_str or "quota" in err_str.lower() or "RESOURCE_EXHAUSTED" in err_str:
+                        continue
+                    logger.error(f"❌ Page {page_num} Gemini error: {e}")
+                    return []
+        return []
+
     def extract_from_cached_file(self, google_file, page_num):
-        """Ultra-fast, low-cost extraction using pre-uploaded file reference with retry logic."""
+        """Legacy: extract using a pre-uploaded File object. Calls extract_from_image_path is preferred."""
         if not self.gemini_client: return None
 
         # Hyper-Targeted Prompt optimized for Single-Page Vision

@@ -53,24 +53,13 @@ class BatchProcessor:
                 
                 page_img_path = page_imgs[0]
                 
-                # 2. Page-level AI Extraction
-                # We upload the single image to keep tokens 30x cheaper
-                google_file = self.engine.upload_file(page_img_path)
-                if not google_file:
-                    return page_num, [], False
-
-                raw_data = self.engine.extract_from_cached_file(google_file, page_num)
+                # 2. Page-level AI Extraction — inline bytes mode (no File API URI issues)
+                raw_data = self.engine.extract_from_image_path(page_img_path, page_num)
 
                 if not raw_data:
                     # PANIC RETRY: If we got nothing, try one more time directly as a fallback
                     logger.warning(f"🔄 Page {page_num} returned no data. Initiating deep-scan retry...")
-                    raw_data = self.engine.extract_from_cached_file(google_file, page_num)
-                
-                # Cleanup Cloud File only after all extraction attempts
-                try:
-                    import google.genai as genai_sdk
-                    genai_sdk.Client(api_key=os.environ.get("GOOGLE_API_KEY", "")).files.delete(name=google_file.name)
-                except: pass
+                    raw_data = self.engine.extract_from_image_path(page_img_path, page_num)
 
                 raw_list = []
                 if isinstance(raw_data, list): raw_list = raw_data
