@@ -124,15 +124,23 @@ class OCREngine:
 
         prompt = f"""
         Act as a professional Election Data Specialist.
-        Extract EVERY voter record from the attached document.
+        Extract EVERY voter record from the attached Malayalam/English document.
         The document corresponds to Page {page_num} of the original roll.
         
-        Output format must be a RAW JSON list. 
+        Strict Field Mapping:
+        - serial_number: The sequential number (e.g., 1, 2, 3).
+        - epic_id: The alphanumeric ID (e.g., ABC1234567).
+        - name_malayalam: The full name in Malayalam.
+        - relation_name_malayalam: The parent/spouse name in Malayalam.
+        - relation_type: Father, Husband, Mother, or Other.
+        - house_number: The numeric/alphanumeric house number.
+        - house_name_malayalam: The specific house name in Malayalam.
+        - age: The numeric age.
+        - gender: Male or Female.
+        
+        Output format: RAW JSON list. 
         Return ONLY the JSON. No markdown backticks, no text before or after.
         
-        Format:
-        [{{ "serial_number": "number", "epic_id": "text", "name_malayalam": "text", "relation_name_malayalam": "text", "relation_type": "Father/Husband/Other", "house_number": "text", "house_name_malayalam": "text", "age": number, "gender": "Male/Female" }}]
-
         IMPORTANT: If no records are found, return []. 
         """
 

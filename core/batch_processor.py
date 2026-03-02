@@ -24,7 +24,7 @@ class BatchProcessor:
         pdf_proc = PDFProcessor()
         
         # Concurrency Management: 3 is the sweet spot for maximum stability without triggering token burst limits on AI endpoints
-        max_workers = 8  # Increased from 5 to 8: leverages 4GB RAM for faster parallel extraction
+        max_workers = 5  # 300 DPI requires more RAM; dropping to 5 workers for 4GB stability
         
         # Determine pages to process
         if page_range:
@@ -46,7 +46,7 @@ class BatchProcessor:
                 # 1. Page-to-Image Burst (Targeted 'Sniper' Conversion)
                 # We convert ONLY the current page to protect RAM
                 page_imgs = pdf_proc.convert_to_images(
-                    pdf_path, temp_dir, dpi=200,  # 200 DPI: 45% smaller upload, Gemini reads Malayalam cleanly at this res
+                    pdf_path, temp_dir, dpi=300,  # 300 DPI: Industry standard for high-accuracy Malayalam OCR
                     first_page=page_num, last_page=page_num
                 )
                 if not page_imgs: return page_num, [], False
