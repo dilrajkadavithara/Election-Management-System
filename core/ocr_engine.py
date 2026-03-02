@@ -128,11 +128,10 @@ class OCREngine:
         IMPORTANT: If no records are found, return []. No analysis, just raw JSON.
         """
 
-        import base64
+        import base64 as _b64  # kept for any legacy path; inline uses raw bytes
         try:
             with open(image_path, 'rb') as f:
                 image_bytes = f.read()
-            image_b64 = base64.b64encode(image_bytes).decode('utf-8')
             logger.info(f"📸 Page {page_num}: Sending {len(image_bytes)//1024}KB inline to Gemini")
         except Exception as e:
             logger.error(f"❌ Page {page_num} image read error: {e}")
@@ -157,7 +156,7 @@ class OCREngine:
                             genai_types.Part(
                                 inline_data=genai_types.Blob(
                                     mime_type="image/jpeg",
-                                    data=image_b64
+                                    data=image_bytes  # raw bytes — SDK handles base64 encoding
                                 )
                             )
                         ],
