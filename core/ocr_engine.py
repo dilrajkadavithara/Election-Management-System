@@ -54,7 +54,7 @@ class OCREngine:
                 api_key=api_key,
                 http_options=genai_types_internal.HttpOptions(api_version='v1')
             )
-            self.gemini_model = "gemini-2.0-flash-001"
+            self.gemini_model = "gemini-1.5-flash"
         else:
             self.gemini_model = None
 
@@ -127,10 +127,13 @@ class OCREngine:
         Extract EVERY voter record from the attached document.
         The document corresponds to Page {page_num} of the original roll.
         
-        Output EXACTLY this JSON List format:
+        Output format must be a RAW JSON list. 
+        Return ONLY the JSON. No markdown backticks, no text before or after.
+        
+        Format:
         [{{ "serial_number": "number", "epic_id": "text", "name_malayalam": "text", "relation_name_malayalam": "text", "relation_type": "Father/Husband/Other", "house_number": "text", "house_name_malayalam": "text", "age": number, "gender": "Male/Female" }}]
 
-        IMPORTANT: If no records are found, return []. No analysis, just raw JSON.
+        IMPORTANT: If no records are found, return []. 
         """
 
         import base64 as _b64  # kept for any legacy path; inline uses raw bytes
@@ -162,10 +165,7 @@ class OCREngine:
                                 data=image_bytes,
                                 mime_type="image/jpeg"
                             )
-                        ],
-                        config=genai_types.GenerateContentConfig(
-                            response_mime_type="application/json"
-                        )
+                        ]
                     )
 
                     try:
