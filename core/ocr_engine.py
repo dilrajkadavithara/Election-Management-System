@@ -5,6 +5,7 @@ import os
 import re
 import json
 import google.genai as genai
+from google.genai import types as genai_types
 import datetime
 from PIL import Image
 from dotenv import load_dotenv
@@ -58,13 +59,13 @@ class OCREngine:
         try:
             logger.info(f"📤 Uploading {file_path} to Gemini File API...")
             uploaded_file = self.gemini_client.files.upload(
-                path=file_path,
-                config={"display_name": os.path.basename(file_path)}
+                file=file_path,
+                config=genai_types.UploadFileConfig(display_name=os.path.basename(file_path))
             )
             # Wait for processing
             while uploaded_file.state.name == "PROCESSING":
                 time.sleep(1)
-                uploaded_file = self.gemini_client.files.get(name=uploaded_file.name)
+                uploaded_file = self.gemini_client.files.get(uploaded_file.name)
             if uploaded_file.state.name == "FAILED":
                 raise Exception("Gemini File Processing Failed")
             logger.info(f"✅ File {uploaded_file.name} ready on Cloud.")
@@ -144,10 +145,19 @@ class OCREngine:
                         logger.warning(f"⏳ Page {page_num} Quota hit. Jittered sleep: {wait_time:.1f}s... [{attempt+1}/{max_retries}]")
                         time.sleep(wait_time)
 
+                    # Wrap the File reference correctly for the new google.genai SDK
+                    file_part = genai_types.Part(
+                        file_data=genai_types.FileData(
+                            file_uri=google_file.uri,
+                            mime_type=google_file.mime_type
+                        )
+                    )
                     response = self.gemini_client.models.generate_content(
                         model=self.gemini_model,
-                        contents=[prompt, google_file],
-                        config={"response_mime_type": "application/json"}
+                        contents=[prompt, file_part],
+                        config=genai_types.GenerateContentConfig(
+                            response_mime_type="application/json"
+                        )
                     )
                     
                     try:
