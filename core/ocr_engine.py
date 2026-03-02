@@ -49,7 +49,7 @@ class OCREngine:
         api_key = os.getenv("GOOGLE_API_KEY")
         if api_key:
             self.gemini_client = genai.Client(api_key=api_key)
-            self.gemini_model = "gemini-2.0-flash"
+            self.gemini_model = "gemini-1.5-flash"
         else:
             self.gemini_model = None
 
