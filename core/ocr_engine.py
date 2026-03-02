@@ -48,8 +48,13 @@ class OCREngine:
         self.gemini_client = None
         api_key = os.getenv("GOOGLE_API_KEY")
         if api_key:
-            self.gemini_client = genai.Client(api_key=api_key)
-            self.gemini_model = "gemini-1.5-flash"
+            # Force stable v1 API version to avoid 'model not found' on v1beta
+            from google.genai import types as genai_types_internal
+            self.gemini_client = genai.Client(
+                api_key=api_key,
+                http_options=genai_types_internal.HttpOptions(api_version='v1')
+            )
+            self.gemini_model = "gemini-2.0-flash-001"
         else:
             self.gemini_model = None
 
