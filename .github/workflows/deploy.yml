@@ -64,15 +64,21 @@ jobs:
             docker compose build --no-cache
             docker compose up -d
             
-            echo "Waiting for services to initialize (45 seconds)..."
-            sleep 45
+            echo "Waiting for services to initialize (up to 120 seconds)..."
+            HEALTH="000"
+            for i in $(seq 1 12); do
+              sleep 10
+              HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:80 || echo "FAILED")
+              echo "  Attempt $i: $HEALTH"
+              if [ "$HEALTH" == "200" ] || [ "$HEALTH" == "301" ] || [ "$HEALTH" == "302" ]; then
+                break
+              fi
+            done
             
             echo "--- DOCKER STATUS ---"
             docker compose ps
             
             echo "--- VERIFYING HEALTH ---"
-            HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:80 || echo "FAILED")
-            
             if [ "$HEALTH" == "200" ] || [ "$HEALTH" == "301" ] || [ "$HEALTH" == "302" ]; then
               echo "🚀 DEPLOYMENT SUCCESSFUL: Site is responding with $HEALTH"
               docker system prune -f
