@@ -60,28 +60,30 @@ jobs:
           port: 22
           script: |
             cd /opt/voterslist
-            docker compose down --remove-orphans
-            docker compose build --no-cache
-            docker compose up -d
-            
-            echo "Waiting for services to initialize (up to 120 seconds)..."
+
+            # Use cached build: only rebuilds layers that actually changed (requirements.txt, code).
+            # '--no-cache' was wiping all layers every time → 10+ min builds. Cached builds take ~30s for code-only changes.
+            docker compose up -d --build --remove-orphans
+
+            echo "Waiting for services to initialize (up to 5 minutes)..."
             HEALTH="000"
-            for i in $(seq 1 12); do
+            for i in $(seq 1 30); do
               sleep 10
               HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:80 || echo "FAILED")
-              echo "  Attempt $i: $HEALTH"
+              echo "  Attempt $i/30: $HEALTH"
               if [ "$HEALTH" == "200" ] || [ "$HEALTH" == "301" ] || [ "$HEALTH" == "302" ]; then
                 break
               fi
             done
-            
+
             echo "--- DOCKER STATUS ---"
             docker compose ps
-            
+
             echo "--- VERIFYING HEALTH ---"
             if [ "$HEALTH" == "200" ] || [ "$HEALTH" == "301" ] || [ "$HEALTH" == "302" ]; then
               echo "🚀 DEPLOYMENT SUCCESSFUL: Site is responding with $HEALTH"
-              docker system prune -f
+              # Only prune stopped containers — preserve build cache for fast future deploys
+              docker container prune -f
             else
               echo "❌ DEPLOYMENT FAILURE: Site returned $HEALTH. Printing logs..."
               docker compose logs --tail=50
