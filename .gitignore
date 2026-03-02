@@ -31,6 +31,7 @@ PRIVATE_SERVER_ACCESS.md
 
 # Project Specific Data (Should stay local or in S3)
 test_*.py
+!tests/          # Allow the tests/ directory to be tracked despite test_*.py rule
 debug_*.py
 diagnostics.py
 data/*
