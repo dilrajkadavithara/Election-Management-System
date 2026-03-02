@@ -153,11 +153,9 @@ class OCREngine:
                         model=self.gemini_model,
                         contents=[
                             prompt,
-                            genai_types.Part(
-                                inline_data=genai_types.Blob(
-                                    mime_type="image/jpeg",
-                                    data=image_bytes  # raw bytes — SDK handles base64 encoding
-                                )
+                            genai_types.Part.from_bytes(
+                                data=image_bytes,
+                                mime_type="image/jpeg"
                             )
                         ],
                         config=genai_types.GenerateContentConfig(
