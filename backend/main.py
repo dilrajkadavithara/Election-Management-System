@@ -467,25 +467,46 @@ async def export_voters(
             yield "No records found"
             return
 
-        # Use fixed fieldnames to ensure order and consistency
+        # Reordered: location fields FIRST so they appear in columns A-E in Excel immediately
         fieldnames = [
+            'constituency', 'local_body', 'booth_no', 'ps_name',
             'serial_no', 'full_name', 'epic_id', 'gender', 'age', 
             'relation_name', 'relation_type', 'house_name', 'house_no', 
-            'phone_no', 'voter_leaning', 'current_location', 'booth_no', 
-            'constituency', 'local_body', 'ps_name', 'voting_probability'
+            'phone_no', 'voter_leaning', 'current_location', 'voting_probability'
         ]
+        display_headers = {
+            'constituency': 'Constituency',
+            'local_body': 'Local Body / Panchayat',
+            'booth_no': 'Booth Number',
+            'ps_name': 'Polling Station Name',
+            'serial_no': 'Serial No',
+            'full_name': 'Full Name',
+            'epic_id': 'EPIC ID',
+            'gender': 'Gender',
+            'age': 'Age',
+            'relation_name': 'Relation Name',
+            'relation_type': 'Relation Type',
+            'house_name': 'House Name',
+            'house_no': 'House No',
+            'phone_no': 'Phone No',
+            'voter_leaning': 'Voter Leaning',
+            'current_location': 'Current Location',
+            'voting_probability': 'Voting Probability',
+        }
         
         # Add a UTF-8 BOM for Excel compatibility
         yield '\ufeff'
         
-        writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction='ignore')
+        writer = csv.DictWriter(output, fieldnames=[display_headers[f] for f in fieldnames], extrasaction='ignore')
         writer.writeheader()
         yield output.getvalue()
         output.seek(0)
         output.truncate(0)
 
         for voter in results:
-            writer.writerow(voter)
+            # Remap data keys to display header names
+            row = {display_headers[f]: voter.get(f, '') for f in fieldnames}
+            writer.writerow(row)
             yield output.getvalue()
             output.seek(0)
             output.truncate(0)
