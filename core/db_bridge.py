@@ -64,26 +64,38 @@ def check_booth_exists(constituency_name, booth_number):
     return Booth.objects.filter(constituency__name=constituency_name, number=str(booth_number)).exists()
 
 def save_booth_data(constituency_name, local_body_type, local_body_name, booth_number, voter_data_list, original_filename, polling_station_no="", polling_station_name="", user_id=None):
+    def t_(v, l=1000):
+        if v is None: return ""
+        s = str(v)
+        return s[:l] if len(s) > l else s
+
     try:
         with transaction.atomic():
-            constituency, _ = Constituency.objects.get_or_create(name=constituency_name.strip().upper())
-            local_body, _ = LocalBody.objects.get_or_create(constituency=constituency, name=local_body_name.strip().upper(), body_type=local_body_type)
+            # Clean up inputs based on DB limits
+            c_name = t_(constituency_name.strip().upper(), 200)
+            lb_name = t_(local_body_name.strip().upper(), 200)
+            b_num = t_(booth_number, 50)
+            ps_no = t_(polling_station_no, 100)
+            ps_name = t_(polling_station_name, 1000)
+            filename = t_(original_filename, 1000)
+
+            constituency, _ = Constituency.objects.get_or_create(name=c_name)
+            local_body, _ = LocalBody.objects.get_or_create(constituency=constituency, name=lb_name, body_type=local_body_type)
 
             booth, created = Booth.objects.get_or_create(
                 constituency=constituency,
-                number=booth_number,
+                number=b_num,
                 defaults={
                     'local_body': local_body,
-                    'polling_station_no': polling_station_no,
-                    'polling_station_name': polling_station_name
+                    'polling_station_no': ps_no,
+                    'polling_station_name': ps_name
                 }
             )
             
             # Update PS Info if it was an existing booth but PS info is now provided
             if not created:
-                if polling_station_no: booth.polling_station_no = polling_station_no
-                if polling_station_name: 
-                    booth.polling_station_name = polling_station_name
+                if ps_no: booth.polling_station_no = ps_no
+                if ps_name: booth.polling_station_name = ps_name
                 booth.local_body = local_body
                 booth.save()
             
@@ -110,19 +122,19 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
                 voter = Voter(
                     booth=booth,
                     serial_no=serial_val,
-                    epic_id=get_val(['EPIC_ID', 'epic_id', 'EPIC ID']) or 'UNK',
-                    full_name=get_val(['Full Name', 'full_name']) or 'N/A',
-                    relation_type=get_val(['Relation Type', 'relation_type']) or '',
-                    relation_name=get_val(['Relation Name', 'relation_name']) or '',
-                    house_no=get_val(['House Number', 'house_no', 'House No']) or '',
-                    house_name=get_val(['House Name', 'house_name']) or '',
+                    epic_id=t_(get_val(['EPIC_ID', 'epic_id', 'EPIC ID']) or 'UNK', 50),
+                    full_name=t_(get_val(['Full Name', 'full_name']) or 'N/A', 1000),
+                    relation_type=t_(get_val(['Relation Type', 'relation_type']) or '', 50),
+                    relation_name=t_(get_val(['Relation Name', 'relation_name']) or '', 1000),
+                    house_no=t_(get_val(['House Number', 'house_no', 'House No']) or '', 100),
+                    house_name=t_(get_val(['House Name', 'house_name']) or '', 1000),
                     age=age_val,
-                    gender=get_val(['Gender', 'gender']) or '',
-                    phone_no=get_val(['phone_no', 'Phone Number', 'Phone']),
-                    voter_leaning=get_val(['voter_leaning', 'Leaning', 'Sentiment']),
-                    current_location=get_val(['current_location', 'Location', 'Residence']),
-                    voting_probability=get_val(['voting_probability', 'Probability', 'Chance']),
-                    source_file=original_filename,
+                    gender=t_(get_val(['Gender', 'gender']) or '', 20),
+                    phone_no=t_(get_val(['phone_no', 'Phone Number', 'Phone']), 20),
+                    voter_leaning=t_(get_val(['voter_leaning', 'Leaning', 'Sentiment']), 20),
+                    current_location=t_(get_val(['current_location', 'Location', 'Residence']), 20),
+                    voting_probability=t_(get_val(['voting_probability', 'Probability', 'Chance']), 20),
+                    source_file=filename,
                     status='VERIFIED',
                     created_by=created_by_user
                 )
