@@ -421,6 +421,23 @@ class OCREngine:
                 pil_img.save(img_byte_arr, format='JPEG')
                 img_bytes = img_byte_arr.getvalue()
 
+                # Define strict schema for a single voter box to force "Flat Object" output
+                voter_schema = genai_types.Schema(
+                    type=genai_types.Type.OBJECT,
+                    properties={
+                        "serial_number": genai_types.Schema(type=genai_types.Type.STRING),
+                        "epic_id": genai_types.Schema(type=genai_types.Type.STRING),
+                        "name_malayalam": genai_types.Schema(type=genai_types.Type.STRING),
+                        "relation_name_malayalam": genai_types.Schema(type=genai_types.Type.STRING),
+                        "relation_type": genai_types.Schema(type=genai_types.Type.STRING),
+                        "house_number": genai_types.Schema(type=genai_types.Type.STRING),
+                        "house_name_malayalam": genai_types.Schema(type=genai_types.Type.STRING),
+                        "age": genai_types.Schema(type=genai_types.Type.INTEGER),
+                        "gender": genai_types.Schema(type=genai_types.Type.STRING),
+                    },
+                    required=["serial_number", "epic_id", "name_malayalam"]
+                )
+
                 response = self.client.models.generate_content(
                     model=self.gemini_model,
                     contents=[
@@ -430,12 +447,17 @@ class OCREngine:
                     config=genai_types.GenerateContentConfig(
                         thinking_config=genai_types.ThinkingConfig(include_thoughts=False),
                         temperature=0.0,
-                        response_mime_type="application/json"
+                        response_mime_type="application/json",
+                        response_schema=voter_schema
                     )
                 )
                 
-                # Use .text and parse JSON carefully
-                return json.loads(response.text)
+                # Liberal Parsing: Handle cases where model still returns a list [ {...} ]
+                data = json.loads(response.text)
+                if isinstance(data, list) and len(data) > 0:
+                    data = data[0]
+                
+                return data
             except Exception as e:
                 # Handle Rate Limits (429) or other transient errors
                 if "429" in str(e) or "quota" in str(e).lower():
