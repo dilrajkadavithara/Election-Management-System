@@ -86,6 +86,8 @@ def run_extraction_task(batch_id: str, dpi: int, direct_pdf: bool = False):
             batch['pages_processed'] = 0 
             batch['status'] = 'extracted'
             state_manager.set_batch(batch_id, batch)
+            import time; time.sleep(1) # Final Sync Buffer
+            state_manager.set_batch(batch_id, batch)
             logger.info(f"Batch {batch_id} ready for Strategic AI extraction.")
             return
 
@@ -111,6 +113,8 @@ def run_extraction_task(batch_id: str, dpi: int, direct_pdf: bool = False):
         
         batch['total_voters'] = total_voters
         batch['status'] = 'extracted'
+        state_manager.set_batch(batch_id, batch)
+        import time; time.sleep(1) # Final Sync Buffer
         state_manager.set_batch(batch_id, batch)
     except Exception as e:
         logger.error(f"Extraction Error: {e}")

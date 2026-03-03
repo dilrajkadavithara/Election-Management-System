@@ -478,7 +478,7 @@ const App = () => {
     // OCR Status Polling
     useEffect(() => {
         let interval;
-        if (ocrBatch && ['extracting', 'processing'].includes(ocrBatch.status)) {
+        if (ocrBatch && ['extracting', 'processing', 'extracted'].includes(ocrBatch.status)) {
             interval = setInterval(async () => {
                 try {
                     const s = await api.getBatchStatus(ocrBatch.id);
