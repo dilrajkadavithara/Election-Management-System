@@ -66,15 +66,15 @@ class Voter(models.Model):
     # Core Data
     serial_no = models.PositiveIntegerField()
     epic_id = models.CharField(max_length=50, db_index=True)  # Indexed for speed
-    full_name = models.CharField(max_length=300, db_index=True) # Indexed for search
+    full_name = models.CharField(max_length=1000, db_index=True) # Indexed for search
     
     # Relations
     relation_type = models.CharField(max_length=50, blank=True) # Father, Mother, Husband
-    relation_name = models.CharField(max_length=300, blank=True)
+    relation_name = models.CharField(max_length=1000, blank=True)
     
     # Demographics
     house_no = models.CharField(max_length=100, blank=True)
-    house_name = models.CharField(max_length=300, blank=True, db_index=True)
+    house_name = models.CharField(max_length=1000, blank=True, db_index=True)
     age = models.PositiveIntegerField(null=True, blank=True)
     gender = models.CharField(max_length=20, blank=True)
     
@@ -106,7 +106,7 @@ class Voter(models.Model):
     voting_probability = models.CharField(max_length=20, choices=PROBABILITY_CHOICES, db_index=True, null=True, blank=True)
     
     # Audit Trail
-    source_file = models.CharField(max_length=300, help_text="Original PDF Filename")
+    source_file = models.CharField(max_length=1000, help_text="Original PDF Filename")
     original_serial = models.CharField(max_length=50, blank=True, help_text="Raw OCR value if needed")
     status = models.CharField(max_length=20, choices=SERIAL_STATUS, default='VERIFIED')
     created_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='uploaded_voters', help_text="User who uploaded this batch")
