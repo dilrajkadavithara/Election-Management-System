@@ -697,6 +697,13 @@ async def save_to_db(payload: SaveBatchRequest, user_info=Depends(get_current_us
     if not success:
         print(f"❌ Save to DB Failed: {msg}")
         raise HTTPException(status_code=400, detail=msg)
+    
+    # 🏁 Final Step: Mark batch as completed so Auto-Reconnect doesn't loop it
+    batch = state_manager.get_batch(payload.batch_id)
+    if batch:
+        batch['status'] = 'completed'
+        state_manager.set_batch(payload.batch_id, batch)
+
     return {"success": success, "message": msg}
 
 # ----------------------------------------------------------------
