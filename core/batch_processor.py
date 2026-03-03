@@ -60,21 +60,19 @@ class BatchProcessor:
                     logger.warning(f"⚠️ Page {page_num}: No voter boxes detected.")
                     return page_num, [], False
 
-                page_results = []
+                # 3. Process boxes in PARALLEL for maximum speed boost
+                page_results_map = {}
                 img = cv2.imread(page_img_path)
                 
-                # 3. Process each box individually for high precision
-                for i, (x, y, w, h) in enumerate(boxes):
+                def process_single_box(box_idx, box_coords):
+                    x, y, w, h = box_coords
                     crop = img[y:y+h, x:x+w]
-                    
-                    # Extract using the single-box Gemini flow
                     entry = self.engine.extract_with_gemini(crop)
-                    
                     if not entry:
-                        logger.warning(f"⚠️ Page {page_num} Box {i+1}: Extraction failed.")
-                        continue
+                        logger.warning(f"⚠️ Page {page_num} Box {box_idx+1}: Extraction failed.")
+                        return None
 
-                    parsed_info = {
+                    return {
                         "Full Name": entry.get("name_malayalam") or entry.get("Full Name", ""),
                         "Relation Name": entry.get("relation_name_malayalam") or entry.get("Relation Name", ""),
                         "Relation Type": str(entry.get("relation_type") or entry.get("Relation Type", "")).title(),
@@ -84,11 +82,22 @@ class BatchProcessor:
                         "Gender": str(entry.get("gender") or entry.get("Gender", "")).title(),
                         "EPIC_ID": entry.get("epic_id") or entry.get("EPIC_ID", ""),
                         "Serial_OCR": str(entry.get("serial_number") or entry.get("Serial_OCR", "")),
-                        "Image_Path": f"p{page_num}_b{i}",
+                        "Image_Path": f"p{page_num}_b{box_idx}",
                         "Filename": os.path.basename(pdf_path)
                     }
-                    page_results.append(parsed_info)
-                
+
+                # Use a secondary thread pool for network calls (Gemini API)
+                # These are light and won't crash the 4GB server
+                with concurrent.futures.ThreadPoolExecutor(max_workers=30) as box_executor:
+                    future_to_box = {box_executor.submit(process_single_box, i, box): i for i, box in enumerate(boxes)}
+                    for future in concurrent.futures.as_completed(future_to_box):
+                        box_idx = future_to_box[future]
+                        res = future.result()
+                        if res:
+                            page_results_map[box_idx] = res
+
+                # Sort by box index to maintain vertical order
+                page_results = [page_results_map[i] for i in sorted(page_results_map.keys())]
                 return page_num, page_results, True
 
             except Exception as e:
@@ -97,7 +106,10 @@ class BatchProcessor:
             finally:
                 shutil.rmtree(temp_dir, ignore_errors=True)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Capping page-level workers to 1-2 to protect RAM when doing 300DPI extraction
+        # but box-level workers are 30 (purely network/API wait time)
+        actual_page_workers = min(max_workers, 2)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=actual_page_workers) as executor:
             future_to_page = {executor.submit(process_page, p): p for p in pages}
             ordered_results = {}
             
