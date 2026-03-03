@@ -16,9 +16,9 @@ class LocalBodyAdmin(admin.ModelAdmin):
 
 @admin.register(Booth)
 class BoothAdmin(admin.ModelAdmin):
-    list_display = ('number', 'constituency', 'local_body', 'name', 'created_at')
+    list_display = ('number', 'constituency', 'local_body', 'polling_station_name', 'created_at')
     list_filter = ('constituency', 'local_body')
-    search_fields = ('number', 'name', 'constituency__name', 'local_body__name')
+    search_fields = ('number', 'polling_station_name', 'constituency__name', 'local_body__name')
     ordering = ('constituency', 'number')
 
 @admin.register(Voter)
