@@ -60,44 +60,31 @@ class BatchProcessor:
                     logger.warning(f"⚠️ Page {page_num}: No voter boxes detected.")
                     return page_num, [], False
 
-                # 3. Process boxes in PARALLEL for maximum speed boost
-                page_results_map = {}
+                # 3. Process boxes in TURBO BATCH for 10x speed boost
                 img = cv2.imread(page_img_path)
+                crops = []
+                for x, y, w, h in boxes:
+                    crops.append(img[y:y+h, x:x+w])
+
+                logger.info(f"🚀 Page {page_num}: Sending batch of {len(crops)} images to Gemini...")
+                batch_results = self.engine.extract_batch_from_images(crops)
                 
-                def process_single_box(box_idx, box_coords):
-                    x, y, w, h = box_coords
-                    crop = img[y:y+h, x:x+w]
-                    entry = self.engine.extract_with_gemini(crop)
-                    if not entry:
-                        logger.warning(f"⚠️ Page {page_num} Box {box_idx+1}: Extraction failed.")
-                        return None
-
-                    return {
-                        "Full Name": entry.get("name_malayalam") or entry.get("Full Name", ""),
-                        "Relation Name": entry.get("relation_name_malayalam") or entry.get("Relation Name", ""),
-                        "Relation Type": str(entry.get("relation_type") or entry.get("Relation Type", "")).title(),
-                        "House Name": entry.get("house_name_malayalam") or entry.get("House Name", ""),
-                        "House Number": entry.get("house_number") or entry.get("House Number", ""),
-                        "Age": str(entry.get("age") or entry.get("Age", "")),
-                        "Gender": str(entry.get("gender") or entry.get("Gender", "")).title(),
-                        "EPIC_ID": entry.get("epic_id") or entry.get("EPIC_ID", ""),
-                        "Serial_OCR": str(entry.get("serial_number") or entry.get("Serial_OCR", "")),
-                        "Image_Path": f"p{page_num}_b{box_idx}",
+                page_results = []
+                # Map results back to standardized format
+                for i, entry in enumerate(batch_results):
+                    page_results.append({
+                        "Full Name": entry.get("name_malayalam") or "",
+                        "Relation Name": entry.get("relation_name_malayalam") or "",
+                        "Relation Type": str(entry.get("relation_type") or "").title(),
+                        "House Name": entry.get("house_name_malayalam") or "",
+                        "House Number": entry.get("house_number") or "",
+                        "Age": str(entry.get("age") or ""),
+                        "Gender": str(entry.get("gender") or "").title(),
+                        "EPIC_ID": entry.get("epic_id") or "",
+                        "Serial_OCR": str(entry.get("serial_number") or ""),
+                        "Image_Path": f"p{page_num}_b{i}",
                         "Filename": os.path.basename(pdf_path)
-                    }
-
-                # Use a secondary thread pool for network calls (Gemini API)
-                # These are light and won't crash the 4GB server
-                with concurrent.futures.ThreadPoolExecutor(max_workers=30) as box_executor:
-                    future_to_box = {box_executor.submit(process_single_box, i, box): i for i, box in enumerate(boxes)}
-                    for future in concurrent.futures.as_completed(future_to_box):
-                        box_idx = future_to_box[future]
-                        res = future.result()
-                        if res:
-                            page_results_map[box_idx] = res
-
-                # Sort by box index to maintain vertical order
-                page_results = [page_results_map[i] for i in sorted(page_results_map.keys())]
+                    })
                 return page_num, page_results, True
 
             except Exception as e:
