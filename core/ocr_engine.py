@@ -174,7 +174,7 @@ class OCREngine:
                             )
                         ],
                         config=genai_types.GenerateContentConfig(
-                            thinking_budget=0,
+                            thinking_config=genai_types.ThinkingConfig(include_thoughts=False),
                             temperature=0.0,
                             response_mime_type="application/json"
                         )
@@ -251,7 +251,7 @@ class OCREngine:
                         model=self.gemini_model,
                         contents=[prompt, google_file],
                         config=genai_types.GenerateContentConfig(
-                            thinking_budget=0,
+                            thinking_config=genai_types.ThinkingConfig(include_thoughts=False),
                             temperature=0.0,
                             response_mime_type="application/json"
                         )
@@ -343,7 +343,7 @@ class OCREngine:
                         )
                     ],
                     config=genai_types.GenerateContentConfig(
-                        thinking_budget=0,
+                        thinking_config=genai_types.ThinkingConfig(include_thoughts=False),
                         temperature=0.0,
                         response_mime_type="application/json"
                     )
@@ -415,16 +415,26 @@ class OCREngine:
         
         for attempt in range(max_retries):
             try:
+                # Convert PIL Image to Bytes for the new SDK's Part.from_bytes
+                import io
+                img_byte_arr = io.BytesIO()
+                pil_img.save(img_byte_arr, format='JPEG')
+                img_bytes = img_byte_arr.getvalue()
+
                 response = self.client.models.generate_content(
                     model=self.gemini_model,
-                    contents=[pil_img, prompt],
+                    contents=[
+                        genai_types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg"),
+                        prompt
+                    ],
                     config=genai_types.GenerateContentConfig(
-                        thinking_budget=0,
+                        thinking_config=genai_types.ThinkingConfig(include_thoughts=False),
                         temperature=0.0,
                         response_mime_type="application/json"
                     )
                 )
                 
+                # Use .text and parse JSON carefully
                 return json.loads(response.text)
             except Exception as e:
                 # Handle Rate Limits (429) or other transient errors
