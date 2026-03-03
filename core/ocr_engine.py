@@ -406,7 +406,7 @@ class OCREngine:
         - gender: "Male" or "Female" (സ്ത്രീ=Female, പുരുഷൻ=Male).
 
         CRITICAL: Capture Malayalam characters exactly as they appear. DO NOT use external knowledge to fix/guess names.
-        Return ONLY a JSON object.
+        Return ONLY valid, minified JSON without unnecessary whitespace.
         """
 
         import time
@@ -447,6 +447,7 @@ class OCREngine:
                     config=genai_types.GenerateContentConfig(
                         thinking_config=genai_types.ThinkingConfig(include_thoughts=False),
                         temperature=0.0,
+                        max_output_tokens=8192,
                         response_mime_type="application/json",
                         response_schema=voter_schema
                     )
@@ -508,7 +509,7 @@ class OCREngine:
         - gender: Male/Female.
 
         CRITICAL: Provide 100% literal transcription. Do not guess. Maintain the order of the images provided.
-        Return ONLY valid JSON.
+        Return ONLY valid, minified JSON without unnecessary whitespace.
         """
         content_parts.append(prompt)
 
@@ -543,7 +544,7 @@ class OCREngine:
                     config=genai_types.GenerateContentConfig(
                         thinking_config=genai_types.ThinkingConfig(include_thoughts=False),
                         temperature=0.0,
-                        max_output_tokens=4000,
+                        max_output_tokens=8192,
                         response_mime_type="application/json",
                         response_schema=batch_schema
                     )
