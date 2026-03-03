@@ -543,15 +543,32 @@ class OCREngine:
                     config=genai_types.GenerateContentConfig(
                         thinking_config=genai_types.ThinkingConfig(include_thoughts=False),
                         temperature=0.0,
+                        max_output_tokens=4000,
                         response_mime_type="application/json",
                         response_schema=batch_schema
                     )
                 )
                 
-                results = json.loads(response.text)
-                if isinstance(results, list):
-                    return results
-                return [results] # Fallback if single object
+                text = response.text.strip()
+                if not text:
+                    logger.warning(f"⚠️ Turbo Batch {attempt+1}: Empty response body.")
+                    continue
+
+                # Clean possible markdown block markers
+                if "```json" in text: text = text.split("```json")[1].split("```")[0].strip()
+                elif "```" in text: text = text.split("```")[1].split("```")[0].strip()
+
+                try:
+                    results = json.loads(text)
+                    if isinstance(results, list):
+                        return results
+                    return [results]
+                except json.JSONDecodeError as je:
+                    # If it's the last attempt, try a regex fallback for broken lists
+                    if attempt == 2:
+                        logger.error(f"❌ JSON Parse Final Failure: {je}")
+                    raise je
+
             except Exception as e:
                 logger.error(f"❌ Turbo Batch Failure (Attempt {attempt+1}): {e}")
                 time.sleep(2 * (attempt + 1))
