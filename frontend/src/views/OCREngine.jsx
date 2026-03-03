@@ -140,7 +140,7 @@ const OCREngine = ({
         finally { setOcrLoading(false); }
     };
 
-    const isComplete = ocrBatch && ['processed', 'warning'].includes(ocrBatch.status);
+    const isComplete = ocrBatch && ['processed', 'warning', 'completed'].includes(ocrBatch.status);
 
     const calculateIntelligence = () => {
         if (!ocrBatch) return 0;
@@ -361,7 +361,7 @@ const OCREngine = ({
                                         { step: 'processed', label: 'Data Ready', icon: '✨' }
                                     ].map((s, i) => {
                                         const steps = ['uploaded', 'extracted', 'processing', 'processed'];
-                                        const status = isComplete ? 'processed' : ocrBatch.status;
+                                        const status = isComplete ? 'processed' : (ocrBatch.status === 'completed' ? 'processed' : ocrBatch.status);
                                         const currentIndex = steps.indexOf(status === 'extracting' ? 'extracted' : status);
                                         const itemIndex = steps.indexOf(s.step);
                                         const isDone = itemIndex < currentIndex;

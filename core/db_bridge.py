@@ -752,8 +752,8 @@ def get_war_room_tactical_stats(user_profile, constituency_id=None, lb_id=None, 
                 new_ldf=Sum('new_ldf'),
                 new_nda=Sum('new_nda')
             )
-            # Dynamic Win Prob for non-live snapshots too
-            raw_prob = (res['supporters'] / max(1, res['digitized'] or 0)) * 100
+            # Dynamic Win Prob for non-live snapshots too (handle None supporters)
+            raw_prob = ((res['supporters'] or 0) / max(1, res['digitized'] or 0)) * 100
             res['win_prob'] = min(99, round(raw_prob * 1.05, 1))
 
         for k in res: 
