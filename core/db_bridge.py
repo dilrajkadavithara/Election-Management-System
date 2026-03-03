@@ -75,8 +75,7 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
                 defaults={
                     'local_body': local_body,
                     'polling_station_no': polling_station_no,
-                    'polling_station_name': polling_station_name,
-                    'name': polling_station_name or f"Booth {booth_number}"
+                    'polling_station_name': polling_station_name
                 }
             )
             
@@ -85,7 +84,6 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
                 if polling_station_no: booth.polling_station_no = polling_station_no
                 if polling_station_name: 
                     booth.polling_station_name = polling_station_name
-                    booth.name = polling_station_name
                 booth.local_body = local_body
                 booth.save()
             
@@ -150,7 +148,7 @@ def get_strategic_analytics(user_profile, constituency_id=None):
     
     # Single GROUP BY query for all booth stats
     booth_agg = voters.values(
-        'booth__id', 'booth__number', 'booth__polling_station_name', 'booth__name'
+        'booth__id', 'booth__number', 'booth__polling_station_name'
     ).annotate(
         h_name=F('booth__head_name'),
         h_phone=F('booth__head_phone'),
@@ -170,7 +168,7 @@ def get_strategic_analytics(user_profile, constituency_id=None):
         booth_stats.append({
             "id": row['booth__id'],
             "number": row['booth__number'],
-            "name": row['booth__polling_station_name'] or row['booth__name'] or f"Booth {row['booth__number']}",
+            "name": row['booth__polling_station_name'] or f"Booth {row['booth__number']}",
             "head_name": row['h_name'],
             "head_phone": row['h_phone'],
             "total": total,
