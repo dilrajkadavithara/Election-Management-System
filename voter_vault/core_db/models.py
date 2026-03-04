@@ -105,6 +105,10 @@ class Voter(models.Model):
     ]
     voting_probability = models.CharField(max_length=20, choices=PROBABILITY_CHOICES, db_index=True, null=True, blank=True)
     
+    # Election Day Arrangement
+    has_voted = models.BooleanField(default=False, db_index=True)
+    voted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    
     # Audit Trail
     source_file = models.CharField(max_length=1000, help_text="Original PDF Filename")
     original_serial = models.CharField(max_length=50, blank=True, help_text="Raw OCR value if needed")

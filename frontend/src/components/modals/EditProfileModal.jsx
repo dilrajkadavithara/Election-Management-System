@@ -76,7 +76,79 @@ const EditProfileModal = ({
                 </div>
 
                 <div className="space-y-4 sm:space-y-12">
-                    {/* 2. Political Alignment (Aligned to LEANING_CHOICES) */}
+                    {/* 0. Basic Information (Editable Document Details) */}
+                    <details className="group border-b border-slate-100 pb-8">
+                        <summary className="text-[10px] sm:text-[11px] font-black uppercase text-indigo-500 cursor-pointer list-none flex items-center gap-3">
+                            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />
+                            അടിസ്ഥാന വിവരങ്ങൾ തിരുത്തുക (Edit Basic Info)
+                            <span className="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+                        </summary>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 animate-in fade-in slide-in-from-top-2">
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">പേര് (Full Name)</label>
+                                <input
+                                    type="text"
+                                    value={editData.full_name || ''}
+                                    onChange={(e) => setEditData({ ...editData, full_name: e.target.value })}
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-900 outline-none focus:border-indigo-400"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">EPIC ID</label>
+                                <input
+                                    type="text"
+                                    value={editData.epic_id || ''}
+                                    onChange={(e) => setEditData({ ...editData, epic_id: e.target.value })}
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-900 outline-none focus:border-indigo-400 font-mono"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">വയസ്സ് (Age)</label>
+                                    <input
+                                        type="number"
+                                        value={editData.age || ''}
+                                        onChange={(e) => setEditData({ ...editData, age: e.target.value })}
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-900 outline-none focus:border-indigo-400"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">ലിംഗം (Gender)</label>
+                                    <select
+                                        value={editData.gender || ''}
+                                        onChange={(e) => setEditData({ ...editData, gender: e.target.value })}
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-900 outline-none focus:border-indigo-400"
+                                    >
+                                        <option value="MALE">MALE</option>
+                                        <option value="FEMALE">FEMALE</option>
+                                        <option value="OTHER">OTHER</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">വീട്ടുനമ്പർ (H No)</label>
+                                    <input
+                                        type="text"
+                                        value={editData.house_no || ''}
+                                        onChange={(e) => setEditData({ ...editData, house_no: e.target.value })}
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-900 outline-none focus:border-indigo-400"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">വീട്ടുപേര് (House Name)</label>
+                                    <input
+                                        type="text"
+                                        value={editData.house_name || ''}
+                                        onChange={(e) => setEditData({ ...editData, house_name: e.target.value })}
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-900 outline-none focus:border-indigo-400"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    {/* 2. Political Alignment */}
                     <ActionCard
                         label="ആരെ പിന്തുണയ്ക്കുന്നു?"
                         currentVal={editData.voter_leaning}
@@ -89,7 +161,7 @@ const EditProfileModal = ({
                         ]}
                     />
 
-                    {/* 3. Physical Presence (Aligned to LOCATION_CHOICES) */}
+                    {/* 3. Physical Presence */}
                     <ActionCard
                         label="ഇപ്പോൾ എവിടെയുണ്ട്?"
                         currentVal={editData.current_location}
@@ -102,7 +174,7 @@ const EditProfileModal = ({
                         ]}
                     />
 
-                    {/* 4. Voting Probability (Aligned to PROBABILITY_CHOICES) */}
+                    {/* 4. Voting Probability */}
                     <ActionCard
                         label="വോട്ട് ചെയ്യാൻ സാധ്യത എത്ര?"
                         currentVal={editData.voting_probability}
@@ -130,25 +202,6 @@ const EditProfileModal = ({
                         </div>
                     </div>
                 </div>
-
-                {/* 6. Technical Footnote (Safe & Hidden) */}
-                <details className="hidden sm:block group border-t border-slate-100 pt-8 opacity-40 hover:opacity-100 transition-opacity">
-                    <summary className="text-[10px] font-black uppercase text-slate-400 cursor-pointer list-none flex items-center justify-center gap-3">
-                        <span className="w-1.5 h-1.5 bg-slate-300 rounded-full" />
-                        സിസ്റ്റം ഡാറ്റ റെഫറൻസ്
-                        <span className="w-1.5 h-1.5 bg-slate-300 rounded-full" />
-                    </summary>
-                    <div className="grid grid-cols-2 gap-8 mt-8 text-left bg-slate-50 rounded-[2rem] p-6 border border-slate-100">
-                        <div className="space-y-1">
-                            <p className="text-[8px] font-black text-slate-400">വോട്ടർ ഐഡി (EPIC)</p>
-                            <p className="text-sm font-bold font-mono tracking-tight text-slate-600">{editData.epic_id}</p>
-                        </div>
-                        <div className="space-y-1 text-right">
-                            <p className="text-[8px] font-black text-slate-400 uppercase">വീട്ടുപേര് / നമ്പർ</p>
-                            <p className="text-sm font-bold text-slate-600 uppercase tracking-tighter truncate">{editData.house_name} ({editData.house_no})</p>
-                        </div>
-                    </div>
-                </details>
 
                 {/* Submit & Cancel */}
                 <div className="flex flex-row gap-2 sm:gap-5 pt-0 sm:pt-4">
@@ -183,4 +236,3 @@ const EditProfileModal = ({
 };
 
 export default EditProfileModal;
-

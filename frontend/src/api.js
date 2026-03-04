@@ -184,6 +184,16 @@ const api = {
         return response.data;
     },
 
+    getVotingStats: async (constituency = null, lb = null, booth = null) => {
+        const response = await client.get('/api/voters/voting-stats', { params: { constituency, lb, booth } });
+        return response.data;
+    },
+
+    toggleAttendance: async (voterId, hasVoted) => {
+        const response = await client.post('/api/voters/toggle-attendance', null, { params: { voter_id: voterId, has_voted: hasVoted } });
+        return response.data;
+    },
+
     // Admin APIs
     getLocations: async () => {
         const response = await client.get('/api/admin/locations');
@@ -199,6 +209,18 @@ const api = {
     },
     addBooth: async (constId, lbId, number, psName, psNo) => {
         const response = await client.post('/api/admin/add-booth', { const_id: constId, lb_id: lbId, number, ps_name: psName, ps_no: psNo });
+        return response.data;
+    },
+    updateConst: async (uid, data) => {
+        const response = await client.put(`/api/admin/update-const/${uid}`, data);
+        return response.data;
+    },
+    updateLB: async (uid, data) => {
+        const response = await client.put(`/api/admin/update-lb/${uid}`, data);
+        return response.data;
+    },
+    updateBooth: async (uid, data) => {
+        const response = await client.put(`/api/admin/update-booth/${uid}`, data);
         return response.data;
     },
     getUsers: async () => {

@@ -9,8 +9,8 @@ from core.detector import VoterDetector
 logger = logging.getLogger("BatchProcessor")
 
 class BatchProcessor:
-    def __init__(self, tesseract_cmd=None):
-        self.engine = OCREngine(tesseract_cmd=tesseract_cmd)
+    def __init__(self):
+        self.engine = OCREngine()
         self.detector = VoterDetector()
         self.results = []
 
@@ -61,10 +61,8 @@ class BatchProcessor:
                     return page_num, [], False
 
                 # 3. Process boxes in TURBO BATCH for 10x speed boost
-                img = cv2.imread(page_img_path)
-                crops = []
-                for x, y, w, h in boxes:
-                    crops.append(img[y:y+h, x:x+w])
+                # Get clean, natural crops optimized for Vision LLM
+                crops = self.detector.get_clean_crops(page_img_path, boxes)
 
                 logger.info(f"🚀 Page {page_num}: Sending batch of {len(crops)} images to Gemini...")
                 batch_results = self.engine.extract_batch_from_images(crops)
@@ -88,14 +86,17 @@ class BatchProcessor:
                 return page_num, page_results, True
 
             except Exception as e:
-                logger.error(f"❌ Thread Error on Page {page_num}: {e}")
-                return page_num, [], False
+                import traceback
+                trace = traceback.format_exc()
+                logger.error(f"❌ Thread Error on Page {page_num}: {trace}")
+                return page_num, str(e), False
             finally:
                 shutil.rmtree(temp_dir, ignore_errors=True)
 
-        # Capping page-level workers to 1-2 to protect RAM when doing 300DPI extraction
-        # but box-level workers are 30 (purely network/API wait time)
-        actual_page_workers = min(max_workers, 2)
+        # Increased page-level concurrency to utilize concurrent network waiting
+        # Since Gemini API processing is mostly network-bound IO, we can afford
+        # to upload and wait for 4-5 pages at the absolute same time.
+        actual_page_workers = min(max_workers, 5)
         with concurrent.futures.ThreadPoolExecutor(max_workers=actual_page_workers) as executor:
             future_to_page = {executor.submit(process_page, p): p for p in pages}
             ordered_results = {}
@@ -122,15 +123,21 @@ class BatchProcessor:
         flags = []
         is_healed = False
         
-        # 1. Serial Number Healing
+        # 1. Serial Number Logic
+        raw_serial = str(parsed_info.get("Serial_OCR", "")).strip()
         try:
-            actual_serial = int(parsed_info.get("Serial_OCR", ""))
-            if actual_serial != expected_serial:
-                parsed_info["Serial_OCR"] = str(expected_serial)
-                is_healed = True
+            # Check if it's a valid integer (ignoring the second supplement box since Gemini prompt handles it)
+            actual_serial = int(raw_serial)
+            if actual_serial <= 0:
+                raise ValueError("Zero or negative serial")
+            parsed_info["Serial_OCR"] = str(actual_serial)
+            # We don't mark as healed if it correctly extracted a number, even if it skips, 
+            # because Kerala rolls can skip numbers (deletions) or start at a high number (supplements).
         except:
+            # Fallback ONLY if OCR failed to read any number
             parsed_info["Serial_OCR"] = str(expected_serial)
             is_healed = True
+
 
         # 2. Malayalam Character Cleaning (Pruning)
         mal_fields = ["Full Name", "Relation Name", "House Name"]
@@ -187,7 +194,9 @@ class BatchProcessor:
 
         if use_gemini:
             # --- GEMINI AI FLOW ---
-            gemini_data = self.engine.extract_with_gemini(img)
+            gemini_results = self.engine.extract_batch_from_images([img])
+            gemini_data = gemini_results[0] if gemini_results and len(gemini_results) > 0 else None
+            
             if gemini_data:
                 parsed_info = {
                     "Full Name": gemini_data.get("name_malayalam", ""),

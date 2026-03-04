@@ -38,12 +38,11 @@ DATA_DIR = BASE_DIR / "data"
 PAGES_DIR = DATA_DIR / "page_images"
 CROPS_DIR = DATA_DIR / "voter_crops"
 poppler = os.getenv("POPPLER_PATH")
-tesseract = os.getenv("TESSERACT_PATH")
 
 # Initialize Processors correctly for the worker process
 pdf_processor = PDFProcessor(poppler_path=poppler)
 detector = VoterDetector()
-batch_processor = BatchProcessor(tesseract_cmd=tesseract)
+batch_processor = BatchProcessor()
 
 def process_single_voter(args):
     """Helper for parallel processing"""
@@ -165,7 +164,8 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
                 if success:
                     completed_pages.add(page_num)
                 else:
-                    logger.error(f"⚠️ Page {page_num} marked as FAILED in Integrity Shield.")
+                    error_reason = page_results if isinstance(page_results, str) else "Unknown Failure"
+                    logger.error(f"⚠️ Page {page_num} marked as FAILED in Integrity Shield. Reason: {error_reason}")
                     # Track failed pages for UI warning
                     if 'failed_pages' not in current_batch: current_batch['failed_pages'] = []
                     if page_num not in current_batch['failed_pages']:
@@ -173,13 +173,14 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
                 
                 existing_results = current_batch.get('results', [])
                 
-                # Assign temporary tracer IDs to results
-                start_id = len(existing_results) + 1
-                for i, r in enumerate(page_results):
-                    r['voter_id'] = f"tmp_{page_num}_{start_id + i}"
-                    if 'Status' not in r: r['Status'] = '✅ OK'
-                
-                existing_results.extend(page_results)
+                if success and isinstance(page_results, list):
+                    # Assign temporary tracer IDs to results
+                    start_id = len(existing_results) + 1
+                    for i, r in enumerate(page_results):
+                        r['voter_id'] = f"tmp_{page_num}_{start_id + i}"
+                        if 'Status' not in r: r['Status'] = '✅ OK'
+                    
+                    existing_results.extend(page_results)
                 
                 # Update counters
                 current_batch['results'] = existing_results

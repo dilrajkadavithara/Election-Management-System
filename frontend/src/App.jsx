@@ -11,6 +11,7 @@ import SlipDesign from './views/SlipDesign';
 import EditProfileModal from './components/modals/EditProfileModal';
 import ChangePasswordModal from './components/modals/ChangePasswordModal';
 import WarRoom from './views/WarRoom';
+import ElectionDay from './views/ElectionDay';
 
 const PARTY_PRESETS = [
     { label: 'Congress (INC)', short: 'INC', color: '#000080', gradient: 'linear-gradient(to bottom, #FF9933, #ffffff, #138808)' },
@@ -58,6 +59,7 @@ const App = () => {
     const [activePrintParty, setActivePrintParty] = useState(null);
     const [assignSelection, setAssignSelection] = useState({ constId: '', lbId: '' });
     const [editingUser, setEditingUser] = useState(null);
+    const [editingLoc, setEditingLoc] = useState(null);
 
     // Engine/OCR State
     const [ocrBatch, setOcrBatch] = useState(null);
@@ -359,6 +361,27 @@ const App = () => {
         finally { setLoading(false); }
     };
 
+    const handleUpdateLocation = async () => {
+        setLoading(true);
+        try {
+            if (editingLoc.type === 'const') {
+                await api.updateConst(editingLoc.id, { name: newLocData.name });
+            } else if (editingLoc.type === 'lb') {
+                await api.updateLB(editingLoc.id, { name: newLocData.name, type: newLocData.lbType });
+            } else if (editingLoc.type === 'booth') {
+                await api.updateBooth(editingLoc.id, { number: newLocData.boothNum, ps_name: newLocData.psName, ps_no: newLocData.psNo });
+            }
+            loadAdminData();
+            setEditingLoc(null);
+            setNewLocData({ type: 'const', name: '', parentId: '', lbType: 'PANCHAYAT', boothNum: '', psName: '', psNo: '' });
+            alert("✅ Location updated successfully.");
+        } catch (e) {
+            console.error(e);
+            alert("⚠️ Error updating location: " + (e.response?.data?.detail || e.message));
+        }
+        finally { setLoading(false); }
+    };
+
     const handleCreateUser = async () => {
         setLoading(true);
         try {
@@ -499,10 +522,10 @@ const App = () => {
     }
 
     return (
-        <div className={`min-h-screen ${view === 'dashboard' ? 'v2-bg-obsidian' : 'bg-slate-50'} flex font-sans transition-colors duration-700`}>
+        <div className={`min-h-screen ${['dashboard', 'electionday', 'warroom'].includes(view) ? 'v2-bg-obsidian' : 'bg-slate-50'} flex font-sans transition-colors duration-700`}>
             <Sidebar view={view} setView={setView} userRole={userRole} username={username} handleLogout={handleLogout} setShowChangePassword={setShowChangePassword} />
 
-            <main className={`flex-1 flex flex-col overflow-y-auto ${view === 'design' ? 'bg-slate-200 p-0' : (view === 'dashboard' ? 'p-0' : 'p-12')}`}>
+            <main className="flex-1 flex flex-col overflow-y-auto p-0">
                 {view === 'dashboard' && (
                     <div className="relative">
                         <DashboardV2
@@ -518,11 +541,12 @@ const App = () => {
                     </div>
                 )}
                 {view === 'voters' && <VoterList voterList={voterList} voterTotal={voterTotal} currentPage={currentPage} voterLoading={voterLoading} listFilters={listFilters} setListFilters={setListFilters} searchQuery={searchQuery} setSearchQuery={setSearchQuery} allLocations={allLocations} loadVoters={loadVoters} loadAdminData={loadAdminData} currentUser={currentUser} userRole={userRole} setEditData={setEditData} setEditMode={setEditMode} handleUpdateIntel={handleUpdateIntel} />}
-                {view === 'admin' && <AdminControl allLocations={allLocations} allUsers={allUsers} userRole={userRole} newLocData={newLocData} setNewLocData={setNewLocData} handleAddLocation={handleAddLocation} newUserData={newUserData} setNewUserData={setNewUserData} assignSelection={assignSelection} setAssignSelection={setAssignSelection} handleCreateUser={handleCreateUser} handleUpdateUser={handleUpdateUser} handleDeleteUser={handleDeleteUser} startEditUser={startEditUser} editingUser={editingUser} setEditingUser={setEditingUser} allParties={allParties} newPartyData={newPartyData} setNewPartyData={setNewPartyData} newPartyFile={newPartyFile} setNewPartyFile={setNewPartyFile} handleAddParty={handleAddParty} handleSyncParties={handleSyncParties} PARTY_PRESETS={PARTY_PRESETS} dashboardStats={dashboardStats} />}
+                {view === 'admin' && <AdminControl allLocations={allLocations} allUsers={allUsers} userRole={userRole} newLocData={newLocData} setNewLocData={setNewLocData} handleAddLocation={handleAddLocation} handleUpdateLocation={handleUpdateLocation} editingLoc={editingLoc} setEditingLoc={setEditingLoc} newUserData={newUserData} setNewUserData={setNewUserData} assignSelection={assignSelection} setAssignSelection={setAssignSelection} handleCreateUser={handleCreateUser} handleUpdateUser={handleUpdateUser} handleDeleteUser={handleDeleteUser} startEditUser={startEditUser} editingUser={editingUser} setEditingUser={setEditingUser} allParties={allParties} newPartyData={newPartyData} setNewPartyData={setNewPartyData} newPartyFile={newPartyFile} setNewPartyFile={setNewPartyFile} handleAddParty={handleAddParty} handleSyncParties={handleSyncParties} PARTY_PRESETS={PARTY_PRESETS} dashboardStats={dashboardStats} />}
                 {view === 'comm' && <CommunicationHub commType={commType} setCommType={setCommType} commMessage={commMessage} setCommMessage={setCommMessage} handleCommunicationSend={handleCommunicationSend} voterTotal={voterTotal} commStats={commStats} commTemplates={commTemplates} allLocations={allLocations} listFilters={listFilters} setListFilters={setListFilters} loadVoters={loadVoters} />}
                 {view === 'engine' && <OCREngine ocrBatch={ocrBatch} setOcrBatch={setOcrBatch} ocrLoading={ocrLoading} setOcrLoading={setOcrLoading} ocrError={ocrError} setOcrError={setOcrError} ocrRef={ocrRef} handleFileUpload={handleFileUpload} startExtraction={startExtraction} startOcr={startOcr} handleSaveBatch={handleSaveBatch} discardBatch={discardBatch} stopAndClearRAM={stopAndClearRAM} setEditData={setEditData} setEditMode={setEditMode} allLocations={allLocations} ocrTargetLoc={ocrTargetLoc} setOcrTargetLoc={setOcrTargetLoc} loadAdminData={loadAdminData} useGemini={useGemini} setUseGemini={setUseGemini} useDirectPdf={useDirectPdf} setUseDirectPdf={setUseDirectPdf} />}
                 {view === 'design' && <SlipDesign activePrintParty={activePrintParty} setActivePrintParty={setActivePrintParty} allParties={allParties} allLocations={allLocations} listFilters={listFilters} setListFilters={setListFilters} voterList={voterList} loadVoters={loadVoters} setSearchQuery={setSearchQuery} />}
                 {view === 'warroom' && <WarRoom allLocations={allLocations} dashFilters={dashFilters} listFilters={listFilters} setListFilters={setListFilters} setView={setView} />}
+                {view === 'electionday' && <ElectionDay userRole={userRole} userAssignments={currentUser?.assignments} />}
             </main>
 
             {editMode && <EditProfileModal editData={editData} setEditData={setEditData} setEditMode={setEditMode} saveCorrection={saveCorrection} ocrBatch={ocrBatch} />}

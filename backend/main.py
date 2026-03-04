@@ -47,7 +47,6 @@ from backend.state_manager import state_manager
 
 # --- TOOL PATH DETECTION ---
 poppler_path = os.getenv("POPPLER_PATH")
-tesseract_path = os.getenv("TESSERACT_PATH")
 
 # Initialize Processors with explicit environment paths for local/fallback modes
 from core.pdf_processor import PDFProcessor
@@ -56,13 +55,15 @@ from core.batch_processor import BatchProcessor
 
 pdf_processor = PDFProcessor(poppler_path=poppler_path)
 detector = VoterDetector()
-batch_processor = BatchProcessor(tesseract_cmd=tesseract_path)
+batch_processor = BatchProcessor()
 from core.db_bridge import (
     get_constituencies, get_local_bodies, check_booth_exists, save_booth_data,
     get_dashboard_stats, get_strategic_analytics, get_voter_list, update_voter_in_db,
     get_all_locations, add_constituency, add_local_body, add_booth,
     get_all_users, create_managed_user, delete_user, update_user_profile, 
-    change_user_password, get_parties, add_party
+    change_user_password, get_parties, add_party,
+    update_constituency, update_local_body, update_booth,
+    get_live_voting_stats, toggle_voter_attendance
 )
 
 SYMBOLS_DIR = BASE_DIR / "data" / "party_symbols"
@@ -85,7 +86,12 @@ def sync_authenticate(username, password):
             "can_verify": user.profile.can_verify,
             "can_edit_voters": user.profile.can_edit_voters,
             "can_send_broadcasts": user.profile.can_send_broadcasts,
-            "can_manage_system": user.profile.can_manage_system
+            "can_manage_system": user.profile.can_manage_system,
+            "assignments": {
+                "constituencies": list(user.profile.assigned_constituencies.values_list('id', flat=True)),
+                "local_bodies": list(user.profile.assigned_local_bodies.values_list('id', flat=True)),
+                "booths": list(user.profile.assigned_booths.values_list('id', flat=True))
+            }
         }
     return None
 
@@ -101,7 +107,12 @@ def sync_get_user_info(username):
             "can_verify": user.profile.can_verify,
             "can_edit_voters": user.profile.can_edit_voters,
             "can_send_broadcasts": user.profile.can_send_broadcasts,
-            "can_manage_system": user.profile.can_manage_system
+            "can_manage_system": user.profile.can_manage_system,
+            "assignments": {
+                "constituencies": list(user.profile.assigned_constituencies.values_list('id', flat=True)),
+                "local_bodies": list(user.profile.assigned_local_bodies.values_list('id', flat=True)),
+                "booths": list(user.profile.assigned_booths.values_list('id', flat=True))
+            }
         }
     return None
 
@@ -133,6 +144,14 @@ get_voters_async = sync_to_async(sync_voter_list_wrapper, thread_sensitive=True)
 edit_voter_async = sync_to_async(update_voter_in_db, thread_sensitive=True)
 get_strategic_analytics_async = sync_to_async(sync_strategic_analytics_wrapper, thread_sensitive=True)
 
+def sync_voting_stats_wrapper(username, constituency_id=None, lb_id=None, booth_id=None):
+    from django.contrib.auth.models import User
+    user = User.objects.get(username=username)
+    return get_live_voting_stats(user.profile, constituency_id, lb_id, booth_id)
+
+get_voting_stats_async = sync_to_async(sync_voting_stats_wrapper, thread_sensitive=True)
+toggle_attendance_async = sync_to_async(toggle_voter_attendance, thread_sensitive=True)
+
 # Admin Async Wrappers
 get_all_locations_async = sync_to_async(sync_locations_wrapper, thread_sensitive=True)
 add_const_async = sync_to_async(add_constituency, thread_sensitive=True)
@@ -145,6 +164,9 @@ update_user_async = sync_to_async(update_user_profile, thread_sensitive=True)
 change_password_async = sync_to_async(change_user_password, thread_sensitive=True)
 get_parties_async = sync_to_async(get_parties, thread_sensitive=True)
 add_party_async = sync_to_async(add_party, thread_sensitive=True)
+update_const_async = sync_to_async(update_constituency, thread_sensitive=True)
+update_lb_async = sync_to_async(update_local_body, thread_sensitive=True)
+update_booth_async = sync_to_async(update_booth, thread_sensitive=True)
 
 # --- Comm Engine Sync Wrappers ---
 def sync_comm_stats(username):
@@ -255,7 +277,7 @@ for p in [UPLOAD_DIR, PAGES_DIR, CROPS_DIR]: p.mkdir(parents=True, exist_ok=True
 # Processors
 # state_manager is already initialized above
 
-from backend.state_manager import state_manager
+# state_manager is already imported at the top of the file
 
 # ----------------------------------------------------------------
 # PURE BACKGROUND TASKS
@@ -289,11 +311,28 @@ async def admin_add_lb(data: dict, user_info=Depends(get_current_user)):
     if user_info['role'] not in allowed: raise HTTPException(403, "Access Denied: High-level privilege required")
     return await add_lb_async(data['const_id'], data['name'], data['type'])
 
-@app.post("/api/admin/add-booth")
-async def admin_add_booth(data: dict, user_info=Depends(get_current_user)):
-    allowed = ['SUPERUSER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER', 'MANAGER', 'OPERATOR']
-    if user_info['role'] not in allowed: raise HTTPException(403, "Access Denied: High-level privilege required")
     return await add_booth_async(data['const_id'], data['lb_id'], data['number'], data.get('ps_name', ''), data.get('ps_no', ''))
+
+@app.put("/api/admin/update-const/{uid}")
+async def admin_update_const(uid: int, data: dict, user_info=Depends(get_current_user)):
+    allowed = ['SUPERUSER', 'MANAGER', 'CONSTITUENCY_ADMIN']
+    if user_info['role'] not in allowed: raise HTTPException(403)
+    success, msg = await update_const_async(uid, data['name'], data.get('code', ''))
+    return {"success": success, "message": msg}
+
+@app.put("/api/admin/update-lb/{uid}")
+async def admin_update_lb(uid: int, data: dict, user_info=Depends(get_current_user)):
+    allowed = ['SUPERUSER', 'MANAGER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD']
+    if user_info['role'] not in allowed: raise HTTPException(403)
+    success, msg = await update_lb_async(uid, data['name'], data.get('type'), data.get('head_name'), data.get('head_phone'))
+    return {"success": success, "message": msg}
+
+@app.put("/api/admin/update-booth/{uid}")
+async def admin_update_booth(uid: int, data: dict, user_info=Depends(get_current_user)):
+    allowed = ['SUPERUSER', 'MANAGER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER']
+    if user_info['role'] not in allowed: raise HTTPException(403)
+    success, msg = await update_booth_async(uid, data.get('number'), data.get('ps_name'), data.get('ps_no'), data.get('head_name'), data.get('head_phone'))
+    return {"success": success, "message": msg}
 
 @app.get("/api/admin/users")
 async def admin_get_users(user_info=Depends(get_current_user)):
@@ -338,7 +377,6 @@ async def health():
         "status": "healthy",
         "redis": "connected" if state_manager.use_redis else "offline (fallback mode)",
         "poppler": "missing",
-        "tesseract": "missing",
         "google_ai": "ready" if os.getenv("GOOGLE_API_KEY") else "missing"
     }
     
@@ -348,16 +386,9 @@ async def health():
         health_data["poppler"] = "ready"
     elif not os.name == 'nt' or os.path.exists("/usr/bin/pdftoppm"): # Unix/Docker fallback
         health_data["poppler"] = "ready (system)"
-        
-    # 2. Check Tesseract
-    t_path = os.getenv("TESSERACT_PATH")
-    if t_path and os.path.exists(t_path):
-        health_data["tesseract"] = "ready"
-    elif not os.name == 'nt' or os.path.exists("/usr/bin/tesseract"):
-        health_data["tesseract"] = "ready (system)"
 
     # If critical path is broken, mark as degraded
-    if health_data["poppler"] == "missing" or health_data["tesseract"] == "missing":
+    if health_data["poppler"] == "missing" or health_data["google_ai"] == "missing":
         health_data["status"] = "degraded"
         
     return health_data
@@ -435,6 +466,25 @@ async def get_voters_api(
         user_info['username'], search, page, page_size,
         c_id, l_id, b_id, gender, age_from, age_to, leaning, serial_from, serial_to, location
     )
+
+@app.get("/api/voters/voting-stats")
+async def get_voting_stats_api(constituency: str = None, lb: str = None, booth: str = None, user_info=Depends(get_current_user)):
+    c_id = int(constituency) if constituency and str(constituency).isdigit() else None
+    l_id = int(lb) if lb and str(lb).isdigit() else None
+    b_id = int(booth) if booth and str(booth).isdigit() else None
+    return await get_voting_stats_async(user_info['username'], c_id, l_id, b_id)
+
+@app.post("/api/voters/toggle-attendance")
+async def toggle_attendance_api(voter_id: int, has_voted: bool, user_info=Depends(get_current_user)):
+    # Only BOOTH_AGENT, SUPERUSER or MANAGER can toggle (for now keeping it simple)
+    # Check if user has permission to edit voters
+    if not user_info.get('can_edit_voters', False) and user_info.get('role') != 'BOOTH_AGENT':
+         raise HTTPException(403, "You do not have permission to mark attendance")
+    
+    success, result = await toggle_attendance_async(voter_id, has_voted)
+    if not success:
+        raise HTTPException(400, result)
+    return result
 
 @app.get("/api/export-voters")
 async def export_voters(

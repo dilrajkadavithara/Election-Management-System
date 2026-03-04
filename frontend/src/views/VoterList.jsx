@@ -183,10 +183,10 @@ const VoterList = ({
                                             <div className="lg:hidden text-[10px] font-black uppercase text-emerald-400 tracking-widest text-center mb-2">✅ Already Updated</div>
                                         )}
                                         <button
-                                            onClick={() => { setEditData({ ...v, phone_no: '' }); setEditMode(true); }}
+                                            onClick={() => { setEditData({ ...v, phone_no: v.phone_no || '' }); setEditMode(true); }}
                                             className={`w-full lg:w-auto px-5 py-4 lg:py-2 rounded-2xl lg:rounded-xl font-black uppercase text-[12px] lg:text-[9px] tracking-[0.3em] lg:tracking-widest transition-all ${v.voter_leaning
-                                                    ? 'bg-emerald-500 lg:bg-emerald-500/10 text-white lg:text-emerald-400 border-emerald-500 lg:border-emerald-500/20 hover:bg-emerald-600 hover:text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] lg:shadow-none'
-                                                    : 'bg-indigo-500 lg:bg-indigo-500/10 text-white lg:text-indigo-400 border border-indigo-500 lg:border-indigo-500/20 hover:bg-indigo-500 hover:text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] lg:shadow-none'
+                                                ? 'bg-emerald-500 lg:bg-emerald-500/10 text-white lg:text-emerald-400 border-emerald-500 lg:border-emerald-500/20 hover:bg-emerald-600 hover:text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] lg:shadow-none'
+                                                : 'bg-indigo-500 lg:bg-indigo-500/10 text-white lg:text-indigo-400 border border-indigo-500 lg:border-indigo-500/20 hover:bg-indigo-500 hover:text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] lg:shadow-none'
                                                 }`}
                                         >
                                             {v.voter_leaning ? 'Edit Again ✏️' : 'Update Profile ✏️'}

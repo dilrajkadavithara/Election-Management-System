@@ -64,10 +64,17 @@ def check_booth_exists(constituency_name, booth_number):
     return Booth.objects.filter(constituency__name=constituency_name, number=str(booth_number)).exists()
 
 def save_booth_data(constituency_name, local_body_type, local_body_name, booth_number, voter_data_list, original_filename, polling_station_no="", polling_station_name="", user_id=None):
+    import logging
+    logger = logging.getLogger("ElectionEngine")
+
     def t_(v, l=1000):
         if v is None: return ""
-        s = str(v)
-        return s[:l] if len(s) > l else s
+        s = str(v).strip()
+        if len(s) > l:
+            # Drop a warning in logs to help identify "The Fault" (Data Corruption)
+            logger.warning(f"DATA OVERFLOW DETECTED: Original length {len(s)} for field exceeds limit {l}. Truncating. Sample: {s[:100]}...")
+            return s[:l]
+        return s
 
     try:
         with transaction.atomic():
@@ -135,6 +142,7 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
                     current_location=t_(get_val(['current_location', 'Location', 'Residence']), 20),
                     voting_probability=t_(get_val(['voting_probability', 'Probability', 'Chance']), 20),
                     source_file=filename,
+                    original_serial=t_(get_val(['original_serial', 'Raw Serial', 'Serial_OCR']) or "", 50),
                     status='VERIFIED',
                     created_by=created_by_user
                 )
@@ -409,7 +417,9 @@ def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency
             "constituency": v.booth.constituency.name,
             "local_body": v.booth.local_body.name if v.booth.local_body else "N/A",
             "ps_name": v.booth.polling_station_name or v.booth.name or "N/A",
-            "voting_probability": v.voting_probability
+            "voting_probability": v.voting_probability,
+            "has_voted": v.has_voted,
+            "voted_at": str(v.voted_at) if v.voted_at else None
         })
     return {"total": total_count, "results": results}
 
@@ -431,6 +441,50 @@ def update_voter_in_db(voter_id, data):
         voter.save()
         return True, "Voter updated"
     except Exception as e: return False, str(e)
+
+def toggle_voter_attendance(voter_id, has_voted):
+    """
+    Marks a voter as voted or not at a specific time.
+    Returns success status and updated stats for the booth.
+    """
+    from datetime import datetime
+    try:
+        voter = Voter.objects.get(id=voter_id)
+        voter.has_voted = has_voted
+        voter.voted_at = datetime.now() if has_voted else None
+        voter.save()
+        # Return updated stats for this booth automatically
+        stats = get_live_voting_stats(None, booth_id=voter.booth_id)
+        return True, {"id": voter.id, "has_voted": voter.has_voted, "voted_at": str(voter.voted_at) if voter.voted_at else None, "booth_stats": stats}
+    except Exception as e:
+        return False, str(e)
+
+def get_live_voting_stats(user_profile, constituency_id=None, lb_id=None, booth_id=None):
+    from django.db.models import Count, Case, When, IntegerField
+    # If user_profile is None (Internal call), we use all voters
+    if user_profile:
+        voters = user_profile.get_accessible_voters()
+    else:
+        voters = Voter.objects.all()
+        
+    if constituency_id: voters = voters.filter(booth__constituency_id=constituency_id)
+    if lb_id: voters = voters.filter(booth__local_body_id=lb_id)
+    if booth_id: voters = voters.filter(booth_id=booth_id)
+    
+    stats = voters.aggregate(
+        total=Count('id'),
+        voted=Count(Case(When(has_voted=True, then=1), output_field=IntegerField())),
+        # Party Turnout
+        udf_total=Count(Case(When(voter_leaning='UDF', then=1), output_field=IntegerField())),
+        udf_voted=Count(Case(When(voter_leaning='UDF', has_voted=True, then=1), output_field=IntegerField())),
+        ldf_total=Count(Case(When(voter_leaning='LDF', then=1), output_field=IntegerField())),
+        ldf_voted=Count(Case(When(voter_leaning='LDF', has_voted=True, then=1), output_field=IntegerField())),
+        nda_total=Count(Case(When(voter_leaning='NDA', then=1), output_field=IntegerField())),
+        nda_voted=Count(Case(When(voter_leaning='NDA', has_voted=True, then=1), output_field=IntegerField())),
+        neu_total=Count(Case(When(voter_leaning='NEUTRAL', then=1), output_field=IntegerField())),
+        neu_voted=Count(Case(When(voter_leaning='NEUTRAL', has_voted=True, then=1), output_field=IntegerField())),
+    )
+    return stats
 
 def get_all_locations(user_profile=None):
     data = []
@@ -457,6 +511,38 @@ def add_local_body(const_id, name, btype):
     c = Constituency.objects.get(id=const_id)
     lb, created = LocalBody.objects.get_or_create(constituency=c, name=name.strip().upper(), body_type=btype)
     return {"id": lb.id, "name": lb.name, "created": created}
+
+def update_constituency(const_id, name, code=""):
+    try:
+        c = Constituency.objects.get(id=const_id)
+        c.name = name.strip().upper()
+        if code: c.code = code
+        c.save()
+        return True, "Constituency updated"
+    except Exception as e: return False, str(e)
+
+def update_local_body(lb_id, name, body_type=None, head_name=None, head_phone=None):
+    try:
+        lb = LocalBody.objects.get(id=lb_id)
+        lb.name = name.strip().upper()
+        if body_type: lb.body_type = body_type
+        if head_name is not None: lb.head_name = head_name
+        if head_phone is not None: lb.head_phone = head_phone
+        lb.save()
+        return True, "Local Body updated"
+    except Exception as e: return False, str(e)
+
+def update_booth(booth_id, number=None, ps_name=None, ps_no=None, head_name=None, head_phone=None):
+    try:
+        b = Booth.objects.get(id=booth_id)
+        if number: b.number = str(number).zfill(3)
+        if ps_name is not None: b.polling_station_name = ps_name
+        if ps_no is not None: b.polling_station_no = ps_no
+        if head_name is not None: b.head_name = head_name
+        if head_phone is not None: b.head_phone = head_phone
+        b.save()
+        return True, "Booth updated"
+    except Exception as e: return False, str(e)
 
 def add_booth(const_id, lb_id, number, ps_name="", ps_no=""):
     num_str = str(number).zfill(3)
