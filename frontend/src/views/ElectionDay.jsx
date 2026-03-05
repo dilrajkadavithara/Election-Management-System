@@ -137,6 +137,20 @@ const ElectionDay = ({ userRole, userAssignments }) => {
         });
     }, [voters, filterStatus, filterParty]);
 
+    const pendingCounts = useMemo(() => {
+        const counts = { UDF: 0, LDF: 0, NDA: 0, NEUTRAL: 0, TOTAL: 0 };
+        voters.forEach(v => {
+            if (!v.has_voted) {
+                counts.TOTAL++;
+                if (v.voter_leaning === 'UDF') counts.UDF++;
+                else if (v.voter_leaning === 'LDF') counts.LDF++;
+                else if (v.voter_leaning === 'NDA') counts.NDA++;
+                else counts.NEUTRAL++;
+            }
+        });
+        return counts;
+    }, [voters]);
+
     const currentConst = locations.find(c => c.id === parseInt(selConst));
     const currentLB = currentConst?.local_bodies.find(lb => lb.id === parseInt(selLB));
 
@@ -233,6 +247,28 @@ const ElectionDay = ({ userRole, userAssignments }) => {
                     </span>
                 )}
             </div>
+
+            {/* Dynamic Pending Counter Panel */}
+            {selBooth && !loading && voters.length > 0 && (
+                <div className="flex flex-wrap gap-2 lg:gap-4 my-3 sm:my-6">
+                    <div className="lux-glass px-5 py-3 rounded-2xl flex-1 flex flex-col justify-center border-l-4 border-b border-r border-t border-l-blue-500 border-white/5 shadow-lg min-w-[120px]">
+                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">UDF PENDING</span>
+                        <span className="text-2xl sm:text-4xl font-black text-blue-400 drop-shadow-md">{pendingCounts.UDF}</span>
+                    </div>
+                    <div className="lux-glass px-5 py-3 rounded-2xl flex-1 flex flex-col justify-center border-l-4 border-b border-r border-t border-l-red-500 border-white/5 shadow-lg min-w-[120px]">
+                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">LDF PENDING</span>
+                        <span className="text-2xl sm:text-4xl font-black text-red-400 drop-shadow-md">{pendingCounts.LDF}</span>
+                    </div>
+                    <div className="lux-glass px-5 py-3 rounded-2xl flex-1 flex flex-col justify-center border-l-4 border-b border-r border-t border-l-orange-500 border-white/5 shadow-lg min-w-[120px]">
+                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">NDA PENDING</span>
+                        <span className="text-2xl sm:text-4xl font-black text-orange-400 drop-shadow-md">{pendingCounts.NDA}</span>
+                    </div>
+                    <div className="lux-glass px-5 py-3 rounded-2xl flex-1 flex flex-col justify-center border-l-4 border-b border-r border-t border-l-slate-400 border-white/5 shadow-lg min-w-[120px]">
+                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">NEUTRAL OUTSTANDING</span>
+                        <span className="text-2xl sm:text-4xl font-black text-slate-300 drop-shadow-md">{pendingCounts.NEUTRAL}</span>
+                    </div>
+                </div>
+            )}
 
             {/* ══════ The Battle Board ══════ */}
             {!selBooth ? (
