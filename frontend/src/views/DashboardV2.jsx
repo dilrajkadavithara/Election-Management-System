@@ -421,7 +421,13 @@ const DashboardV2 = ({
                                     itemStyle={{ color: '#fff', fontSize: '10px', fontWeight: 'bold' }}
                                     formatter={(value, name, props) => [value.toLocaleString(), props.payload.full_name]}
                                 />
-                                <Bar dataKey="value" fill={`url(#bar${perspective === 'NEUTRAL' ? 'NEU' : perspective})`} radius={[4, 4, 0, 0]} />
+                                <Bar
+                                    dataKey="value"
+                                    fill={`url(#bar${perspective === 'NEUTRAL' ? 'NEU' : perspective})`}
+                                    radius={[4, 4, 0, 0]}
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={(data) => handleCardClick({ location: data.payload.full_name, leaning: perspective })}
+                                />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -450,10 +456,10 @@ const DashboardV2 = ({
                                     itemStyle={{ fontSize: '10px', textTransform: 'uppercase', color: '#fff', fontWeight: 'bold' }}
                                     formatter={(value, name) => [value.toLocaleString(), name]}
                                 />
-                                <Bar dataKey="UDF" stackId="a" fill="url(#barUDF)" radius={[0, 0, 0, 0]} barSize={50} />
-                                <Bar dataKey="LDF" stackId="a" fill="url(#barLDF)" radius={[0, 0, 0, 0]} />
-                                <Bar dataKey="NDA" stackId="a" fill="url(#barNDA)" radius={[0, 0, 0, 0]} />
-                                <Bar dataKey="NEUTRAL" stackId="a" fill="url(#barNEU)" radius={[12, 12, 0, 0]} />
+                                <Bar dataKey="UDF" stackId="a" fill="url(#barUDF)" radius={[0, 0, 0, 0]} barSize={50} style={{ cursor: 'pointer' }} onClick={(data) => handleCardClick({ ageFrom: data.payload.name.includes('+') ? data.payload.name.replace('+', '') : data.payload.name.split('-')[0], ageTo: data.payload.name.includes('+') ? '' : data.payload.name.split('-')[1], leaning: 'UDF' })} />
+                                <Bar dataKey="LDF" stackId="a" fill="url(#barLDF)" radius={[0, 0, 0, 0]} style={{ cursor: 'pointer' }} onClick={(data) => handleCardClick({ ageFrom: data.payload.name.includes('+') ? data.payload.name.replace('+', '') : data.payload.name.split('-')[0], ageTo: data.payload.name.includes('+') ? '' : data.payload.name.split('-')[1], leaning: 'LDF' })} />
+                                <Bar dataKey="NDA" stackId="a" fill="url(#barNDA)" radius={[0, 0, 0, 0]} style={{ cursor: 'pointer' }} onClick={(data) => handleCardClick({ ageFrom: data.payload.name.includes('+') ? data.payload.name.replace('+', '') : data.payload.name.split('-')[0], ageTo: data.payload.name.includes('+') ? '' : data.payload.name.split('-')[1], leaning: 'NDA' })} />
+                                <Bar dataKey="NEUTRAL" stackId="a" fill="url(#barNEU)" radius={[12, 12, 0, 0]} style={{ cursor: 'pointer' }} onClick={(data) => handleCardClick({ ageFrom: data.payload.name.includes('+') ? data.payload.name.replace('+', '') : data.payload.name.split('-')[0], ageTo: data.payload.name.includes('+') ? '' : data.payload.name.split('-')[1], leaning: 'NEUTRAL' })} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -479,10 +485,10 @@ const DashboardV2 = ({
                                     itemStyle={{ fontSize: '10px', textTransform: 'uppercase', color: '#fff', fontWeight: 'bold' }}
                                     formatter={(value, name) => [value.toLocaleString(), name]}
                                 />
-                                <Bar dataKey="UDF" stackId="a" fill="url(#barUDF)" barSize={50} />
-                                <Bar dataKey="LDF" stackId="a" fill="url(#barLDF)" />
-                                <Bar dataKey="NDA" stackId="a" fill="url(#barNDA)" />
-                                <Bar dataKey="NEUTRAL" stackId="a" fill="url(#barNEU)" radius={[0, 12, 12, 0]} />
+                                <Bar dataKey="UDF" stackId="a" fill="url(#barUDF)" barSize={50} style={{ cursor: 'pointer' }} onClick={(data) => handleCardClick({ gender: data.payload.name.toUpperCase(), leaning: 'UDF' })} />
+                                <Bar dataKey="LDF" stackId="a" fill="url(#barLDF)" style={{ cursor: 'pointer' }} onClick={(data) => handleCardClick({ gender: data.payload.name.toUpperCase(), leaning: 'LDF' })} />
+                                <Bar dataKey="NDA" stackId="a" fill="url(#barNDA)" style={{ cursor: 'pointer' }} onClick={(data) => handleCardClick({ gender: data.payload.name.toUpperCase(), leaning: 'NDA' })} />
+                                <Bar dataKey="NEUTRAL" stackId="a" fill="url(#barNEU)" radius={[0, 12, 12, 0]} style={{ cursor: 'pointer' }} onClick={(data) => handleCardClick({ gender: data.payload.name.toUpperCase(), leaning: 'NEUTRAL' })} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
