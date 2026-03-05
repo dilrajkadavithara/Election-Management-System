@@ -426,7 +426,18 @@ const DashboardV2 = ({
                                     fill={`url(#bar${perspective === 'NEUTRAL' ? 'NEU' : perspective})`}
                                     radius={[4, 4, 0, 0]}
                                     style={{ cursor: 'pointer' }}
-                                    onClick={(data) => handleCardClick({ location: data.payload.full_name, leaning: perspective })}
+                                    onClick={(data) => {
+                                        const cat = data.payload.full_name;
+                                        const map = {
+                                            "Likely": "LIKELY",
+                                            "Unlikely": "UNLIKELY",
+                                            "Out of Station": "OUT_OF_STATION",
+                                            "Abroad": "ABROAD",
+                                            "Outside State": "STATE",
+                                            "Outside District": "DISTRICT"
+                                        };
+                                        handleCardClick({ location: map[cat] || cat, leaning: perspective });
+                                    }}
                                 />
                             </BarChart>
                         </ResponsiveContainer>

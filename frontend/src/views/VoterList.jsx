@@ -71,7 +71,7 @@ const VoterList = ({
                         { label: 'Booth Unit', key: 'booth', icon: '📍', options: allLocations.find(c => String(c.id) === String(listFilters.constituency))?.local_bodies?.find(l => String(l.id) === String(listFilters.lb))?.booths, disabled: !listFilters.lb },
                         { label: 'Gender', key: 'gender', icon: '👤', options: [{ id: 'MALE', name: 'MALE' }, { id: 'FEMALE', name: 'FEMALE' }, { id: 'TRANSGENDER', name: 'TRANSGENDER' }] },
                         { label: 'Voter Sentiment', key: 'leaning', icon: '⚖️', options: [{ id: 'UDF', name: 'UDF' }, { id: 'LDF', name: 'LDF' }, { id: 'NDA', name: 'NDA' }, { id: 'NEUTRAL', name: 'NEUTRAL' }] },
-                        { label: 'LOCATION', key: 'location', icon: '🌎', options: [{ id: 'LOCAL', name: 'LOCAL' }, { id: 'ABROAD', name: 'ABROAD' }, { id: 'STATE', name: 'OTHER STATE' }, { id: 'DISTRICT', name: 'OTHER DIST' }] }
+                        { label: 'LOCATION / CHANCES', key: 'location', icon: '🌎', options: [{ id: 'LOCAL', name: 'LOCAL' }, { id: 'ABROAD', name: 'ABROAD' }, { id: 'STATE', name: 'OTHER STATE' }, { id: 'DISTRICT', name: 'OTHER DIST' }, { id: 'LIKELY', name: 'LIKELY' }, { id: 'UNLIKELY', name: 'UNLIKELY' }, { id: 'OUT_OF_STATION', name: 'OUT OF STATION' }] }
                     ].map(f => (
                         <div key={f.key} className="flex flex-col gap-2">
                             <div className="flex items-center gap-2 mb-1">

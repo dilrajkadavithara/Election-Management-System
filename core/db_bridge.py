@@ -380,7 +380,11 @@ def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency
     if age_from: voters = voters.filter(age__gte=int(age_from))
     if age_to: voters = voters.filter(age__lte=int(age_to))
     if leaning: voters = voters.filter(voter_leaning=leaning)
-    if location: voters = voters.filter(current_location=location)
+    if location:
+        if location in ['CONFIRMED', 'LIKELY', 'UNLIKELY', 'OUT_OF_STATION']:
+            voters = voters.filter(voting_probability=location)
+        else:
+            voters = voters.filter(current_location=location)
     
     # Serial range filtering for Slip Design
     if serial_from: voters = voters.filter(serial_no__gte=int(serial_from))
