@@ -109,7 +109,7 @@ class BatchProcessor:
 
             # 3. Final Serialization (Maintain Perfect Order)
             for p in pages:
-                if p in ordered_results:
+                if p in ordered_results and isinstance(ordered_results[p], list):
                     for voter in ordered_results[p]:
                         voter["voter_id"] = len(all_standardized) + 1
                         self._apply_standardization(voter, voter["voter_id"])
