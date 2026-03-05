@@ -74,22 +74,22 @@ const VoterSlip = ({ voterName, serialNo, epicNo, boothNo, pollingStation, party
                 </div>
 
                 {/* DATA AREA */}
-                <div className="px-4 flex-grow flex flex-col mt-2.5 pb-4 z-10">
+                <div className="px-4 flex-grow flex flex-col mt-2.5 pb-2.5 z-10">
 
                     {/* Name Row */}
                     <div className="flex flex-col mb-1 relative">
                         <span className="text-[6.5px] font-black uppercase malayalam-font mb-0.5 tracking-wider" style={{ color: activeTheme.primary }}>വോട്ടറുടെ പേര്</span>
-                        <h2 className="text-[16px] font-black text-slate-900 malayalam-font leading-none line-clamp-1 uppercase tracking-tight drop-shadow-sm">
+                        <h2 className="text-[14.5px] font-black text-slate-900 malayalam-font leading-[1.2] pb-0.5 line-clamp-1 uppercase tracking-tight drop-shadow-sm">
                             {voterName}
                         </h2>
                     </div>
 
                     {/* Voter ID and Metadata Row */}
-                    <div className="flex justify-between items-center mb-auto mt-1.5">
+                    <div className="flex justify-between items-center mb-auto mt-0.5">
                         <div className="flex flex-col">
-                            <span className="text-[6.5px] font-black text-slate-400 uppercase malayalam-font leading-none mb-1 tracking-wider">വോട്ടർ ഐഡി</span>
+                            <span className="text-[6.5px] font-black text-slate-400 uppercase malayalam-font leading-none mb-[2px] tracking-wider">വോട്ടർ ഐഡി</span>
                             <div className="flex items-center">
-                                <span className={`text-[12px] font-black font-mono tracking-widest px-2 py-0.5 rounded border bg-white shadow-sm ${activeTheme.text} border-slate-200`}>
+                                <span className={`text-[11.5px] font-black font-mono tracking-widest px-2 py-[2px] rounded border bg-white shadow-sm ${activeTheme.text} border-slate-200`}>
                                     {epicNo}
                                 </span>
                             </div>
@@ -97,7 +97,7 @@ const VoterSlip = ({ voterName, serialNo, epicNo, boothNo, pollingStation, party
                     </div>
 
                     {/* Polling Station */}
-                    <div className="border-t border-slate-100 pt-1.5 flex flex-col mt-2 mb-3">
+                    <div className="border-t border-slate-100 pt-1 flex flex-col mt-1.5 mb-1.5">
                         <div className="flex items-center gap-1.5 mb-1">
                             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: activeTheme.accent }}></div>
                             <span className="text-[6.5px] font-black uppercase malayalam-font tracking-wider" style={{ color: activeTheme.primary }}>പോളിംഗ് സ്റ്റേഷൻ</span>
