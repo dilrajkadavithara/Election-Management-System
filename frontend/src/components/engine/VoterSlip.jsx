@@ -74,18 +74,18 @@ const VoterSlip = ({ voterName, serialNo, epicNo, boothNo, pollingStation, party
                 </div>
 
                 {/* DATA AREA */}
-                <div className="px-4 flex-grow flex flex-col mt-2.5 pb-5 z-10">
+                <div className="px-4 flex-grow flex flex-col mt-2.5 pb-4 z-10">
 
                     {/* Name Row */}
-                    <div className="flex flex-col mb-3 relative">
+                    <div className="flex flex-col mb-1 relative">
                         <span className="text-[6.5px] font-black uppercase malayalam-font mb-0.5 tracking-wider" style={{ color: activeTheme.primary }}>വോട്ടറുടെ പേര്</span>
-                        <h2 className="text-[16px] font-black text-slate-900 malayalam-font leading-normal pb-1 line-clamp-1 uppercase tracking-tight drop-shadow-sm">
+                        <h2 className="text-[16px] font-black text-slate-900 malayalam-font leading-none line-clamp-1 uppercase tracking-tight drop-shadow-sm">
                             {voterName}
                         </h2>
                     </div>
 
                     {/* Voter ID and Metadata Row */}
-                    <div className="flex justify-between items-center mb-auto mt-1">
+                    <div className="flex justify-between items-center mb-auto mt-1.5">
                         <div className="flex flex-col">
                             <span className="text-[6.5px] font-black text-slate-400 uppercase malayalam-font leading-none mb-1 tracking-wider">വോട്ടർ ഐഡി</span>
                             <div className="flex items-center">
