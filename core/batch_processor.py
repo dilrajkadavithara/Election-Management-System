@@ -43,7 +43,14 @@ class BatchProcessor:
         logger.info(f"🎯 High-Precision Box Mode: {len(pages)} pages | {max_workers} Workers | 300 DPI")
         
         def process_page(page_num):
-            temp_dir = tempfile.mkdtemp(prefix=f"ocr_page_{page_num}_")
+            try:
+                temp_dir = tempfile.mkdtemp(prefix=f"ocr_page_{page_num}_")
+            except Exception as e:
+                import traceback
+                trace = traceback.format_exc()
+                logger.error(f"❌ Failed to create temp directory for Page {page_num}: {trace}")
+                return page_num, str(e), False
+
             try:
                 # 1. Page-to-Image (300 DPI for box detection accuracy)
                 page_imgs = pdf_proc.convert_to_images(
@@ -91,7 +98,8 @@ class BatchProcessor:
                 logger.error(f"❌ Thread Error on Page {page_num}: {trace}")
                 return page_num, str(e), False
             finally:
-                shutil.rmtree(temp_dir, ignore_errors=True)
+                if 'temp_dir' in locals():
+                    shutil.rmtree(temp_dir, ignore_errors=True)
 
         # Increased page-level concurrency to utilize concurrent network waiting
         # Since Gemini API processing is mostly network-bound IO, we can afford

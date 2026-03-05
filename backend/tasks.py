@@ -261,13 +261,17 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
                 try:
                     res = future.result()
                     results.append(res)
-                    if res.get('Status') == '✅ OK': clean_count += 1
-                    else: 
+                    if isinstance(res, dict):
+                        if res.get('Status') == '✅ OK': clean_count += 1
+                        else: 
+                            flagged_count += 1
+                            flags = str(res.get('Flags', '')).split(", ")
+                            for f in flags:
+                                if f and not f.startswith("("):
+                                    error_stats[f] = error_stats.get(f, 0) + 1
+                    else:
                         flagged_count += 1
-                        flags = str(res.get('Flags', '')).split(", ")
-                        for f in flags:
-                            if f and not f.startswith("("):
-                                error_stats[f] = error_stats.get(f, 0) + 1
+                        error_stats['Parsing_Error'] = error_stats.get('Parsing_Error', 0) + 1
                         
                     current_batch = state_manager.get_batch(batch_id)
                     if current_batch:

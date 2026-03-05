@@ -141,10 +141,12 @@ const OCREngine = ({
     };
 
     const isComplete = ocrBatch && ['processed', 'warning', 'completed'].includes(ocrBatch.status);
+    const hasFailed = ocrBatch && ocrBatch.status === 'error';
 
     const calculateIntelligence = () => {
         if (!ocrBatch) return 0;
         if (isComplete) return 100;
+        if (hasFailed) return 0;
         if (!['extracting', 'processing'].includes(ocrBatch.status)) return 0;
         const totalPages = Math.max(1, (ocrBatch.total_pages || 0) - 2);
         const pagesProcessed = ocrBatch.pages_processed || 0;
@@ -362,19 +364,21 @@ const OCREngine = ({
                                     ].map((s, i) => {
                                         const steps = ['uploaded', 'extracted', 'processing', 'processed'];
                                         const status = isComplete ? 'processed' : (ocrBatch.status === 'completed' ? 'processed' : ocrBatch.status);
-                                        const currentIndex = steps.indexOf(status === 'extracting' ? 'extracted' : status);
+                                        const currentIndex = steps.indexOf(status === 'extracting' ? 'extracted' : (hasFailed ? 'processing' : status));
                                         const itemIndex = steps.indexOf(s.step);
-                                        const isDone = itemIndex < currentIndex;
-                                        const isActive = itemIndex === currentIndex;
+                                        const isDone = itemIndex < currentIndex || (hasFailed && itemIndex < currentIndex);
+                                        const isActive = itemIndex === currentIndex && !hasFailed;
+                                        const isErrorStep = hasFailed && itemIndex === currentIndex;
 
                                         return (
-                                            <div key={s.step} className={`flex items-center gap-6 group transition-all duration-700 ${isActive ? 'scale-110 translate-x-4' : isDone ? 'opacity-30' : 'opacity-50'}`}>
-                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl border transition-all ${isActive ? 'bg-indigo-600 border-indigo-400 shadow-[0_0_20px_#6366f1]' : 'bg-white/5 border-white/5'}`}>
-                                                    {isDone ? '✅' : s.icon}
+                                            <div key={s.step} className={`flex items-center gap-6 group transition-all duration-700 ${(isActive || isErrorStep) ? 'scale-110 translate-x-4' : isDone ? 'opacity-30' : 'opacity-50'}`}>
+                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl border transition-all ${isActive ? 'bg-indigo-600 border-indigo-400 shadow-[0_0_20px_#6366f1]' : isErrorStep ? 'bg-rose-600 border-rose-400 shadow-[0_0_20px_#e11d48]' : 'bg-white/5 border-white/5'}`}>
+                                                    {isErrorStep ? '❌' : (isDone ? '✅' : s.icon)}
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className={`lux-tech-label !text-xs ${isActive ? 'text-white' : 'text-slate-300'}`}>{s.label}</span>
+                                                    <span className={`lux-tech-label !text-xs ${isActive ? 'text-white' : isErrorStep ? 'text-rose-400' : 'text-slate-300'}`}>{s.label}</span>
                                                     {isActive && <div className="h-1 w-12 bg-indigo-500 mt-2 animate-pulse rounded-full shadow-[0_0_10px_#6366f1]" />}
+                                                    {isErrorStep && <div className="h-1 w-12 bg-rose-500 mt-2 rounded-full shadow-[0_0_10px_#e11d48]" />}
                                                 </div>
                                             </div>
                                         );
@@ -400,6 +404,7 @@ const OCREngine = ({
                                     <h2 className="text-5xl font-black uppercase tracking-tighter leading-none mb-12 italic" style={{ fontFamily: '"Rajdhani", sans-serif' }}>
                                         {ocrBatch.status === 'uploaded' && <span className="text-slate-800">FILE READY</span>}
                                         {(ocrBatch.status === 'extracting' || ocrBatch.status === 'processing') && <span className="lux-text-gradient animate-pulse">PROCESSING DATA</span>}
+                                        {hasFailed && <span className="text-rose-500">SYSTEM FAILURE</span>}
                                         {ocrBatch.status === 'extracted' && <span className="text-indigo-600">PAGES READ</span>}
                                         {isComplete && <span className="text-emerald-500">PREVIEW READY</span>}
                                     </h2>
@@ -413,15 +418,26 @@ const OCREngine = ({
                                             <div key={m.l}>
                                                 <p className="lux-tech-label mb-3">{m.l}</p>
                                                 <p className={`text-5xl font-black ${m.c} tracking-tighter italic`} style={{ fontFamily: '"Rajdhani", sans-serif' }}>{m.v}</p>
-                                                {m.l === 'Neural Sync' && (
+                                                {m.l === 'Neural Sync' && !hasFailed && (
                                                     <div className="h-1 w-full bg-white/5 mt-4 rounded-full overflow-hidden">
                                                         <div className="h-full bg-indigo-500 shadow-[0_0_10px_#6366f1] transition-all duration-1000" style={{ width: m.v }} />
+                                                    </div>
+                                                )}
+                                                {m.l === 'Neural Sync' && hasFailed && (
+                                                    <div className="h-1 w-full bg-white/5 mt-4 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-rose-500 shadow-[0_0_10px_#e11d48]" style={{ width: '100%' }} />
                                                     </div>
                                                 )}
                                             </div>
                                         ))}
                                     </div>
                                 </div>
+                                {hasFailed && (
+                                    <div className="mt-6 p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl">
+                                        <p className="lux-tech-label !text-rose-400 !text-[10px] mb-1">CRITICAL ERROR REPORT</p>
+                                        <p className="text-rose-200 font-mono text-sm leading-relaxed">{ocrBatch.error || "Unknown system failure occurred during background processing."}</p>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-2 gap-10">
