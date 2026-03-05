@@ -46,7 +46,7 @@ class OCREngine:
         if api_key:
             self.client = genai.Client(api_key=api_key)
             # Upgraded to the fastest, most cost-effective vision model
-            self.gemini_model = "gemini-2.5-flash"
+            self.gemini_model = "gemini-2.5-flash-lite"
         else:
             self.gemini_model = None
         
