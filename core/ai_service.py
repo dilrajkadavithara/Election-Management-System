@@ -19,8 +19,8 @@ class AIService:
             self.model = None
         else:
             genai.configure(api_key=api_key)
-            # Use 'gemini-2.5-flash-lite' to guarantee free-tier / minimal cost
-            self.model = genai.GenerativeModel('gemini-2.5-flash-lite')
+            # Revert to standard flash for accuracy
+            self.model = genai.GenerativeModel('gemini-2.5-flash')
 
     def test_connection(self):
         """Simple test to verify API key works."""

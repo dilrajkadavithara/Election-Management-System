@@ -45,8 +45,8 @@ class OCREngine:
         api_key = os.getenv("GOOGLE_API_KEY")
         if api_key:
             self.client = genai.Client(api_key=api_key)
-            # Upgraded to the fastest, most cost-effective vision model
-            self.gemini_model = "gemini-2.5-flash-lite"
+            # Restored standard model for highest accuracy
+            self.gemini_model = "gemini-2.5-flash"
         else:
             self.gemini_model = None
         
@@ -71,11 +71,17 @@ class OCREngine:
         import io
         content_parts = []
         for img_np in img_list:
-            # Natural BGR to RGB conversion (No binarization)
             rgb_img = cv2.cvtColor(img_np, cv2.COLOR_BGR2RGB)
             pil_img = Image.fromarray(rgb_img)
+            
+            # Massive input token saving: Downscale width to max 400px to maintain
+            # aspect ratio, and lower JPEG quality constraints.
+            # This slices the byte-size heavily without ruining Kannada/Malayalam legibility.
+            pil_img.thumbnail((350, 350), Image.Resampling.LANCZOS)
+            
             buf = io.BytesIO()
-            pil_img.save(buf, format='JPEG', quality=95)
+            pil_img.save(buf, format='JPEG', quality=70, optimize=True)
+            
             content_parts.append(
                 genai_types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg")
             )
