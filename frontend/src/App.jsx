@@ -12,6 +12,7 @@ import EditProfileModal from './components/modals/EditProfileModal';
 import ChangePasswordModal from './components/modals/ChangePasswordModal';
 import WarRoom from './views/WarRoom';
 import ElectionDay from './views/ElectionDay';
+import FamilyHeads from './views/FamilyHeads';
 
 const PARTY_PRESETS = [
     { label: 'Congress (INC)', short: 'INC', color: '#000080', gradient: 'linear-gradient(to bottom, #FF9933, #ffffff, #138808)' },
@@ -522,7 +523,7 @@ const App = () => {
     }
 
     return (
-        <div className={`min-h-screen ${['dashboard', 'electionday', 'warroom'].includes(view) ? 'v2-bg-obsidian' : 'bg-slate-50'} flex font-sans transition-colors duration-700`}>
+        <div className={`min-h-screen ${['dashboard', 'electionday', 'warroom', 'familyheads'].includes(view) ? 'v2-bg-obsidian' : 'bg-slate-50'} flex font-sans transition-colors duration-700`}>
             <Sidebar view={view} setView={setView} userRole={userRole} username={username} handleLogout={handleLogout} setShowChangePassword={setShowChangePassword} />
 
             <main className="flex-1 flex flex-col overflow-y-auto p-0">
@@ -547,6 +548,7 @@ const App = () => {
                 {view === 'design' && <SlipDesign activePrintParty={activePrintParty} setActivePrintParty={setActivePrintParty} allParties={allParties} allLocations={allLocations} listFilters={listFilters} setListFilters={setListFilters} voterList={voterList} loadVoters={loadVoters} setSearchQuery={setSearchQuery} />}
                 {view === 'warroom' && <WarRoom allLocations={allLocations} dashFilters={dashFilters} listFilters={listFilters} setListFilters={setListFilters} setView={setView} />}
                 {view === 'electionday' && <ElectionDay userRole={userRole} userAssignments={currentUser?.assignments} />}
+                {view === 'familyheads' && <FamilyHeads allLocations={allLocations} currentUser={currentUser} userRole={userRole} setEditData={setEditData} setEditMode={setEditMode} />}
             </main>
 
             {editMode && <EditProfileModal editData={editData} setEditData={setEditData} setEditMode={setEditMode} saveCorrection={saveCorrection} ocrBatch={ocrBatch} />}

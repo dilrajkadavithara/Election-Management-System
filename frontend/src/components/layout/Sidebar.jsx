@@ -46,6 +46,7 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout, setShowChang
                         { id: 'warroom', label: 'War room', icon: '⚔️' },
                         ...(userRole !== 'BOOTH_AGENT' ? [{ id: 'engine', label: 'Upload Voter List', icon: '⚡' }] : []),
                         { id: 'voters', label: 'Voter List', icon: '👥' },
+                        { id: 'familyheads', label: 'Influencer Segment', icon: '👑' },
                         { id: 'comm', label: 'Send Messages', icon: '💬' },
                         { id: 'design', label: 'Voter Slips', icon: '🎨' },
                         { id: 'electionday', label: 'Election Day', icon: '🗳️' },
@@ -73,7 +74,7 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout, setShowChang
                     <span className="text-2xl group-hover:rotate-12 transition-transform">🚪</span>
                     <span>LOGOUT</span>
                 </button>
-            </aside>
+            </aside >
         </>
     );
 };

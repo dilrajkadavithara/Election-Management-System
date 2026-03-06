@@ -124,9 +124,9 @@ def sync_strategic_analytics_wrapper(username, constituency_id=None):
     user = User.objects.get(username=username)
     return get_strategic_analytics(user.profile, constituency_id)
 
-def sync_voter_list_wrapper(username, search, page, page_size, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None, serial_from=None, serial_to=None, location=None):
+def sync_voter_list_wrapper(username, search, page, page_size, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None, serial_from=None, serial_to=None, location=None, is_head_of_family=None):
     user = User.objects.get(username=username)
-    return get_voter_list(user.profile, search, page, page_size, constituency_id, lb_id, booth_id, gender, age_from, age_to, leaning, serial_from, serial_to, location)
+    return get_voter_list(user.profile, search, page, page_size, constituency_id, lb_id, booth_id, gender, age_from, age_to, leaning, serial_from, serial_to, location, is_head_of_family)
 
 def sync_locations_wrapper(username):
     user = User.objects.get(username=username)
@@ -457,6 +457,7 @@ async def get_voters_api(
     gender: str = None, age_from: str = None, age_to: str = None,
     leaning: str = None, serial_from: str = None, serial_to: str = None,
     location: str = None,
+    is_head_of_family: bool = None,
     user_info=Depends(get_current_user)
 ):
     c_id = int(constituency) if constituency and str(constituency).isdigit() else None
@@ -464,7 +465,7 @@ async def get_voters_api(
     b_id = int(booth) if booth and str(booth).isdigit() else None
     return await get_voters_async(
         user_info['username'], search, page, page_size,
-        c_id, l_id, b_id, gender, age_from, age_to, leaning, serial_from, serial_to, location
+        c_id, l_id, b_id, gender, age_from, age_to, leaning, serial_from, serial_to, location, is_head_of_family
     )
 
 @app.get("/api/voters/voting-stats")

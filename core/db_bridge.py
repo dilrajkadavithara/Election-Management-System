@@ -367,7 +367,7 @@ def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id
     _set_cache(cache_key, result)
     return result
 
-def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None, serial_from=None, serial_to=None, location=None):
+def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None, serial_from=None, serial_to=None, location=None, is_head_of_family=None):
     voters = user_profile.get_accessible_voters()
     
     if search:
@@ -385,6 +385,9 @@ def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency
             voters = voters.filter(voting_probability=location)
         else:
             voters = voters.filter(current_location=location)
+            
+    if is_head_of_family:
+        voters = voters.filter(is_head_of_family=is_head_of_family)
     
     # Serial range filtering for Slip Design
     if serial_from: voters = voters.filter(serial_no__gte=int(serial_from))
