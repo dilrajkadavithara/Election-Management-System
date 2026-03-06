@@ -21,8 +21,8 @@ const FamilyHeads = ({
     const pageSize = 50;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-    // Force booth selection first
-    const canFetch = !!filters.booth;
+    // Force constituency selection first (allows global lb/booth view)
+    const canFetch = !!filters.constituency;
 
     const loadData = async (currentPage = 1) => {
         if (!canFetch) {
@@ -122,7 +122,7 @@ const FamilyHeads = ({
             {!canFetch ? (
                 <div className="flex flex-col items-center justify-center py-32 space-y-4 opacity-30 text-white">
                     <span className="text-8xl">👑</span>
-                    <p className="font-black uppercase tracking-[0.3em] text-center text-xs">Select a specific Booth to reveal its key influencers</p>
+                    <p className="font-black uppercase tracking-[0.3em] text-center text-xs">Select a Constituency to reveal key influencers</p>
                 </div>
             ) : (
                 <div className="lux-glass rounded-[2rem] border-amber-500/20 shadow-[0_0_50px_rgba(245,158,11,0.05)] overflow-hidden group">
