@@ -187,6 +187,25 @@ const EditProfileModal = ({
                         ]}
                     />
 
+                    {/* 4.5. Head of Family Toggle */}
+                    <div className="space-y-2 sm:space-y-4">
+                        <label className="text-[10px] sm:text-[11px] font-black uppercase text-slate-400 tracking-[0.2em] ml-1 sm:ml-2">ഗൃഹനാഥനാണോ (Is Head of Family)?</label>
+                        <button
+                            onClick={() => setEditData({ ...editData, is_head_of_family: !editData.is_head_of_family })}
+                            className={`w-full flex items-center justify-between p-4 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border-2 transition-all duration-300 ${editData.is_head_of_family ? 'bg-amber-100 border-amber-300 shadow-[0_0_20px_rgba(251,191,36,0.2)]' : 'bg-slate-50 border-slate-100 hover:border-slate-300'}`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl sm:text-4xl text-amber-500">👑</span>
+                                <span className={`text-sm sm:text-lg font-black uppercase tracking-widest ${editData.is_head_of_family ? 'text-amber-700' : 'text-slate-400'}`}>
+                                    {editData.is_head_of_family ? 'അതെ (YES)' : 'അല്ല (NO)'}
+                                </span>
+                            </div>
+                            <div className={`w-12 sm:w-16 h-6 sm:h-8 rounded-full relative transition-colors ${editData.is_head_of_family ? 'bg-amber-500' : 'bg-slate-300'}`}>
+                                <div className={`absolute top-1 bottom-1 w-4 sm:w-6 rounded-full bg-white transition-all shadow-sm ${editData.is_head_of_family ? 'left-6 sm:left-9' : 'left-1'}`} />
+                            </div>
+                        </button>
+                    </div>
+
                     {/* 5. Mobile Connection */}
                     <div className="space-y-2 sm:space-y-4">
                         <label className="text-[10px] sm:text-[11px] font-black uppercase text-slate-400 tracking-[0.2em] ml-1 sm:ml-2">ഫോൺ നമ്പർ</label>

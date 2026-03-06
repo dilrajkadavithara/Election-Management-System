@@ -414,6 +414,7 @@ def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency
             "house_name": v.house_name,
             "house_no": v.house_no,
             "phone_no": v.phone_no,
+            "is_head_of_family": v.is_head_of_family,
             "voter_leaning": v.voter_leaning,
             "current_location": v.current_location,
             "booth_no": v.booth.number,
@@ -435,6 +436,7 @@ def update_voter_in_db(voter_id, data):
         if 'age' in data: voter.age = data['age']
         if 'gender' in data: voter.gender = data['gender']
         if 'phone_no' in data: voter.phone_no = data['phone_no']
+        if 'is_head_of_family' in data: voter.is_head_of_family = data['is_head_of_family']
         if 'voter_leaning' in data: voter.voter_leaning = data['voter_leaning']
         if 'current_location' in data: voter.current_location = data['current_location']
         if 'voting_probability' in data: voter.voting_probability = data['voting_probability']

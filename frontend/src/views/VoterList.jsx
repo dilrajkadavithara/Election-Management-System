@@ -145,7 +145,9 @@ const VoterList = ({
 
                                     <div className="col-span-3 lg:px-2 py-0 lg:py-5 flex justify-between lg:block mb-4 lg:mb-0 border-b border-white/10 lg:border-0 pb-4 lg:pb-0 items-start">
                                         <div className="flex flex-col">
-                                            <span className="text-white font-black text-lg lg:text-[12px] uppercase tracking-wider lg:tracking-widest group-hover:text-indigo-400 transition-colors">{v.full_name}</span>
+                                            <span className="text-white font-black text-lg lg:text-[12px] uppercase tracking-wider lg:tracking-widest group-hover:text-indigo-400 transition-colors">
+                                                {v.full_name} {v.is_head_of_family && <span className="text-amber-500 animate-pulse ml-1" title="Head of Family (ഗൃഹനാഥൻ)">👑</span>}
+                                            </span>
                                             <span className="text-slate-300 text-[9px] font-bold mt-1 uppercase leading-none">{v.local_body} Unit • SL NO: {v.serial_no}</span>
                                         </div>
                                         <div className="lg:hidden flex gap-2">
