@@ -85,6 +85,7 @@ const App = () => {
     const [editData, setEditData] = useState({});
     const [showChangePassword, setShowChangePassword] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+    const lastFiltersRef = useRef(null);
 
     useEffect(() => {
         const checkHealth = async () => {
@@ -98,11 +99,17 @@ const App = () => {
     }, [isLoggedIn]);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            if (isLoggedIn && view === 'voters') loadVoters(currentPage);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [view, dashFilters, listFilters, searchQuery]);
+        if (!isLoggedIn || view !== 'voters') return;
+
+        const currentFilterState = JSON.stringify({ dashFilters, listFilters, searchQuery });
+        if (lastFiltersRef.current !== currentFilterState) {
+            const timer = setTimeout(() => {
+                loadVoters(1);
+                lastFiltersRef.current = currentFilterState;
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [view, dashFilters, listFilters, searchQuery, isLoggedIn]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -303,7 +310,8 @@ const App = () => {
                 // Regular database edit
                 await api.editVoterInDB(editData.id, editData);
                 setEditMode(false);
-                loadVoters();
+                // Maintain current page after edit
+                loadVoters(currentPage);
                 loadStats();
             } else if (ocrBatch && editData.voter_id) {
                 // OCR process correction (Smart Workflow)
