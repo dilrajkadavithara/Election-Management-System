@@ -42,12 +42,14 @@ const ElectionDay = ({ userRole, userAssignments }) => {
                     }
                 }
             } else if (userAssignments?.booths?.length > 0) {
-                const bid = userAssignments.booths[0];
+                const bid = parseInt(userAssignments.booths[0]);
+                console.log("Auto-selecting booth for agent:", bid);
                 setSelBooth(bid);
                 // Also resolve parent IDs from locations tree
                 for (const c of data) {
                     for (const lb of c.local_bodies) {
-                        if (lb.booths.some(b => String(b.id) === String(bid))) {
+                        if (lb.booths.some(b => parseInt(b.id) === bid)) {
+                            console.log("Resolved parents:", { const: c.id, lb: lb.id });
                             setSelConst(c.id);
                             setSelLB(lb.id);
                             break;

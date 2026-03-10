@@ -165,9 +165,9 @@ const App = () => {
 
             // Auto-set filters for Booth Agents to their assigned booth
             if (res.role === 'BOOTH_AGENT' && res.assignments?.booths?.length > 0) {
-                const assignedBoothId = res.assignments.booths[0];
-                setDashFilters(prev => ({ ...prev, booth: String(assignedBoothId), constituency: '', lb: '' }));
-                setListFilters(prev => ({ ...prev, booth: String(assignedBoothId), constituency: '', lb: '' }));
+                const assignedBoothId = String(res.assignments.booths[0]);
+                setDashFilters(prev => ({ ...prev, booth: assignedBoothId, constituency: '', lb: '' }));
+                setListFilters(prev => ({ ...prev, booth: assignedBoothId, constituency: '', lb: '' }));
             }
         } catch (e) { setError("Invalid credentials or server error"); }
         finally { setLoading(false); }
