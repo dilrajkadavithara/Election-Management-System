@@ -130,7 +130,12 @@ const App = () => {
                 username: localStorage.getItem('voter_user'),
                 role: role,
                 assignments: assignments,
-                can_download: role === 'SUPERUSER' // Logic fallback for admin
+                can_download: localStorage.getItem('voter_can_download') === 'true',
+                can_upload: localStorage.getItem('voter_can_upload') === 'true',
+                can_verify: localStorage.getItem('voter_can_verify') === 'true',
+                can_edit_voters: localStorage.getItem('voter_can_edit_voters') === 'true',
+                can_send_broadcasts: localStorage.getItem('voter_can_send_broadcasts') === 'true',
+                can_manage_system: localStorage.getItem('voter_can_manage_system') === 'true'
             });
 
             // Initialize filters for Booth Agents on refresh

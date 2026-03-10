@@ -28,17 +28,19 @@ const ElectionDay = ({ userRole, userAssignments }) => {
     const lastTapRef = useRef({});
 
     useEffect(() => {
+        console.log("ElectionDay Init: userRole =", userRole, "userAssignments =", userAssignments);
         api.getLocations().then(data => {
+            console.log("Locations loaded:", data?.length, "items");
             setLocations(data);
             if (userAssignments?.constituencies?.length > 0) {
-                const cid = userAssignments.constituencies[0];
+                const cid = parseInt(userAssignments.constituencies[0]);
                 setSelConst(cid);
                 const cObj = data.find(c => c.id === cid);
                 if (cObj && userAssignments.local_bodies?.length > 0) {
-                    const lbid = userAssignments.local_bodies[0];
+                    const lbid = parseInt(userAssignments.local_bodies[0]);
                     setSelLB(lbid);
                     if (userAssignments.booths?.length > 0) {
-                        setSelBooth(userAssignments.booths[0]);
+                        setSelBooth(parseInt(userAssignments.booths[0]));
                     }
                 }
             } else if (userAssignments?.booths?.length > 0) {
@@ -46,19 +48,26 @@ const ElectionDay = ({ userRole, userAssignments }) => {
                 console.log("Auto-selecting booth for agent:", bid);
                 setSelBooth(bid);
                 // Also resolve parent IDs from locations tree
+                let resolved = false;
                 for (const c of data) {
                     for (const lb of c.local_bodies) {
                         if (lb.booths.some(b => parseInt(b.id) === bid)) {
                             console.log("Resolved parents:", { const: c.id, lb: lb.id });
                             setSelConst(c.id);
                             setSelLB(lb.id);
+                            resolved = true;
                             break;
                         }
                     }
+                    if (resolved) break;
                 }
+            } else {
+                console.warn("No assignments found for current user.");
             }
+        }).catch(err => {
+            console.error("Failed to load locations:", err);
         });
-    }, [userAssignments]);
+    }, [userAssignments, userRole]);
 
     const fetchData = useCallback(async (boothId) => {
         if (!boothId) return;
@@ -292,11 +301,18 @@ const ElectionDay = ({ userRole, userAssignments }) => {
 
             {/* ══════ The Battle Board ══════ */}
             {!selBooth ? (
-                <div className="flex flex-col items-center justify-center py-32 space-y-4 opacity-20">
-                    <span className="text-9xl">🏔️</span>
-                    <p className="font-black uppercase tracking-[0.4em] text-center text-sm">
-                        {userRole === 'BOOTH_AGENT' ? 'Synchronizing Assigned Booth...' : 'Select a Booth to begin'}
+                <div className="flex flex-col items-center justify-center py-32 space-y-4 opacity-50">
+                    <span className="text-9xl animate-pulse">🏔️</span>
+                    <p className="font-black uppercase tracking-[0.4em] text-center text-sm max-w-md">
+                        {userRole === 'BOOTH_AGENT' 
+                            ? (userAssignments?.booths?.length > 0 ? 'Synchronizing Assigned Booth...' : 'Error: No Booth Assigned to User')
+                            : 'Select a Booth to begin'}
                     </p>
+                    {userRole === 'BOOTH_AGENT' && !userAssignments?.booths?.length && (
+                        <p className="text-xs text-red-400 font-bold uppercase tracking-widest mt-2">
+                            Please contact administrator to assign your booth.
+                        </p>
+                    )}
                 </div>
             ) : loading ? (
                 <div className="grid grid-cols-5 sm:grid-cols-8 lg:grid-cols-12 xl:grid-cols-14 gap-2">

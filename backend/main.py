@@ -404,7 +404,14 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         "access_token": access_token, 
         "token_type": "bearer", 
         "role": user_info['role'], 
-        "username": user_info['username']
+        "username": user_info['username'],
+        "assignments": user_info['assignments'],
+        "can_download": user_info['can_download'],
+        "can_upload": user_info['can_upload'],
+        "can_verify": user_info['can_verify'],
+        "can_edit_voters": user_info['can_edit_voters'],
+        "can_send_broadcasts": user_info['can_send_broadcasts'],
+        "can_manage_system": user_info['can_manage_system']
     }
 
 @app.post("/api/user/change-password")

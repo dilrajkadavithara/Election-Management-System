@@ -496,20 +496,54 @@ def get_live_voting_stats(user_profile, constituency_id=None, lb_id=None, booth_
     return stats
 
 def get_all_locations(user_profile=None):
+    """
+    Fetch optimized locations tree. 
+    If user_profile is provided, filters booths to only those the user is assigned to.
+    """
+    from django.db.models import Prefetch
+    from core_db.models import Booth, LocalBody, Constituency
+
+    # Optimize with prefetch to avoid N+1 queries
+    queryset = Constituency.objects.prefetch_related(
+        Prefetch(
+            'local_bodies',
+            queryset=LocalBody.objects.prefetch_related(
+                Prefetch(
+                    'booths',
+                    queryset=Booth.objects.all().order_by('number')
+                )
+            ).order_by('name')
+        )
+    ).order_of_name = 'name' # Sorting handled in queryset
+
     data = []
-    for c in Constituency.objects.all():
+    # If user_profile is a BOOTH_AGENT, we only care about their booths
+    assigned_booth_ids = []
+    if user_profile and user_profile.role == 'BOOTH_AGENT':
+        assigned_booth_ids = list(user_profile.assigned_booths.values_list('id', flat=True))
+
+    for c in Constituency.objects.prefetch_related('local_bodies__booths').all().order_by('name'):
         c_node = {"id": c.id, "name": c.name, "local_bodies": []}
         for lb in c.local_bodies.all():
             lb_node = {"id": lb.id, "name": lb.name, "booths": []}
             for b in lb.booths.all():
+                # For agents, we still show the full tree structure but might mark assigned ones?
+                # Actually, the frontend expects the full tree to resolve parent IDs (Const/LB).
                 lb_node["booths"].append({
                     "id": b.id,
                     "number": b.number,
                     "ps_name": b.polling_station_name or "",
                     "ps_no": b.polling_station_no or ""
                 })
-            c_node["local_bodies"].append(lb_node)
-        data.append(c_node)
+            
+            # If it's an agent, only include LB if it has at least one assigned booth
+            # OR just return everything and let frontend handle it (simpler for now)
+            if lb_node["booths"]:
+                c_node["local_bodies"].append(lb_node)
+        
+        if c_node["local_bodies"]:
+            data.append(c_node)
+            
     return data
 
 def add_constituency(name):

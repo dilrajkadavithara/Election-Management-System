@@ -22,9 +22,7 @@ client.interceptors.response.use(
     (error) => {
         if (error.response && error.response.status === 401) {
             console.warn("Session Expired - Auto Logout Triggered");
-            localStorage.removeItem('voter_token');
-            localStorage.removeItem('voter_role');
-            localStorage.removeItem('voter_user');
+            localStorage.clear();
             // Force reload to clear React state
             window.location.reload();
         }
@@ -45,14 +43,19 @@ const api = {
             localStorage.setItem('voter_role', response.data.role);
             localStorage.setItem('voter_user', response.data.username);
             localStorage.setItem('voter_assignments', JSON.stringify(response.data.assignments || {}));
+            // Save permissions
+            localStorage.setItem('voter_can_download', response.data.can_download);
+            localStorage.setItem('voter_can_upload', response.data.can_upload);
+            localStorage.setItem('voter_can_verify', response.data.can_verify);
+            localStorage.setItem('voter_can_edit_voters', response.data.can_edit_voters);
+            localStorage.setItem('voter_can_send_broadcasts', response.data.can_send_broadcasts);
+            localStorage.setItem('voter_can_manage_system', response.data.can_manage_system);
         }
         return response.data;
     },
 
     logout: () => {
-        localStorage.removeItem('voter_token');
-        localStorage.removeItem('voter_role');
-        localStorage.removeItem('voter_user');
+        localStorage.clear();
     },
 
     checkHealth: async () => {
