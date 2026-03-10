@@ -377,7 +377,8 @@ async def health():
         "status": "healthy",
         "redis": "connected" if state_manager.use_redis else "offline (fallback mode)",
         "poppler": "missing",
-        "google_ai": "ready" if os.getenv("GOOGLE_API_KEY") else "missing"
+        "google_ai": "ready" if os.getenv("GOOGLE_API_KEY") else "missing",
+        "build_version": "2026-03-11T01:15:00"
     }
     
     # 1. Check Poppler (pdftoppm)

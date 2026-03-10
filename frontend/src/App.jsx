@@ -582,7 +582,7 @@ const App = () => {
                 {view === 'engine' && <OCREngine ocrBatch={ocrBatch} setOcrBatch={setOcrBatch} ocrLoading={ocrLoading} setOcrLoading={setOcrLoading} ocrError={ocrError} setOcrError={setOcrError} ocrRef={ocrRef} handleFileUpload={handleFileUpload} startExtraction={startExtraction} startOcr={startOcr} handleSaveBatch={handleSaveBatch} discardBatch={discardBatch} stopAndClearRAM={stopAndClearRAM} setEditData={setEditData} setEditMode={setEditMode} allLocations={allLocations} ocrTargetLoc={ocrTargetLoc} setOcrTargetLoc={setOcrTargetLoc} loadAdminData={loadAdminData} useGemini={useGemini} setUseGemini={setUseGemini} useDirectPdf={useDirectPdf} setUseDirectPdf={setUseDirectPdf} />}
                 {view === 'design' && <SlipDesign activePrintParty={activePrintParty} setActivePrintParty={setActivePrintParty} allParties={allParties} allLocations={allLocations} listFilters={listFilters} setListFilters={setListFilters} voterList={voterList} loadVoters={loadVoters} setSearchQuery={setSearchQuery} userRole={userRole} userAssignments={currentUser?.assignments} />}
                 {view === 'warroom' && <WarRoom allLocations={allLocations} dashFilters={dashFilters} listFilters={listFilters} setListFilters={setListFilters} setView={setView} userRole={userRole} />}
-                {view === 'electionday' && <ElectionDay userRole={userRole} userAssignments={currentUser?.assignments} />}
+                {view === 'electionday' && <ElectionDay userRole={userRole} userAssignments={currentUser?.assignments} username={username} />}
                 {view === 'familyheads' && <FamilyHeads allLocations={allLocations} currentUser={currentUser} userRole={userRole} setEditData={setEditData} setEditMode={setEditMode} />}
             </main>
 

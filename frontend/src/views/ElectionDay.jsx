@@ -8,7 +8,7 @@ const LEANING_CONFIG = {
     NEUTRAL: { color: 'bg-slate-500', border: 'border-slate-600', glow: '', text: 'text-slate-400', badge: 'bg-slate-700 text-slate-300' },
 };
 
-const ElectionDay = ({ userRole, userAssignments }) => {
+const ElectionDay = ({ userRole, userAssignments, username }) => {
     const [locations, setLocations] = useState([]);
     const [selConst, setSelConst] = useState('');
     const [selLB, setSelLB] = useState('');
@@ -309,10 +309,11 @@ const ElectionDay = ({ userRole, userAssignments }) => {
                             : 'Select a Booth to begin'}
                     </p>
                     {userRole === 'BOOTH_AGENT' && (
-                        <div className="bg-black/40 p-4 rounded-2xl border border-white/5 text-[10px] font-mono text-slate-500 whitespace-pre">
-                            DEBUG INFO:
+                        <div className="bg-black/60 p-4 rounded-2xl border border-white/10 text-[10px] font-mono text-indigo-300 whitespace-pre shadow-2xl">
+                            <span className="text-white font-bold">SYSTEM DIAGNOSTICS:</span>
+                            User: {username || 'UNKNOWN'}
                             Role: {userRole}
-                            Assignments: {JSON.stringify(userAssignments || 'NONE')}
+                            Assignments: {JSON.stringify(userAssignments || 'MISSING')}
                         </div>
                     )}
                     {userRole === 'BOOTH_AGENT' && !userAssignments?.booths?.length && (
