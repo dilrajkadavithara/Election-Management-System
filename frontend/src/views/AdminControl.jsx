@@ -241,7 +241,7 @@ const AdminControl = ({
                                                         onClick={() => toggleBoothAssignment(b.id)}
                                                         className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all border mb-1 flex justify-between items-center ${(newUserData.assignments?.booths || []).includes(b.id) ? 'bg-indigo-600/20 border-indigo-500/40 text-white' : 'bg-white/5 border-white/5 text-slate-400 hover:text-white'}`}
                                                     >
-                                                        <span>Booth {b.booth_number} <span className="text-slate-500">— {b.lbName}</span></span>
+                                                        <span>Booth {b.number} {b.ps_name && `— ${b.ps_name}`} <span className="text-slate-500">({b.lbName})</span></span>
                                                         {(newUserData.assignments?.booths || []).includes(b.id) && <span className="text-indigo-400 font-bold">✓</span>}
                                                     </button>
                                                 ))}
@@ -493,7 +493,7 @@ const AdminControl = ({
                                                             onClick={() => startEditLoc('booth', { ...b, constituency_id: c.id, local_body_id: lb.id })}
                                                             className="text-[10px] bg-white/5 border border-white/8 rounded-md px-2 py-0.5 text-slate-400 hover:bg-white/10 hover:border-indigo-500/30 cursor-pointer"
                                                         >
-                                                            Booth {b.number || b.booth_number}
+                                                            Booth {b.number}
                                                         </span>
                                                     ))}
                                                 </div>
