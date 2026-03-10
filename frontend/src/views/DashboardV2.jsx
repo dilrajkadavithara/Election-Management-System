@@ -100,7 +100,8 @@ const DashboardV2 = ({
     allLocations,
     listFilters,
     setListFilters,
-    setView
+    setView,
+    userRole
 }) => {
     const [turnoutScenario, setTurnoutScenario] = React.useState(85);
     const [perspective, setPerspective] = React.useState('UDF');
@@ -154,88 +155,92 @@ const DashboardV2 = ({
                         </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-6">
-                        {/* Perspective Switcher */}
-                        <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/5">
-                            {['UDF', 'LDF', 'NDA'].map(p => (
-                                <button
-                                    key={p}
-                                    onClick={() => setPerspective(p)}
-                                    className={`px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all ${perspective === p ? 'bg-indigo-500 text-white shadow-[0_0_20px_#6366f1]' : 'text-slate-400 hover:text-white'}`}
-                                >
-                                    {p} VIEW
-                                </button>
-                            ))}
-                        </div>
+                    {userRole !== 'BOOTH_AGENT' && (
+                        <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-6">
+                            {/* Perspective Switcher */}
+                            <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/5">
+                                {['UDF', 'LDF', 'NDA'].map(p => (
+                                    <button
+                                        key={p}
+                                        onClick={() => setPerspective(p)}
+                                        className={`px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all ${perspective === p ? 'bg-indigo-500 text-white shadow-[0_0_20px_#6366f1]' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                        {p} VIEW
+                                    </button>
+                                ))}
+                            </div>
 
-                        <button
-                            onClick={() => setView('warroom')}
-                            className="bg-rose-600 hover:bg-rose-500 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(225,29,72,0.3)] transition-all flex items-center gap-3 group animate-pulse hover:animate-none"
-                        >
-                            <span>⚔️</span>
-                            <span>ENTER WAR ROOM</span>
-                        </button>
-                    </div>
+                            <button
+                                onClick={() => setView('warroom')}
+                                className="bg-rose-600 hover:bg-rose-500 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(225,29,72,0.3)] transition-all flex items-center gap-3 group animate-pulse hover:animate-none"
+                            >
+                                <span>⚔️</span>
+                                <span>ENTER WAR ROOM</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* 🛡️ Strategic Control Bar */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white/5 p-6 rounded-[2.5rem] border border-white/5 shadow-2xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] -mr-32 -mt-32 transition-all group-hover:bg-indigo-500/10" />
+                {userRole !== 'BOOTH_AGENT' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white/5 p-6 rounded-[2.5rem] border border-white/5 shadow-2xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] -mr-32 -mt-32 transition-all group-hover:bg-indigo-500/10" />
 
-                    {/* Constituency Filter */}
-                    <div className="flex flex-col gap-2 relative z-10">
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs">🗺️</span>
-                            <label className="text-[9px] font-black uppercase text-indigo-400 tracking-[0.2em]">Constituency</label>
+                        {/* Constituency Filter */}
+                        <div className="flex flex-col gap-2 relative z-10">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs">🗺️</span>
+                                <label className="text-[9px] font-black uppercase text-indigo-400 tracking-[0.2em]">Constituency</label>
+                            </div>
+                            <select
+                                className="lux-glass text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/50 cursor-pointer hover:bg-white/10 transition-all outline-none w-full appearance-none shadow-inner"
+                                value={dashFilters.constituency}
+                                onChange={(e) => setDashFilters({ ...dashFilters, constituency: e.target.value, lb: '', booth: '' })}
+                            >
+                                <option value="" className="bg-slate-900">Global View</option>
+                                {allLocations.map(c => <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>)}
+                            </select>
                         </div>
-                        <select
-                            className="lux-glass text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/50 cursor-pointer hover:bg-white/10 transition-all outline-none w-full appearance-none shadow-inner"
-                            value={dashFilters.constituency}
-                            onChange={(e) => setDashFilters({ ...dashFilters, constituency: e.target.value, lb: '', booth: '' })}
-                        >
-                            <option value="" className="bg-slate-900">Global View</option>
-                            {allLocations.map(c => <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>)}
-                        </select>
-                    </div>
 
-                    {/* Local Body Filter */}
-                    <div className="flex flex-col gap-2 relative z-10">
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs">🏘️</span>
-                            <label className="text-[9px] font-black uppercase text-indigo-400 tracking-[0.2em]">Local Body</label>
+                        {/* Local Body Filter */}
+                        <div className="flex flex-col gap-2 relative z-10">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs">🏘️</span>
+                                <label className="text-[9px] font-black uppercase text-indigo-400 tracking-[0.2em]">Local Body</label>
+                            </div>
+                            <select
+                                disabled={!dashFilters.constituency}
+                                className="lux-glass text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/50 cursor-pointer hover:bg-white/10 transition-all outline-none w-full appearance-none disabled:opacity-20 shadow-inner"
+                                value={dashFilters.lb}
+                                onChange={(e) => setDashFilters({ ...dashFilters, lb: e.target.value, booth: '' })}
+                            >
+                                <option value="" className="bg-slate-900">All Local Bodies</option>
+                                {allLocations.find(c => String(c.id) === String(dashFilters.constituency))?.local_bodies?.map(lb => (
+                                    <option key={lb.id} value={lb.id} className="bg-slate-900">{lb.name}</option>
+                                ))}
+                            </select>
                         </div>
-                        <select
-                            disabled={!dashFilters.constituency}
-                            className="lux-glass text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/50 cursor-pointer hover:bg-white/10 transition-all outline-none w-full appearance-none disabled:opacity-20 shadow-inner"
-                            value={dashFilters.lb}
-                            onChange={(e) => setDashFilters({ ...dashFilters, lb: e.target.value, booth: '' })}
-                        >
-                            <option value="" className="bg-slate-900">All Local Bodies</option>
-                            {allLocations.find(c => String(c.id) === String(dashFilters.constituency))?.local_bodies?.map(lb => (
-                                <option key={lb.id} value={lb.id} className="bg-slate-900">{lb.name}</option>
-                            ))}
-                        </select>
-                    </div>
 
-                    {/* Booth Filter */}
-                    <div className="flex flex-col gap-2 relative z-10">
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs">📍</span>
-                            <label className="text-[9px] font-black uppercase text-indigo-400 tracking-[0.2em]">Specific Booth</label>
+                        {/* Booth Filter */}
+                        <div className="flex flex-col gap-2 relative z-10">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs">📍</span>
+                                <label className="text-[9px] font-black uppercase text-indigo-400 tracking-[0.2em]">Specific Booth</label>
+                            </div>
+                            <select
+                                disabled={!dashFilters.lb}
+                                className="lux-glass text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/50 cursor-pointer hover:bg-white/10 transition-all outline-none w-full appearance-none disabled:opacity-20 shadow-inner"
+                                value={dashFilters.booth}
+                                onChange={(e) => setDashFilters({ ...dashFilters, booth: e.target.value })}
+                            >
+                                <option value="" className="bg-slate-900">All Booths</option>
+                                {allLocations.find(c => String(c.id) === String(dashFilters.constituency))?.local_bodies?.find(lb => String(lb.id) === String(dashFilters.lb))?.booths?.map(b => (
+                                    <option key={b.id} value={b.id} className="bg-slate-900">Booth {b.number}</option>
+                                ))}
+                            </select>
                         </div>
-                        <select
-                            disabled={!dashFilters.lb}
-                            className="lux-glass text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/50 cursor-pointer hover:bg-white/10 transition-all outline-none w-full appearance-none disabled:opacity-20 shadow-inner"
-                            value={dashFilters.booth}
-                            onChange={(e) => setDashFilters({ ...dashFilters, booth: e.target.value })}
-                        >
-                            <option value="" className="bg-slate-900">All Booths</option>
-                            {allLocations.find(c => String(c.id) === String(dashFilters.constituency))?.local_bodies?.find(lb => String(lb.id) === String(dashFilters.lb))?.booths?.map(b => (
-                                <option key={b.id} value={b.id} className="bg-slate-900">Booth {b.number}</option>
-                            ))}
-                        </select>
                     </div>
-                </div>
+                )}
             </header>
 
             {/* 📋 KEY SNAPSHOT ROW 1 */}

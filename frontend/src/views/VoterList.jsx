@@ -72,7 +72,7 @@ const VoterList = ({
                         { label: 'Gender', key: 'gender', icon: '👤', options: [{ id: 'MALE', name: 'MALE' }, { id: 'FEMALE', name: 'FEMALE' }, { id: 'TRANSGENDER', name: 'TRANSGENDER' }] },
                         { label: 'Voter Sentiment', key: 'leaning', icon: '⚖️', options: [{ id: 'UDF', name: 'UDF' }, { id: 'LDF', name: 'LDF' }, { id: 'NDA', name: 'NDA' }, { id: 'NEUTRAL', name: 'NEUTRAL' }] },
                         { label: 'LOCATION / CHANCES', key: 'location', icon: '🌎', options: [{ id: 'LOCAL', name: 'LOCAL' }, { id: 'ABROAD', name: 'ABROAD' }, { id: 'STATE', name: 'OTHER STATE' }, { id: 'DISTRICT', name: 'OTHER DIST' }, { id: 'LIKELY', name: 'LIKELY' }, { id: 'UNLIKELY', name: 'UNLIKELY' }, { id: 'OUT_OF_STATION', name: 'OUT OF STATION' }] }
-                    ].map(f => (
+                    ].filter(f => userRole !== 'BOOTH_AGENT' || !['constituency', 'lb', 'booth'].includes(f.key)).map(f => (
                         <div key={f.key} className="flex flex-col gap-2">
                             <div className="flex items-center gap-2 mb-1">
                                 <span className="text-xs">{f.icon}</span>

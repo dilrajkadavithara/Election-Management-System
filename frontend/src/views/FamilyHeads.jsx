@@ -89,7 +89,7 @@ const FamilyHeads = ({
                         { label: 'Local Body', key: 'lb', icon: '🏘️', options: allLocations.find(c => String(c.id) === String(filters.constituency))?.local_bodies, disabled: !filters.constituency },
                         { label: 'Booth Unit', key: 'booth', icon: '📍', options: allLocations.find(c => String(c.id) === String(filters.constituency))?.local_bodies?.find(l => String(l.id) === String(filters.lb))?.booths, disabled: !filters.lb },
                         { label: 'Voter Sentiment', key: 'leaning', icon: '⚖️', options: [{ id: 'UDF', name: 'UDF' }, { id: 'LDF', name: 'LDF' }, { id: 'NDA', name: 'NDA' }, { id: 'NEUTRAL', name: 'NEUTRAL' }] }
-                    ].map(f => (
+                    ].filter(f => userRole !== 'BOOTH_AGENT' || !['constituency', 'lb', 'booth'].includes(f.key)).map(f => (
                         <div key={f.key} className="flex flex-col gap-2">
                             <div className="flex items-center gap-2 mb-1">
                                 <span className="text-xs">{f.icon}</span>

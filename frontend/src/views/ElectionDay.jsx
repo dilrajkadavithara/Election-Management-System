@@ -41,6 +41,8 @@ const ElectionDay = ({ userRole, userAssignments }) => {
                         setSelBooth(userAssignments.booths[0]);
                     }
                 }
+            } else if (userAssignments?.booths?.length > 0) {
+                setSelBooth(userAssignments.booths[0]);
             }
         });
     }, [userAssignments]);
@@ -181,18 +183,20 @@ const ElectionDay = ({ userRole, userAssignments }) => {
                             </select>
                         </>
                     )}
-                    <select value={selBooth} onChange={e => setSelBooth(e.target.value)}
-                        disabled={!selLB && userRole !== 'BOOTH_AGENT'}
-                        className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 disabled:opacity-30">
-                        <option value="" className="bg-slate-800">Select Booth</option>
-                        {userRole === 'BOOTH_AGENT'
-                            ? userAssignments?.booths?.map(bid => {
-                                const b = locations.flatMap(c => c.local_bodies).flatMap(lb => lb.booths).find(bo => bo.id === bid);
-                                return <option key={bid} value={bid} className="bg-slate-800">Booth {b?.number || bid}</option>;
-                            })
-                            : currentLB?.booths.map(b => <option key={b.id} value={b.id} className="bg-slate-800">Booth {b.number}</option>)
-                        }
-                    </select>
+                    {userRole !== 'BOOTH_AGENT' ? (
+                        <select value={selBooth} onChange={e => setSelBooth(e.target.value)}
+                            disabled={!selLB && userRole !== 'BOOTH_AGENT'}
+                            className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 disabled:opacity-30">
+                            <option value="" className="bg-slate-800">Select Booth</option>
+                            {userRole === 'BOOTH_AGENT'
+                                ? userAssignments?.booths?.map(bid => {
+                                    const b = locations.flatMap(c => c.local_bodies).flatMap(lb => lb.booths).find(bo => bo.id === bid);
+                                    return <option key={bid} value={bid} className="bg-slate-800">Booth {b?.number || bid}</option>;
+                                })
+                                : currentLB?.booths.map(b => <option key={b.id} value={b.id} className="bg-slate-800">Booth {b.number}</option>)
+                            }
+                        </select>
+                    ) : null}
                 </div>
             </div>
 
@@ -274,7 +278,9 @@ const ElectionDay = ({ userRole, userAssignments }) => {
             {!selBooth ? (
                 <div className="flex flex-col items-center justify-center py-32 space-y-4 opacity-20">
                     <span className="text-9xl">🏔️</span>
-                    <p className="font-black uppercase tracking-[0.4em] text-center text-sm">Select a Booth to begin</p>
+                    <p className="font-black uppercase tracking-[0.4em] text-center text-sm">
+                        {userRole === 'BOOTH_AGENT' ? 'Synchronizing Assigned Booth...' : 'Select a Booth to begin'}
+                    </p>
                 </div>
             ) : loading ? (
                 <div className="grid grid-cols-5 sm:grid-cols-8 lg:grid-cols-12 xl:grid-cols-14 gap-2">

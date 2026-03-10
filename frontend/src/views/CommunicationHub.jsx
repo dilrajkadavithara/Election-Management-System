@@ -12,7 +12,8 @@ const CommunicationHub = ({
     allLocations,
     listFilters,
     setListFilters,
-    loadVoters
+    loadVoters,
+    userRole
 }) => {
     const [heading, setHeading] = useState('');
     const [selectedImage, setSelectedImage] = useState(null);
@@ -70,12 +71,12 @@ const CommunicationHub = ({
                         {[
                             { label: 'Constituency', key: 'constituency', options: allLocations },
                             { label: 'Local Body', key: 'lb', options: allLocations.find(c => String(c.id) === String(listFilters.constituency))?.local_bodies, disabled: !listFilters.constituency },
-                            { label: 'Booth', key: 'booth', options: allLocations.find(c => String(c.id) === String(listFilters.constituency))?.local_bodies.find(lb => String(lb.id) === String(listFilters.lb))?.booths, disabled: !listFilters.lb },
+                            { label: 'Booth', key: 'booth', options: allLocations.find(c => String(c.id) === String(listFilters.constituency))?.local_bodies?.find(lb => String(lb.id) === String(listFilters.lb))?.booths, disabled: !listFilters.lb },
                             { label: 'Political Leaning', key: 'leaning', options: [{ id: 'LDF', name: 'LDF' }, { id: 'UDF', name: 'UDF' }, { id: 'NDA', name: 'NDA' }, { id: 'NEUTRAL', name: 'NEUTRAL' }] },
                             { label: 'Gender', key: 'gender', options: [{ id: 'MALE', name: 'MALE' }, { id: 'FEMALE', name: 'FEMALE' }, { id: 'TRANSGENDER', name: 'TRANSGENDER' }] },
                             { label: 'Age Group', key: 'ageRange', options: [{ id: '18-25', name: '18-25' }, { id: '26-40', name: '26-40' }, { id: '41-60', name: '41-60' }, { id: '60-', name: '60+' }] },
                             { label: 'Voter Location', key: 'location', options: [{ id: 'LOCAL', name: 'LOCAL' }, { id: 'ABROAD', name: 'ABROAD' }, { id: 'STATE', name: 'OTHER STATE' }, { id: 'DISTRICT', name: 'OTHER DIST' }] }
-                        ].map(f => (
+                        ].filter(f => userRole !== 'BOOTH_AGENT' || !['constituency', 'lb', 'booth'].includes(f.key)).map(f => (
                             <div key={f.key} className="space-y-2">
                                 <label className="text-xs font-black text-slate-300 uppercase tracking-widest ml-1">{f.label}</label>
                                 <select

@@ -10,7 +10,9 @@ const SlipDesign = ({
     setListFilters,
     voterList,
     loadVoters,
-    setSearchQuery
+    setSearchQuery,
+    userRole,
+    userAssignments
 }) => {
 
     useEffect(() => {
@@ -18,12 +20,21 @@ const SlipDesign = ({
         const blankFilters = {
             constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '', serialFrom: '', serialTo: '', location: ''
         };
+        
+        // Auto-select booth for Booth Agents
+        if (userRole === 'BOOTH_AGENT' && userAssignments?.booths?.length > 0) {
+            blankFilters.booth = String(userAssignments.booths[0]);
+        }
+        
         setListFilters(blankFilters);
         loadVoters(1, blankFilters);
-    }, []);
+    }, [userRole, userAssignments]);
 
     const handleReset = () => {
         const blankFilters = { constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '', serialFrom: '', serialTo: '', location: '' };
+        if (userRole === 'BOOTH_AGENT' && userAssignments?.booths?.length > 0) {
+            blankFilters.booth = String(userAssignments.booths[0]);
+        }
         setListFilters(blankFilters);
         loadVoters(1, blankFilters);
     };
@@ -49,27 +60,31 @@ const SlipDesign = ({
 
             <div className="lux-glass p-6 lg:p-8 rounded-3xl lg:rounded-[3rem] border-white/5 shadow-2xl space-y-6 no-print group">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6 items-end">
-                    <div className="space-y-2">
-                        <label className="text-xs font-black text-indigo-400 uppercase tracking-widest ml-1">Constituency</label>
-                        <select className="w-full bg-slate-900/80 text-white border border-white/10 rounded-xl px-4 py-3 text-sm font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 appearance-none transition-all" value={listFilters.constituency} onChange={(e) => setListFilters({ ...listFilters, constituency: e.target.value, lb: '', booth: '' })}>
-                            <option value="" className="bg-slate-900">All Constituencies</option>
-                            {allLocations.map(c => <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>)}
-                        </select>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-xs font-black text-indigo-400 uppercase tracking-widest ml-1">Local Body</label>
-                        <select disabled={!listFilters.constituency} className="w-full bg-slate-900/80 text-white border border-white/10 rounded-xl px-4 py-3 text-sm font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 appearance-none disabled:opacity-20 transition-all" value={listFilters.lb} onChange={(e) => setListFilters({ ...listFilters, lb: e.target.value, booth: '' })}>
-                            <option value="" className="bg-slate-900">All Local Bodies</option>
-                            {listFilters.constituency && allLocations.find(c => String(c.id) === String(listFilters.constituency))?.local_bodies.map(lb => <option key={lb.id} value={lb.id} className="bg-slate-900">{lb.name}</option>)}
-                        </select>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-xs font-black text-indigo-400 uppercase tracking-widest ml-1">Booth Number</label>
-                        <select disabled={!listFilters.lb} className="w-full bg-slate-900/80 text-white border border-white/10 rounded-xl px-4 py-3 text-sm font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 appearance-none disabled:opacity-20 transition-all" value={listFilters.booth} onChange={(e) => setListFilters({ ...listFilters, booth: e.target.value })}>
-                            <option value="" className="bg-slate-900">All Booths</option>
-                            {listFilters.lb && allLocations.find(c => String(c.id) === String(listFilters.constituency))?.local_bodies.find(l => String(l.id) === String(listFilters.lb))?.booths.sort((a, b) => a.number - b.number).map(b => <option key={b.id} value={b.id} className="bg-slate-900">Booth {b.number}</option>)}
-                        </select>
-                    </div>
+                    {userRole !== 'BOOTH_AGENT' && (
+                        <>
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-indigo-400 uppercase tracking-widest ml-1">Constituency</label>
+                                <select className="w-full bg-slate-900/80 text-white border border-white/10 rounded-xl px-4 py-3 text-sm font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 appearance-none transition-all" value={listFilters.constituency} onChange={(e) => setListFilters({ ...listFilters, constituency: e.target.value, lb: '', booth: '' })}>
+                                    <option value="" className="bg-slate-900">All Constituencies</option>
+                                    {allLocations.map(c => <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-indigo-400 uppercase tracking-widest ml-1">Local Body</label>
+                                <select disabled={!listFilters.constituency} className="w-full bg-slate-900/80 text-white border border-white/10 rounded-xl px-4 py-3 text-sm font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 appearance-none disabled:opacity-20 transition-all" value={listFilters.lb} onChange={(e) => setListFilters({ ...listFilters, lb: e.target.value, booth: '' })}>
+                                    <option value="" className="bg-slate-900">All Local Bodies</option>
+                                    {listFilters.constituency && allLocations.find(c => String(c.id) === String(listFilters.constituency))?.local_bodies.map(lb => <option key={lb.id} value={lb.id} className="bg-slate-900">{lb.name}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-indigo-400 uppercase tracking-widest ml-1">Booth Number</label>
+                                <select disabled={!listFilters.lb} className="w-full bg-slate-900/80 text-white border border-white/10 rounded-xl px-4 py-3 text-sm font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 appearance-none disabled:opacity-20 transition-all" value={listFilters.booth} onChange={(e) => setListFilters({ ...listFilters, booth: e.target.value })}>
+                                    <option value="" className="bg-slate-900">All Booths</option>
+                                    {listFilters.lb && allLocations.find(c => String(c.id) === String(listFilters.constituency))?.local_bodies.find(l => String(l.id) === String(listFilters.lb))?.booths.sort((a, b) => a.number - b.number).map(b => <option key={b.id} value={b.id} className="bg-slate-900">Booth {b.number}</option>)}
+                                </select>
+                            </div>
+                        </>
+                    )}
                     <div className="space-y-2">
                         <label className="text-xs font-black text-indigo-400 uppercase tracking-widest ml-1">Party</label>
                         <select className="w-full bg-slate-900/80 text-white border border-white/10 rounded-xl px-4 py-3 text-sm font-black uppercase tracking-widest outline-none focus:border-indigo-500/50 appearance-none transition-all" value={listFilters.leaning} onChange={(e) => setListFilters({ ...listFilters, leaning: e.target.value })}>

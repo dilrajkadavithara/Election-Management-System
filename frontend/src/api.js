@@ -44,6 +44,7 @@ const api = {
             localStorage.setItem('voter_token', response.data.access_token);
             localStorage.setItem('voter_role', response.data.role);
             localStorage.setItem('voter_user', response.data.username);
+            localStorage.setItem('voter_assignments', JSON.stringify(response.data.assignments || {}));
         }
         return response.data;
     },

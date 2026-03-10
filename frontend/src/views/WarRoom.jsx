@@ -4,7 +4,7 @@ import {
 } from 'recharts';
 import api from '../api';
 
-const WarRoom = ({ allLocations, dashFilters, listFilters, setListFilters, setView }) => {
+const WarRoom = ({ allLocations, dashFilters, listFilters, setListFilters, setView, userRole }) => {
     const [perspective, setPerspective] = useState('UDF');
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -90,18 +90,19 @@ const WarRoom = ({ allLocations, dashFilters, listFilters, setListFilters, setVi
                     </div>
 
                     <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-6">
-                        {/* Perspective Toggle */}
-                        <div className="bg-slate-900/80 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 flex gap-1">
-                            {['UDF', 'LDF', 'NDA'].map(p => (
-                                <button
-                                    key={p}
-                                    onClick={() => setPerspective(p)}
-                                    className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${perspective === p ? 'bg-indigo-600 text-white shadow-[0_0_20px_#6366f1]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-                                >
-                                    {p}
-                                </button>
-                            ))}
-                        </div>
+                        {userRole !== 'BOOTH_AGENT' && (
+                            <div className="bg-slate-900/80 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 flex gap-1">
+                                {['UDF', 'LDF', 'NDA'].map(p => (
+                                    <button
+                                        key={p}
+                                        onClick={() => setPerspective(p)}
+                                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${perspective === p ? 'bg-indigo-600 text-white shadow-[0_0_20px_#6366f1]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                                    >
+                                        {p}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
 
                         {/* Hard Sync Button */}
                         <button
@@ -115,61 +116,63 @@ const WarRoom = ({ allLocations, dashFilters, listFilters, setListFilters, setVi
                 </div>
 
                 {/* 🛡️ Tactical Control Bar */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white/5 p-6 rounded-[2.5rem] border border-white/5 shadow-2xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/5 rounded-full blur-[80px] -mr-32 -mt-32 transition-all group-hover:bg-rose-500/10" />
+                {userRole !== 'BOOTH_AGENT' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white/5 p-6 rounded-[2.5rem] border border-white/5 shadow-2xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/5 rounded-full blur-[80px] -mr-32 -mt-32 transition-all group-hover:bg-rose-500/10" />
 
-                    {/* Constituency Filter */}
-                    <div className="flex flex-col gap-2 relative z-10">
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs">🗺️</span>
-                            <label className="text-[9px] font-black uppercase text-rose-400 tracking-[0.2em]">Constituency</label>
+                        {/* Constituency Filter */}
+                        <div className="flex flex-col gap-2 relative z-10">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs">🗺️</span>
+                                <label className="text-[9px] font-black uppercase text-rose-400 tracking-[0.2em]">Constituency</label>
+                            </div>
+                            <select
+                                className="lux-glass text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-rose-500/50 cursor-pointer hover:bg-white/10 transition-all outline-none w-full appearance-none shadow-inner"
+                                value={filters.constituencyId}
+                                onChange={(e) => setFilters({ ...filters, constituencyId: e.target.value, lbId: '', boothId: '' })}
+                            >
+                                <option value="" className="bg-slate-900">All Local Bodies</option>
+                                {allLocations.map(c => <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>)}
+                            </select>
                         </div>
-                        <select
-                            className="lux-glass text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-rose-500/50 cursor-pointer hover:bg-white/10 transition-all outline-none w-full appearance-none shadow-inner"
-                            value={filters.constituencyId}
-                            onChange={(e) => setFilters({ ...filters, constituencyId: e.target.value, lbId: '', boothId: '' })}
-                        >
-                            <option value="" className="bg-slate-900">All Local Bodies</option>
-                            {allLocations.map(c => <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>)}
-                        </select>
-                    </div>
 
-                    {/* Local Body Filter */}
-                    <div className="flex flex-col gap-2 relative z-10">
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs">🏘️</span>
-                            <label className="text-[9px] font-black uppercase text-rose-400 tracking-[0.2em]">Local Body</label>
+                        {/* Local Body Filter */}
+                        <div className="flex flex-col gap-2 relative z-10">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs">🏘️</span>
+                                <label className="text-[9px] font-black uppercase text-rose-400 tracking-[0.2em]">Local Body</label>
+                            </div>
+                            <select
+                                disabled={!filters.constituencyId}
+                                className="lux-glass text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-rose-500/50 cursor-pointer hover:bg-white/10 transition-all outline-none w-full appearance-none disabled:opacity-20 shadow-inner"
+                                value={filters.lbId}
+                                onChange={(e) => setFilters({ ...filters, lbId: e.target.value, boothId: '' })}
+                            >
+                                <option value="" className="bg-slate-900">All Panchayats</option>
+                                {activeConst?.local_bodies.map(l => <option key={l.id} value={l.id} className="bg-slate-900">{l.name}</option>)}
+                            </select>
                         </div>
-                        <select
-                            disabled={!filters.constituencyId}
-                            className="lux-glass text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-rose-500/50 cursor-pointer hover:bg-white/10 transition-all outline-none w-full appearance-none disabled:opacity-20 shadow-inner"
-                            value={filters.lbId}
-                            onChange={(e) => setFilters({ ...filters, lbId: e.target.value, boothId: '' })}
-                        >
-                            <option value="" className="bg-slate-900">All Panchayats</option>
-                            {activeConst?.local_bodies.map(l => <option key={l.id} value={l.id} className="bg-slate-900">{l.name}</option>)}
-                        </select>
-                    </div>
 
-                    {/* Booth Filter */}
-                    <div className="flex flex-col gap-2 relative z-10">
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs">📍</span>
-                            <label className="text-[9px] font-black uppercase text-rose-400 tracking-[0.2em]">Specific Unit</label>
+                        {/* Booth Filter */}
+                        <div className="flex flex-col gap-2 relative z-10">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs">📍</span>
+                                <label className="text-[9px] font-black uppercase text-rose-400 tracking-[0.2em]">Specific Unit</label>
+                            </div>
+                            <select
+                                disabled={!filters.lbId}
+                                className="lux-glass text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-rose-500/50 cursor-pointer hover:bg-white/10 transition-all outline-none w-full appearance-none disabled:opacity-20 shadow-inner"
+                                value={filters.boothId}
+                                onChange={(e) => setFilters({ ...filters, boothId: e.target.value })}
+                            >
+                                <option value="" className="bg-slate-900">All Booths</option>
+                                {activeLB?.booths.map(b => (
+                                    <option key={b.id} value={b.id} className="bg-slate-900">Booth {b.number}</option>
+                                ))}
+                            </select>
                         </div>
-                        <select
-                            disabled={!filters.lbId}
-                            className="lux-glass text-white border border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-rose-500/50 cursor-pointer hover:bg-white/10 transition-all outline-none w-full appearance-none disabled:opacity-20 shadow-inner"
-                            value={filters.boothId}
-                            onChange={(e) => setFilters({ ...filters, boothId: e.target.value })}
-                        >
-                            <option value="" className="bg-slate-900">All Booths</option>
-                            {activeLB?.booths.map(b => (
-                                <option key={b.id} value={b.id} className="bg-slate-900">Booth {b.number}</option>
-                            ))}
-                        </select>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* 🛡️ TACTICAL SUMMARY STRIP */}
