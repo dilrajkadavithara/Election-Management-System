@@ -308,10 +308,25 @@ const ElectionDay = ({ userRole, userAssignments }) => {
                             ? (userAssignments?.booths?.length > 0 ? 'Synchronizing Assigned Booth...' : 'Error: No Booth Assigned to User')
                             : 'Select a Booth to begin'}
                     </p>
+                    {userRole === 'BOOTH_AGENT' && (
+                        <div className="bg-black/40 p-4 rounded-2xl border border-white/5 text-[10px] font-mono text-slate-500 whitespace-pre">
+                            DEBUG INFO:
+                            Role: {userRole}
+                            Assignments: {JSON.stringify(userAssignments || 'NONE')}
+                        </div>
+                    )}
                     {userRole === 'BOOTH_AGENT' && !userAssignments?.booths?.length && (
-                        <p className="text-xs text-red-400 font-bold uppercase tracking-widest mt-2">
-                            Please contact administrator to assign your booth.
-                        </p>
+                        <div className="flex flex-col items-center gap-4">
+                            <p className="text-xs text-red-400 font-bold uppercase tracking-widest mt-2">
+                                Please contact administrator to assign your booth.
+                            </p>
+                            <button 
+                                onClick={() => { localStorage.clear(); window.location.reload(); }}
+                                className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-full text-[10px] font-black uppercase tracking-widest transition-all"
+                            >
+                                🔄 Force Session Reset
+                            </button>
+                        </div>
                     )}
                 </div>
             ) : loading ? (
