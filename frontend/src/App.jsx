@@ -122,13 +122,23 @@ const App = () => {
     // Auto-reconnect to latest processed batch when opening AI Processor
     useEffect(() => {
         if (isLoggedIn && !currentUser) {
+            const role = localStorage.getItem('voter_role');
             const storedAssignments = localStorage.getItem('voter_assignments');
+            const assignments = storedAssignments ? JSON.parse(storedAssignments) : {};
+            
             setCurrentUser({
                 username: localStorage.getItem('voter_user'),
-                role: localStorage.getItem('voter_role'),
-                assignments: storedAssignments ? JSON.parse(storedAssignments) : {},
-                can_download: localStorage.getItem('voter_role') === 'SUPERUSER' // Logic fallback for admin
+                role: role,
+                assignments: assignments,
+                can_download: role === 'SUPERUSER' // Logic fallback for admin
             });
+
+            // Initialize filters for Booth Agents on refresh
+            if (role === 'BOOTH_AGENT' && assignments.booths?.length > 0) {
+                const bFilters = { constituency: '', lb: '', booth: String(assignments.booths[0]) };
+                setDashFilters(bFilters);
+                setListFilters(prev => ({ ...prev, ...bFilters }));
+            }
         }
         if (isLoggedIn && view === 'engine' && !ocrBatch) {
             (async () => {
