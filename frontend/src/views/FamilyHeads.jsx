@@ -38,7 +38,7 @@ const FamilyHeads = ({
                 lb: filters.lb,
                 booth: filters.booth,
                 gender: filters.gender,
-                learning: filters.leaning,
+                leaning: filters.leaning,
                 location: filters.location,
                 is_head_of_family: true,
                 page: currentPage,

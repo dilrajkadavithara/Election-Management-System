@@ -70,3 +70,25 @@ var/
 .vite/
 # Local Backups
 backups/
+
+# Image Files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.webp
+*.ico
+
+# Marketing & Presentation Assets
+brochure.html
+slides.html
+brochure_assets/
+pptx_images/
+Profile L'AUTRE VISAO Media- 0.pdf
+gen_slides.py
+rearrange.py
+redesign_page*.py
+add_page*.py
+fix_*.py
+scratch_*.py
