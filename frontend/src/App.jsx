@@ -239,10 +239,12 @@ const App = () => {
             setAllLocations(locs);
         } catch (e) { console.error("Locations Load Error:", e); }
 
-        try {
-            const users = await api.getUsers();
-            setAllUsers(users);
-        } catch (e) { console.error("Users Load Error:", e); }
+        if (['SUPERUSER', 'MANAGER'].includes(userRole)) {
+            try {
+                const users = await api.getUsers();
+                setAllUsers(users);
+            } catch (e) { console.error("Users Load Error:", e); }
+        }
 
         try {
             const parties = await api.getParties();
