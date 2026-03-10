@@ -22,7 +22,8 @@ const FamilyHeads = ({
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
     // Force constituency selection first (allows global lb/booth view)
-    const canFetch = !!filters.constituency;
+    // Booth Agents skip this check as they are pre-assigned to a booth
+    const canFetch = !!filters.constituency || userRole === 'BOOTH_AGENT';
 
     const loadData = async (currentPage = 1) => {
         if (!canFetch) {

@@ -42,7 +42,18 @@ const ElectionDay = ({ userRole, userAssignments }) => {
                     }
                 }
             } else if (userAssignments?.booths?.length > 0) {
-                setSelBooth(userAssignments.booths[0]);
+                const bid = userAssignments.booths[0];
+                setSelBooth(bid);
+                // Also resolve parent IDs from locations tree
+                for (const c of data) {
+                    for (const lb of c.local_bodies) {
+                        if (lb.booths.some(b => String(b.id) === String(bid))) {
+                            setSelConst(c.id);
+                            setSelLB(lb.id);
+                            break;
+                        }
+                    }
+                }
             }
         });
     }, [userAssignments]);
@@ -56,13 +67,16 @@ const ElectionDay = ({ userRole, userAssignments }) => {
                 api.getVoters({ booth: boothId, page: 1, page_size: 9999 }),
                 api.getVotingStats(null, null, boothId)
             ]);
+            const results = vData?.results || (Array.isArray(vData) ? vData : []);
             const counts = {};
-            vData.results.forEach(v => counts[v.serial_no] = (counts[v.serial_no] || 0) + 1);
-            const marked = vData.results.map(v => ({ ...v, is_duplicate: counts[v.serial_no] > 1 }));
+            results.forEach(v => counts[v.serial_no] = (counts[v.serial_no] || 0) + 1);
+            const marked = results.map(v => ({ ...v, is_duplicate: counts[v.serial_no] > 1 }));
             const sorted = marked.sort((a, b) => (parseInt(a.serial_no) || 0) - (parseInt(b.serial_no) || 0));
             setVoters(sorted);
             setStats(sData);
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error("fetchData failed:", e);
+        }
         finally { setLoading(false); }
     }, []);
 

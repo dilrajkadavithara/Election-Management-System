@@ -43,7 +43,7 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout, setShowChang
                 <nav className="space-y-4 flex-grow">
                     {[
                         { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-                        { id: 'warroom', label: 'War room', icon: '⚔️' },
+                        ...(userRole !== 'BOOTH_AGENT' ? [{ id: 'warroom', label: 'War room', icon: '⚔️' }] : []),
                         ...(userRole !== 'BOOTH_AGENT' ? [{ id: 'engine', label: 'Upload Voter List', icon: '⚡' }] : []),
                         { id: 'voters', label: 'Voter List', icon: '👥' },
                         { id: 'familyheads', label: 'Influencer Segment', icon: '👑' },
