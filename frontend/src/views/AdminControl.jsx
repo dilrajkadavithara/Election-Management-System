@@ -54,6 +54,7 @@ const AdminControl = ({
     dashboardStats
 }) => {
     const [activeTab, setActiveTab] = useState('users'); // users | locations | parties
+    const [boothFilterConst, setBoothFilterConst] = useState('');
 
     const selectedRole = newUserData.role;
     const roleScope = ROLE_INFO[selectedRole]?.scope || '';
@@ -229,24 +230,41 @@ const AdminControl = ({
                             )}
 
                             {selectedRole && (roleScope === 'booth') && (
-                                <div className="space-y-2">
-                                    <label className="text-xs font-semibold text-slate-300">Step 2 — Assign Booth(s)</label>
-                                    <div className="max-h-52 overflow-y-auto space-y-2 pr-1">
-                                        {allLocations.map(c => (
-                                            <div key={c.id}>
-                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1 mb-1 mt-2">{c.name}</p>
-                                                {c.local_bodies.flatMap(lb => lb.booths.map(b => ({ ...b, lbName: lb.name }))).map(b => (
-                                                    <button
-                                                        key={b.id}
-                                                        onClick={() => toggleBoothAssignment(b.id)}
-                                                        className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all border mb-1 flex justify-between items-center ${(newUserData.assignments?.booths || []).includes(b.id) ? 'bg-indigo-600/20 border-indigo-500/40 text-white' : 'bg-white/5 border-white/5 text-slate-400 hover:text-white'}`}
-                                                    >
-                                                        <span>Booth {b.number} {b.ps_name && `— ${b.ps_name}`} <span className="text-slate-500">({b.lbName})</span></span>
-                                                        {(newUserData.assignments?.booths || []).includes(b.id) && <span className="text-indigo-400 font-bold">✓</span>}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        ))}
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-xs font-semibold text-slate-300">Step 2 — Assign Booth(s)</label>
+                                        <select 
+                                            value={boothFilterConst}
+                                            onChange={(e) => setBoothFilterConst(e.target.value)}
+                                            className="bg-slate-800 text-[10px] text-slate-300 border border-white/10 rounded px-2 py-1 outline-none focus:border-indigo-500/50"
+                                        >
+                                            <option value="">All Constituencies</option>
+                                            {allLocations.map(c => (
+                                                <option key={c.id} value={c.id}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="max-h-64 overflow-y-auto space-y-2 pr-1 border border-white/5 rounded-xl p-2 bg-black/20">
+                                        {allLocations
+                                            .filter(c => !boothFilterConst || c.id === parseInt(boothFilterConst))
+                                            .map(c => (
+                                                <div key={c.id} className="mb-4 last:mb-0">
+                                                    <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest px-1 mb-2 sticky top-0 bg-slate-900/90 py-1">{c.name}</p>
+                                                    {c.local_bodies.flatMap(lb => lb.booths.map(b => ({ ...b, lbName: lb.name }))).map(b => (
+                                                        <button
+                                                            key={b.id}
+                                                            onClick={() => toggleBoothAssignment(b.id)}
+                                                            className={`w-full text-left px-3 py-2.5 rounded-lg text-xs transition-all border mb-1.5 flex justify-between items-center ${(newUserData.assignments?.booths || []).includes(b.id) ? 'bg-indigo-600/20 border-indigo-500/40 text-white shadow-[0_0_15px_rgba(79,70,229,0.1)]' : 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:border-white/10'}`}
+                                                        >
+                                                            <div className="flex flex-col">
+                                                                <span className="font-bold">Booth {b.number}</span>
+                                                                <span className="text-[10px] text-slate-500">{b.lbName}</span>
+                                                            </div>
+                                                            {(newUserData.assignments?.booths || []).includes(b.id) && <span className="text-indigo-400 font-bold bg-indigo-400/10 w-5 h-5 flex items-center justify-center rounded-full">✓</span>}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            ))}
                                     </div>
                                 </div>
                             )}
