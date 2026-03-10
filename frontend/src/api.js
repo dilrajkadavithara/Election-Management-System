@@ -295,6 +295,10 @@ const api = {
     changePassword: async (old_password, new_password) => {
         const response = await client.post('/api/user/change-password', { old_password, new_password });
         return response.data;
+    },
+    getMyProfile: async () => {
+        const response = await client.get('/api/user/me');
+        return response.data;
     }
 };
 

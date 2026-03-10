@@ -427,6 +427,11 @@ async def change_user_pass(data: dict, user_info=Depends(get_current_user)):
         raise HTTPException(400, msg)
     return {"success": True, "message": msg}
 
+@app.get("/api/user/me")
+async def get_my_profile(user_info=Depends(get_current_user)):
+    """Returns the latest profile data for the logged-in user to keep frontend in sync."""
+    return user_info
+
 @app.get("/api/stats")
 async def get_stats(constituency: str = None, lb: str = None, booth: str = None, user_info=Depends(get_current_user)):
     c_id = int(constituency) if constituency and str(constituency).isdigit() else None

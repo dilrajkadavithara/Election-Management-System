@@ -126,7 +126,8 @@ const App = () => {
             const storedAssignments = localStorage.getItem('voter_assignments');
             const assignments = storedAssignments ? JSON.parse(storedAssignments) : {};
             
-            setCurrentUser({
+            // Initialize currentUser from storage instantly for UX speed
+            const initialUser = {
                 username: localStorage.getItem('voter_user'),
                 role: role,
                 assignments: assignments,
@@ -136,7 +137,22 @@ const App = () => {
                 can_edit_voters: localStorage.getItem('voter_can_edit_voters') === 'true',
                 can_send_broadcasts: localStorage.getItem('voter_can_send_broadcasts') === 'true',
                 can_manage_system: localStorage.getItem('voter_can_manage_system') === 'true'
-            });
+            };
+            setCurrentUser(initialUser);
+
+            // Safety Sync: Re-fetch latest permissions/assignments from server
+            api.getMyProfile().then(latest => {
+                console.log("Profile Sync: Updated latest User data from server.");
+                setCurrentUser(latest);
+                // Update storage too
+                localStorage.setItem('voter_assignments', JSON.stringify(latest.assignments || {}));
+                localStorage.setItem('voter_can_download', latest.can_download);
+                localStorage.setItem('voter_can_upload', latest.can_upload);
+                localStorage.setItem('voter_can_verify', latest.can_verify);
+                localStorage.setItem('voter_can_edit_voters', latest.can_edit_voters);
+                localStorage.setItem('voter_can_send_broadcasts', latest.can_send_broadcasts);
+                localStorage.setItem('voter_can_manage_system', latest.can_manage_system);
+            }).catch(e => console.error("Profile Sync Failed:", e));
 
             // Initialize filters for Booth Agents on refresh
             if (role === 'BOOTH_AGENT' && assignments.booths?.length > 0) {
