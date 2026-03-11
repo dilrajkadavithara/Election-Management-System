@@ -53,6 +53,24 @@ const FamilyHeads = ({
     };
 
     useEffect(() => {
+        // Auto-select booth for Booth Agents
+        if (userRole === 'BOOTH_AGENT' && currentUser?.assignments?.booths?.length > 0) {
+            const bid = parseInt(currentUser.assignments.booths[0]);
+            let resolved = false;
+            for (const c of allLocations) {
+                for (const lb of c.local_bodies) {
+                    if (lb.booths.some(b => parseInt(b.id) === bid)) {
+                        setFilters(f => ({ ...f, constituency: c.id, lb: lb.id, booth: bid }));
+                        resolved = true;
+                        break;
+                    }
+                }
+                if (resolved) break;
+            }
+        }
+    }, [allLocations, currentUser, userRole]);
+
+    useEffect(() => {
         const timer = setTimeout(() => {
             loadData(1);
         }, 500);

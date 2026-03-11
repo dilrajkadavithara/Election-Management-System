@@ -22,6 +22,24 @@ const VoterList = ({
     const pageSize = 50;
     const totalPages = Math.max(1, Math.ceil(voterTotal / pageSize));
 
+    React.useEffect(() => {
+        // Auto-select booth for Booth Agents
+        if (userRole === 'BOOTH_AGENT' && currentUser?.assignments?.booths?.length > 0) {
+            const bid = parseInt(currentUser.assignments.booths[0]);
+            let resolved = false;
+            for (const c of allLocations) {
+                for (const lb of c.local_bodies) {
+                    if (lb.booths.some(b => parseInt(b.id) === bid)) {
+                        setListFilters(f => ({ ...f, constituency: c.id, lb: lb.id, booth: bid }));
+                        resolved = true;
+                        break;
+                    }
+                }
+                if (resolved) break;
+            }
+        }
+    }, [allLocations, currentUser, userRole]);
+
     return (
         <div className="min-h-screen lux-mesh-bg p-6 pt-24 lg:p-12 lg:pl-[420px] lg:pr-16 space-y-8 lg:space-y-12 lux-animate-in">
             <header className="flex flex-col lg:flex-row justify-between items-center lg:items-end border-b border-white/5 pb-8 lg:pb-10 gap-6 lg:gap-10 text-center lg:text-left">
