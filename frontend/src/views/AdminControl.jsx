@@ -68,7 +68,7 @@ const AdminControl = ({
     const cancelEdit = () => {
         setEditingUser(null);
         setNewUserData({
-            username: '', password: '', role: 'BOOTH_AGENT',
+            username: '', password: '', full_name: '', phone_number: '', role: 'BOOTH_AGENT',
             can_download: false, can_upload: false, can_verify: true,
             can_edit_voters: true, can_send_broadcasts: false, can_manage_system: false,
             assignments: { constituencies: [], local_bodies: [], booths: [] }
@@ -275,6 +275,20 @@ const AdminControl = ({
                                     <label className="text-xs font-semibold text-slate-300">Step 3 — Login Details</label>
                                     <input
                                         type="text"
+                                        placeholder="Full Name (e.g. Rahul K)"
+                                        value={newUserData.full_name || ''}
+                                        onChange={(e) => setNewUserData({ ...newUserData, full_name: e.target.value })}
+                                        className={inp}
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="Phone Number"
+                                        value={newUserData.phone_number || ''}
+                                        onChange={(e) => setNewUserData({ ...newUserData, phone_number: e.target.value })}
+                                        className={inp}
+                                    />
+                                    <input
+                                        type="text"
                                         placeholder="Username"
                                         disabled={!!editingUser}
                                         value={newUserData.username}
@@ -346,8 +360,10 @@ const AdminControl = ({
                                             </div>
                                             <div className="min-w-0">
                                                 <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="font-semibold text-sm text-white">{u.username}</span>
+                                                    <span className="font-semibold text-sm text-white">{u.full_name || u.username}</span>
+                                                    {u.full_name && <span className="text-[10px] text-slate-500">@{u.username}</span>}
                                                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/10 text-slate-300">{ROLE_INFO[u.role]?.label || u.role}</span>
+                                                    {u.phone_number && <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">{u.phone_number}</span>}
                                                 </div>
                                                 <div className="flex flex-wrap gap-1 mt-1">
                                                     {(u.constituencies || []).map(n => <span key={n} className="text-[9px] text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">{n}</span>)}

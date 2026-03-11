@@ -173,6 +173,10 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='BOOTH_AGENT')
     
+    # Profile Info
+    full_name = models.CharField(max_length=200, blank=True, null=True, help_text="Common name for display")
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    
     # Granular Permissions
     can_download = models.BooleanField(default=False, help_text="Can this user export CSV/Excel?")
     can_upload = models.BooleanField(default=False, help_text="Can access OCR Engine & upload lists")

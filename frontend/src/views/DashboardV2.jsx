@@ -637,7 +637,7 @@ const DashboardV2 = ({
 
                                                     {/* 👤 Booth Leadership Section */}
                                                     <div className="mt-3 pt-3 border-t border-slate-100">
-                                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-indigo-500 mb-1.5 italic">Field Leadership</p>
+                                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-indigo-500 mb-1.5 italic">Booth Agent</p>
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center gap-2">
                                                                 <span className="text-lg">👤</span>

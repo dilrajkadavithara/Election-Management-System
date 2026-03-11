@@ -191,14 +191,19 @@ def get_strategic_analytics(user_profile, constituency_id=None):
         ).select_related('user').prefetch_related('assigned_booths')
         
         for p in agent_profiles:
-            # Construct human-friendly name from first/last name or fallback to username
-            human_name = f"{p.user.first_name} {p.user.last_name}".strip()
-            disp_name = human_name if human_name else p.user.username
+            # Priority: 1. Full Name field, 2. First/Last name combo, 3. Username
+            disp_name = p.full_name
+            if not disp_name:
+                human_name = f"{p.user.first_name} {p.user.last_name}".strip()
+                disp_name = human_name if human_name else p.user.username
             
             for b in p.assigned_booths.all():
                 if b.id in booth_ids:
                     # If multiple agents, this will take the last one (simple behavior)
-                    agents_map[b.id] = disp_name
+                    agents_map[b.id] = {
+                        "name": disp_name,
+                        "phone": p.phone_number
+                    }
 
     booth_stats = []
     for row in booth_agg:
@@ -207,17 +212,19 @@ def get_strategic_analytics(user_profile, constituency_id=None):
             continue
             
         # Fallback logic: 
-        # 1. Manually entered Booth.head_name (e.g. from Polling List)
-        # 2. Automatically detected Assigned Agent Name
-        # 3. Fallback to 'Unassigned'
-        resolved_name = row['h_name'] or agents_map.get(row['booth__id']) or 'Unassigned'
+        # 1. Assigned Agent Details
+        # 2. Manually entered Booth.head_name
+        # 3. Fallback
+        agent_info = agents_map.get(row['booth__id'], {})
+        resolved_name = agent_info.get("name") or row['h_name'] or 'Unassigned'
+        resolved_phone = agent_info.get("phone") or row['h_phone'] or 'N/A'
         
         booth_stats.append({
             "id": row['booth__id'],
             "number": row['booth__number'],
             "name": row['booth__polling_station_name'] or f"Booth {row['booth__number']}",
             "head_name": resolved_name,
-            "head_phone": row['h_phone'] or 'N/A',
+            "head_phone": resolved_phone,
             "total": total,
             "udf": row['udf'],
             "ldf": row['ldf'],
@@ -636,6 +643,8 @@ def get_all_users():
             users.append({
                 "id": u.id,
                 "username": u.username,
+                "full_name": p.full_name or "",
+                "phone_number": p.phone_number or "",
                 "role": p.role,
                 "can_download": p.can_download,
                 "can_upload": p.can_upload,
@@ -673,6 +682,11 @@ def create_managed_user(username, password, role, data):
     profile.can_edit_voters = p_data.get('can_edit_voters', a_data.get('can_edit_voters', True))
     profile.can_send_broadcasts = p_data.get('can_send_broadcasts', a_data.get('can_send_broadcasts', False))
     profile.can_manage_system = p_data.get('can_manage_system', a_data.get('can_manage_system', False))
+    
+    # Save identity
+    if 'full_name' in data: profile.full_name = data['full_name']
+    if 'phone_number' in data: profile.phone_number = data['phone_number']
+    
     profile.save()
 
     # Save scope assignments
@@ -700,6 +714,8 @@ def update_user_profile(user_id, data):
         user.save()
     
     if 'role' in data: p.role = data['role']
+    if 'full_name' in data: p.full_name = data['full_name']
+    if 'phone_number' in data: p.phone_number = data['phone_number']
     
     # Update permissions
     for field in ['can_download', 'can_upload', 'can_verify', 'can_edit_voters', 'can_send_broadcasts', 'can_manage_system']:

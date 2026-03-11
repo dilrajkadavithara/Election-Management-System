@@ -49,7 +49,7 @@ const App = () => {
     const [allUsers, setAllUsers] = useState([]);
     const [newLocData, setNewLocData] = useState({ type: 'const', name: '', parentId: '', lbType: 'PANCHAYAT', boothNum: '', psName: '', psNo: '' });
     const [newUserData, setNewUserData] = useState({
-        username: '', password: '', role: 'BOOTH_AGENT',
+        username: '', password: '', full_name: '', phone_number: '', role: 'BOOTH_AGENT',
         can_download: false, can_upload: false, can_verify: true,
         can_edit_voters: true, can_send_broadcasts: false, can_manage_system: false,
         assignments: { constituencies: [], local_bodies: [], booths: [] }
@@ -488,7 +488,11 @@ const App = () => {
         setEditingUser(u);
         const assignments = u.assignments || {};
         setNewUserData({
-            username: u.username, role: u.role,
+            username: u.username,
+            full_name: u.full_name || '',
+            phone_number: u.phone_number || '',
+            password: '',
+            role: u.role,
             can_download: u.can_download, can_upload: u.can_upload,
             can_verify: u.can_verify, can_edit_voters: u.can_edit_voters,
             can_send_broadcasts: u.can_send_broadcasts, can_manage_system: u.can_manage_system,
