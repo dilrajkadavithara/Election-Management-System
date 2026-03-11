@@ -4,7 +4,7 @@ import {
 } from 'recharts';
 import api from '../api';
 
-const WarRoom = ({ allLocations, dashFilters, listFilters, setListFilters, setView, userRole }) => {
+const WarRoom = ({ allLocations, dashFilters, listFilters, setListFilters, setView, userRole, setShowChangePassword }) => {
     const [perspective, setPerspective] = useState('UDF');
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -103,6 +103,14 @@ const WarRoom = ({ allLocations, dashFilters, listFilters, setListFilters, setVi
                                 ))}
                             </div>
                         )}
+
+                        <button
+                            onClick={() => setShowChangePassword(true)}
+                            className="bg-white/5 hover:bg-white/10 text-white/50 hover:text-white px-6 py-3 rounded-2xl border border-white/10 transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
+                        >
+                            <span>🔐</span>
+                            <span>Change Password</span>
+                        </button>
 
                         {/* Hard Sync Button */}
                         <button

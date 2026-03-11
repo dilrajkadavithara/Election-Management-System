@@ -27,14 +27,14 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout, setShowChang
                     </div>
                     <div>
                         <h1 className="font-black uppercase text-[10px] tracking-[0.3em] lux-text-gradient opacity-90">Election Manager</h1>
-                        <div className="flex items-center gap-3 mt-1">
+                        <div className="flex flex-col gap-2 mt-2">
                             <p className="text-[12px] text-white font-black uppercase tracking-widest">{username}</p>
                             <button
                                 onClick={() => setShowChangePassword(true)}
-                                className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-[10px] hover:bg-white/20 transition-all border border-white/5"
-                                title="Change Password"
+                                className="w-fit flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 group"
                             >
-                                🔐
+                                <span className="text-[10px] group-hover:scale-110 transition-transform">🔐</span>
+                                <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Update Security</span>
                             </button>
                         </div>
                     </div>

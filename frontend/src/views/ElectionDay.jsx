@@ -8,7 +8,7 @@ const LEANING_CONFIG = {
     NEUTRAL: { color: 'bg-slate-500', border: 'border-slate-600', glow: '', text: 'text-slate-400', badge: 'bg-slate-700 text-slate-300' },
 };
 
-const ElectionDay = ({ userRole, userAssignments, username }) => {
+const ElectionDay = ({ userRole, userAssignments, username, setShowChangePassword }) => {
     const [locations, setLocations] = useState([]);
     const [selConst, setSelConst] = useState('');
     const [selLB, setSelLB] = useState('');
@@ -190,7 +190,15 @@ const ElectionDay = ({ userRole, userAssignments, username }) => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-14 lg:pt-0">
                 <div>
                     <h1 className="text-3xl sm:text-5xl font-black tracking-tighter uppercase lux-text-gradient">Election Day</h1>
-                    <p className="text-[10px] font-black tracking-[0.4em] text-indigo-400 uppercase opacity-70">Live Attendance Tracking</p>
+                    <div className="flex items-center gap-4 mt-1">
+                        <p className="text-[10px] font-black tracking-[0.4em] text-indigo-400 uppercase opacity-70">Live Attendance Tracking</p>
+                        <button
+                            onClick={() => setShowChangePassword(true)}
+                            className="bg-white/5 hover:bg-white/10 text-white/50 hover:text-white px-3 py-1 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all border border-white/5"
+                        >
+                            🔐 Change Access Key
+                        </button>
+                    </div>
                 </div>
 
                 <div className="flex flex-wrap gap-3 w-full sm:w-auto">

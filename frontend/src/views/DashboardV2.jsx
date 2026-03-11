@@ -101,7 +101,8 @@ const DashboardV2 = ({
     listFilters,
     setListFilters,
     setView,
-    userRole
+    userRole,
+    setShowChangePassword
 }) => {
     const [turnoutScenario, setTurnoutScenario] = React.useState(85);
     const [perspective, setPerspective] = React.useState('UDF');
@@ -155,7 +156,7 @@ const DashboardV2 = ({
                         </div>
                     </div>
 
-                    {userRole !== 'BOOTH_AGENT' && (
+                    {userRole !== 'BOOTH_AGENT' ? (
                         <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-6">
                             {/* Perspective Switcher */}
                             <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/5">
@@ -171,11 +172,29 @@ const DashboardV2 = ({
                             </div>
 
                             <button
+                                onClick={() => setShowChangePassword(true)}
+                                className="lux-glass text-white/70 hover:text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border border-white/5 hover:bg-white/10 transition-all flex items-center gap-3"
+                            >
+                                <span>🔐</span>
+                                <span>CHANGE PASSWORD</span>
+                            </button>
+
+                            <button
                                 onClick={() => setView('warroom')}
                                 className="bg-rose-600 hover:bg-rose-500 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(225,29,72,0.3)] transition-all flex items-center gap-3 group animate-pulse hover:animate-none"
                             >
                                 <span>⚔️</span>
                                 <span>ENTER WAR ROOM</span>
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-6">
+                            <button
+                                onClick={() => setShowChangePassword(true)}
+                                className="lux-glass text-white/70 hover:text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border border-white/5 hover:bg-white/10 transition-all flex items-center gap-3 shadow-2xl"
+                            >
+                                <span>🔐</span>
+                                <span>CHANGE PASSWORD</span>
                             </button>
                         </div>
                     )}
