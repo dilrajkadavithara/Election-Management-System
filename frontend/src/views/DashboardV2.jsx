@@ -97,6 +97,38 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
     );
 };
 
+const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        // Filter out the TOTAL if it somehow sneaks into payload, we handle it explicitly
+        const items = payload.filter(p => p.dataKey !== 'TOTAL');
+        
+        return (
+            <div className="bg-slate-900/95 backdrop-blur-xl border border-white/20 p-5 rounded-3xl shadow-2xl min-w-[220px] animate-in fade-in zoom-in-95 duration-200">
+                <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px] mb-4 border-b border-white/5 pb-2">{label} Segment</p>
+                <div className="space-y-2.5">
+                    {items.map((entry, index) => (
+                        <div key={index} className="flex justify-between items-center gap-6">
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.fill?.includes('url') ? (entry.dataKey === 'UDF' ? '#6366f1' : entry.dataKey === 'LDF' ? '#f43f5e' : entry.dataKey === 'NDA' ? '#f59e0b' : '#64748b') : entry.color }} />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-200">
+                                    {entry.name === 'PENDING' ? 'UNTAGGED' : entry.name}
+                                </span>
+                            </div>
+                            <span className="text-sm font-black text-white">{entry.value.toLocaleString()}</span>
+                        </div>
+                    ))}
+                    <div className="flex justify-between items-center gap-6 pt-3 mt-1 border-t border-white/10">
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400">Group Total</span>
+                        <span className="text-lg font-black text-indigo-400 drop-shadow-[0_0_10px_rgba(99,102,241,0.3)]">{data.TOTAL?.toLocaleString()}</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    return null;
+};
+
 const DashboardV2 = ({
     dashboardStats,
     strategicStats,
@@ -495,17 +527,7 @@ const DashboardV2 = ({
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} dy={10} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} />
-                                <Tooltip
-                                    cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                                    contentStyle={{ background: '#0f172a', borderRadius: '1.5rem', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.5)' }}
-                                    labelStyle={{ color: '#f8fafc', fontWeight: 'bold', marginBottom: '8px', display: 'block' }}
-                                    itemStyle={{ fontSize: '10px', textTransform: 'uppercase', color: '#fff', fontWeight: 'bold' }}
-                                    formatter={(value, name, props) => {
-                                        if (name === 'TOTAL') return [value.toLocaleString(), 'GROUP TOTAL'];
-                                        if (name === 'PENDING') return [value.toLocaleString(), 'UNTAGGED'];
-                                        return [value.toLocaleString(), name];
-                                    }}
-                                />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
                                 <Bar dataKey="UDF" stackId="a" fill="url(#barUDF)" radius={[0, 0, 0, 0]} barSize={50} style={{ cursor: 'pointer' }} onClick={(data) => { const n = data.payload?.name || data.name; handleCardClick({ ageFrom: n.includes('+') ? n.replace('+', '') : n.split('-')[0], ageTo: n.includes('+') ? '' : n.split('-')[1], leaning: 'UDF' }); }} />
                                 <Bar dataKey="LDF" stackId="a" fill="url(#barLDF)" radius={[0, 0, 0, 0]} style={{ cursor: 'pointer' }} onClick={(data) => { const n = data.payload?.name || data.name; handleCardClick({ ageFrom: n.includes('+') ? n.replace('+', '') : n.split('-')[0], ageTo: n.includes('+') ? '' : n.split('-')[1], leaning: 'LDF' }); }} />
                                 <Bar dataKey="NDA" stackId="a" fill="url(#barNDA)" radius={[0, 0, 0, 0]} style={{ cursor: 'pointer' }} onClick={(data) => { const n = data.payload?.name || data.name; handleCardClick({ ageFrom: n.includes('+') ? n.replace('+', '') : n.split('-')[0], ageTo: n.includes('+') ? '' : n.split('-')[1], leaning: 'NDA' }); }} />
@@ -535,17 +557,7 @@ const DashboardV2 = ({
                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} />
                                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} width={80} />
-                                <Tooltip
-                                    cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                                    contentStyle={{ background: '#0f172a', borderRadius: '1.5rem', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.5)' }}
-                                    labelStyle={{ color: '#f8fafc', fontWeight: 'bold', marginBottom: '8px', display: 'block' }}
-                                    itemStyle={{ fontSize: '10px', textTransform: 'uppercase', color: '#fff', fontWeight: 'bold' }}
-                                    formatter={(value, name) => {
-                                        if (name === 'TOTAL') return [value.toLocaleString(), 'GROUP TOTAL'];
-                                        if (name === 'PENDING') return [value.toLocaleString(), 'UNTAGGED'];
-                                        return [value.toLocaleString(), name];
-                                    }}
-                                />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
                                 <Bar dataKey="UDF" stackId="a" fill="url(#barUDF)" barSize={50} style={{ cursor: 'pointer' }} onClick={(data) => handleCardClick({ gender: (data.payload?.name || data.name).toUpperCase(), leaning: 'UDF' })} />
                                 <Bar dataKey="LDF" stackId="a" fill="url(#barLDF)" style={{ cursor: 'pointer' }} onClick={(data) => handleCardClick({ gender: (data.payload?.name || data.name).toUpperCase(), leaning: 'LDF' })} />
                                 <Bar dataKey="NDA" stackId="a" fill="url(#barNDA)" style={{ cursor: 'pointer' }} onClick={(data) => handleCardClick({ gender: (data.payload?.name || data.name).toUpperCase(), leaning: 'NDA' })} />
