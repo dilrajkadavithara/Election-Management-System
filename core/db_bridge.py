@@ -180,17 +180,44 @@ def get_strategic_analytics(user_profile, constituency_id=None):
         intel_tagged=Count(Case(When(voter_leaning__isnull=False, then=1), output_field=IntegerField())),
     ).order_by('booth__number')
 
+    # 🕵️ Smart Agent Name Resolution
+    booth_ids = [row['booth__id'] for row in booth_agg]
+    agents_map = {}
+    if booth_ids:
+        # Get users with BOOTH_AGENT role assigned to these booths
+        agent_profiles = UserProfile.objects.filter(
+            assigned_booths__id__in=booth_ids,
+            role='BOOTH_AGENT'
+        ).select_related('user').prefetch_related('assigned_booths')
+        
+        for p in agent_profiles:
+            # Construct human-friendly name from first/last name or fallback to username
+            human_name = f"{p.user.first_name} {p.user.last_name}".strip()
+            disp_name = human_name if human_name else p.user.username
+            
+            for b in p.assigned_booths.all():
+                if b.id in booth_ids:
+                    # If multiple agents, this will take the last one (simple behavior)
+                    agents_map[b.id] = disp_name
+
     booth_stats = []
     for row in booth_agg:
         total = row['total']
         if total == 0:
             continue
+            
+        # Fallback logic: 
+        # 1. Manually entered Booth.head_name (e.g. from Polling List)
+        # 2. Automatically detected Assigned Agent Name
+        # 3. Fallback to 'Unassigned'
+        resolved_name = row['h_name'] or agents_map.get(row['booth__id']) or 'Unassigned'
+        
         booth_stats.append({
             "id": row['booth__id'],
             "number": row['booth__number'],
             "name": row['booth__polling_station_name'] or f"Booth {row['booth__number']}",
-            "head_name": row['h_name'],
-            "head_phone": row['h_phone'],
+            "head_name": resolved_name,
+            "head_phone": row['h_phone'] or 'N/A',
             "total": total,
             "udf": row['udf'],
             "ldf": row['ldf'],
