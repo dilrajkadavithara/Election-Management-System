@@ -72,6 +72,11 @@ const ChartDefs = () => (
             <stop offset="50%" stopColor="#64748b" />
             <stop offset="100%" stopColor="#1e293b" />
         </linearGradient>
+        <linearGradient id="barPENDING" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#334155" />
+            <stop offset="50%" stopColor="#475569" />
+            <stop offset="100%" stopColor="#334155" />
+        </linearGradient>
     </defs>
 );
 
@@ -476,10 +481,16 @@ const DashboardV2 = ({
                     <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-indigo-400 mb-8 border-b border-white/5 pb-4">Age Profile (Political Split)</h3>
                     <div className="h-[350px] w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={Object.entries(dashboardStats.age_split || {}).map(([age, leanings]) => ({
-                                name: age,
-                                ...leanings
-                            }))}>
+                            <BarChart data={Object.entries(dashboardStats.age_split || {}).map(([age, leanings]) => {
+                                const totalInGroup = dashboardStats.age_dist?.[age] || 0;
+                                const taggedInGroup = Object.values(leanings).reduce((a, b) => a + b, 0);
+                                return {
+                                    name: age,
+                                    ...leanings,
+                                    PENDING: Math.max(0, totalInGroup - taggedInGroup),
+                                    TOTAL: totalInGroup
+                                };
+                            })}>
                                 <ChartDefs />
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} dy={10} />
@@ -489,12 +500,17 @@ const DashboardV2 = ({
                                     contentStyle={{ background: '#0f172a', borderRadius: '1.5rem', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.5)' }}
                                     labelStyle={{ color: '#f8fafc', fontWeight: 'bold', marginBottom: '8px', display: 'block' }}
                                     itemStyle={{ fontSize: '10px', textTransform: 'uppercase', color: '#fff', fontWeight: 'bold' }}
-                                    formatter={(value, name) => [value.toLocaleString(), name]}
+                                    formatter={(value, name, props) => {
+                                        if (name === 'TOTAL') return [value.toLocaleString(), 'GROUP TOTAL'];
+                                        if (name === 'PENDING') return [value.toLocaleString(), 'UNTAGGED'];
+                                        return [value.toLocaleString(), name];
+                                    }}
                                 />
                                 <Bar dataKey="UDF" stackId="a" fill="url(#barUDF)" radius={[0, 0, 0, 0]} barSize={50} style={{ cursor: 'pointer' }} onClick={(data) => { const n = data.payload?.name || data.name; handleCardClick({ ageFrom: n.includes('+') ? n.replace('+', '') : n.split('-')[0], ageTo: n.includes('+') ? '' : n.split('-')[1], leaning: 'UDF' }); }} />
                                 <Bar dataKey="LDF" stackId="a" fill="url(#barLDF)" radius={[0, 0, 0, 0]} style={{ cursor: 'pointer' }} onClick={(data) => { const n = data.payload?.name || data.name; handleCardClick({ ageFrom: n.includes('+') ? n.replace('+', '') : n.split('-')[0], ageTo: n.includes('+') ? '' : n.split('-')[1], leaning: 'LDF' }); }} />
                                 <Bar dataKey="NDA" stackId="a" fill="url(#barNDA)" radius={[0, 0, 0, 0]} style={{ cursor: 'pointer' }} onClick={(data) => { const n = data.payload?.name || data.name; handleCardClick({ ageFrom: n.includes('+') ? n.replace('+', '') : n.split('-')[0], ageTo: n.includes('+') ? '' : n.split('-')[1], leaning: 'NDA' }); }} />
-                                <Bar dataKey="NEUTRAL" stackId="a" fill="url(#barNEU)" radius={[12, 12, 0, 0]} style={{ cursor: 'pointer' }} onClick={(data) => { const n = data.payload?.name || data.name; handleCardClick({ ageFrom: n.includes('+') ? n.replace('+', '') : n.split('-')[0], ageTo: n.includes('+') ? '' : n.split('-')[1], leaning: 'NEUTRAL' }); }} />
+                                <Bar dataKey="NEUTRAL" stackId="a" fill="url(#barNEU)" radius={[0, 0, 0, 0]} style={{ cursor: 'pointer' }} onClick={(data) => { const n = data.payload?.name || data.name; handleCardClick({ ageFrom: n.includes('+') ? n.replace('+', '') : n.split('-')[0], ageTo: n.includes('+') ? '' : n.split('-')[1], leaning: 'NEUTRAL' }); }} />
+                                <Bar dataKey="PENDING" stackId="a" fill="url(#barPENDING)" radius={[12, 12, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -505,10 +521,16 @@ const DashboardV2 = ({
                     <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-indigo-400 mb-8 border-b border-white/5 pb-4">Gender Alignment (Political Split)</h3>
                     <div className="h-[350px] w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart layout="vertical" data={Object.entries(dashboardStats.gender_split || {}).map(([gender, leanings]) => ({
-                                name: gender,
-                                ...leanings
-                            }))}>
+                            <BarChart layout="vertical" data={Object.entries(dashboardStats.gender_split || {}).map(([gender, leanings]) => {
+                                const totalInGroup = dashboardStats.gender?.[gender.toLowerCase()] || 0;
+                                const taggedInGroup = Object.values(leanings).reduce((a, b) => a + b, 0);
+                                return {
+                                    name: gender,
+                                    ...leanings,
+                                    PENDING: Math.max(0, totalInGroup - taggedInGroup),
+                                    TOTAL: totalInGroup
+                                };
+                            })}>
                                 <ChartDefs />
                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} />
@@ -518,12 +540,17 @@ const DashboardV2 = ({
                                     contentStyle={{ background: '#0f172a', borderRadius: '1.5rem', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.5)' }}
                                     labelStyle={{ color: '#f8fafc', fontWeight: 'bold', marginBottom: '8px', display: 'block' }}
                                     itemStyle={{ fontSize: '10px', textTransform: 'uppercase', color: '#fff', fontWeight: 'bold' }}
-                                    formatter={(value, name) => [value.toLocaleString(), name]}
+                                    formatter={(value, name) => {
+                                        if (name === 'TOTAL') return [value.toLocaleString(), 'GROUP TOTAL'];
+                                        if (name === 'PENDING') return [value.toLocaleString(), 'UNTAGGED'];
+                                        return [value.toLocaleString(), name];
+                                    }}
                                 />
                                 <Bar dataKey="UDF" stackId="a" fill="url(#barUDF)" barSize={50} style={{ cursor: 'pointer' }} onClick={(data) => handleCardClick({ gender: (data.payload?.name || data.name).toUpperCase(), leaning: 'UDF' })} />
                                 <Bar dataKey="LDF" stackId="a" fill="url(#barLDF)" style={{ cursor: 'pointer' }} onClick={(data) => handleCardClick({ gender: (data.payload?.name || data.name).toUpperCase(), leaning: 'LDF' })} />
                                 <Bar dataKey="NDA" stackId="a" fill="url(#barNDA)" style={{ cursor: 'pointer' }} onClick={(data) => handleCardClick({ gender: (data.payload?.name || data.name).toUpperCase(), leaning: 'NDA' })} />
-                                <Bar dataKey="NEUTRAL" stackId="a" fill="url(#barNEU)" radius={[0, 12, 12, 0]} style={{ cursor: 'pointer' }} onClick={(data) => handleCardClick({ gender: (data.payload?.name || data.name).toUpperCase(), leaning: 'NEUTRAL' })} />
+                                <Bar dataKey="NEUTRAL" stackId="a" fill="url(#barNEU)" style={{ cursor: 'pointer' }} onClick={(data) => handleCardClick({ gender: (data.payload?.name || data.name).toUpperCase(), leaning: 'NEUTRAL' })} />
+                                <Bar dataKey="PENDING" stackId="a" fill="url(#barPENDING)" radius={[0, 12, 12, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
