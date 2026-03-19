@@ -22,7 +22,7 @@ services:
       - redis_data:/data
 
   app:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-user}/voter-vault:latest
+    image: ghcr.io/dilrajkadavithara/voter-vault:latest
     restart: always
     expose:
       - "8000"
@@ -40,7 +40,7 @@ services:
       - redis
 
   worker:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-user}/voter-vault:latest
+    image: ghcr.io/dilrajkadavithara/voter-vault:latest
     restart: always
     # High-Performance Concurrency for 8-core Tank server
     # -P solo is still safest for stability, but we scale workers to 20
