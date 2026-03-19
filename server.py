@@ -47,6 +47,26 @@ if __name__ == "__main__":
             except Exception as static_err:
                 print(f"   ⚠️ collectstatic warning: {static_err}")
 
+            # 3. SYNC SHARED VOLUMES (Critical for Nginx visibility)
+            # This ensures that even if Docker doesn't auto-populate the volumes (e.g. they weren't empty),
+            # we force-sync the latest build from the image to the shared volume mount.
+            import shutil
+            export_paths = {
+                "/app/frontend/dist": "/mnt/static_export/frontend",
+                "/app/voter_vault/static": "/mnt/static_export/backend"
+            }
+            
+            for src, dst in export_paths.items():
+                if os.path.exists(src) and os.path.exists(Path(dst).parent):
+                    print(f"   - Syncing {src} to {dst}...")
+                    try:
+                        # Clear target if it's dirty/old to ensure hash consistency
+                        if os.path.exists(dst): shutil.rmtree(dst)
+                        shutil.copytree(src, dst)
+                        print(f"     ✅ Sync complete.")
+                    except Exception as sync_err:
+                        print(f"     ⚠️ Sync warning: {sync_err}")
+
             print("✅ Deployment Gates Complete.")
 
         except Exception as e:
