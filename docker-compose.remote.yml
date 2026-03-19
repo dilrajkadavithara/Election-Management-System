@@ -10,14 +10,11 @@ services:
       - POSTGRES_DB=voter_db
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=secretpassword
-    ports:
-      - "5432:5432"
+    # Internal usage: admin/secretpassword (production local auth)
 
   redis:
     image: redis:7-alpine
     restart: always
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
 
@@ -30,11 +27,14 @@ services:
       - DATABASE_URL=postgres://admin:secretpassword@db:5432/voter_db
       - REDIS_URL=redis://redis:6379/0
       - DJANGO_SETTINGS_MODULE=voter_vault.settings
+      - RUN_MIGRATIONS=True
     env_file:
       - .env
     volumes:
       - ./data:/app/data
-      - .:/app
+      # Shared volumes to export static files from the build image to Nginx
+      - static_volume:/app/frontend/dist
+      - backend_static:/app/voter_vault/static
     depends_on:
       - db
       - redis
@@ -42,37 +42,34 @@ services:
   worker:
     image: ghcr.io/dilrajkadavithara/voter-vault:latest
     restart: always
-    # High-Performance Concurrency for 8-core Tank server
-    # -P solo is still safest for stability, but we scale workers to 20
-    # to handle the I/O-bound Gemini API wait times efficiently.
     command: celery -A backend.celery_app worker --loglevel=info -P solo --concurrency=20 --max-tasks-per-child=5
     environment:
       - DATABASE_URL=postgres://admin:secretpassword@db:5432/voter_db
       - REDIS_URL=redis://redis:6379/0
       - DJANGO_SETTINGS_MODULE=voter_vault.settings
       - PYTHONPATH=/app/voter_vault
-      - OMP_THREAD_LIMIT=1 # Limit Tesseract threads (Legacy safety)
+      - OMP_THREAD_LIMIT=1 
     env_file:
       - .env
     volumes:
       - ./data:/app/data
-      - .:/app
     depends_on:
       - db
       - redis
 
   nginx:
-    build:
-      context: .
-      dockerfile: nginx/Dockerfile
+    image: nginx:alpine
     restart: always
     ports:
       - "80:80"
       - "443:443"
     volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-      - ./frontend/dist:/usr/share/nginx/html:ro
+      # Shared volumes populated by the app container
+      - static_volume:/usr/share/nginx/html:ro
+      - backend_static:/app/voter_vault/static:ro
     depends_on:
       - app
 
@@ -87,3 +84,5 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  static_volume:
+  backend_static:
