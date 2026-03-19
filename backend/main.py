@@ -394,7 +394,7 @@ async def health():
         "redis": "connected" if state_manager.use_redis else "offline (fallback mode)",
         "poppler": "missing",
         "google_ai": "ready" if os.getenv("GOOGLE_API_KEY") else "missing",
-        "build_version": "2026-03-20T03:30:00"
+        "build_version": "2026-03-20T03:55:00"
     }
     
     # 1. Check User Base
