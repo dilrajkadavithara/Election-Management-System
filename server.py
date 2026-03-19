@@ -32,6 +32,30 @@ if __name__ == "__main__":
                 try:
                     execute_from_command_line([sys.argv[0], "migrate", "--noinput"])
                     migrated = True
+                    print("✅ Migrations successful.")
+                    
+                    # 4. AUTO-CREATE SUPERUSER (If missing)
+                    # We ensure at least one admin exists post-wipe
+                    from django.contrib.auth.models import User
+                    from core_db.models import UserProfile
+                    
+                    if not User.objects.filter(is_superuser=True).exists():
+                        print("🛠️  No superuser detected. Creating default 'admin'...")
+                        admin_user = User.objects.create_superuser(
+                            username="admin",
+                            email="admin@intelhub.live",
+                            password="Peeku@123"
+                        )
+                        # Sync with UserProfile for Role-Based Access
+                        UserProfile.objects.get_or_create(
+                            user=admin_user, 
+                            role='SUPERUSER',
+                            can_manage_system=True,
+                            can_upload=True,
+                            can_download=True
+                        )
+                        print("✅ Default superuser 'admin' created pulse-active.")
+                    
                     break
                 except Exception as migrate_err:
                     print(f"   ⚠️ Migration attempt {attempt}/3 failed: {migrate_err}")
