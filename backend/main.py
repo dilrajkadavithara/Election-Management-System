@@ -281,6 +281,10 @@ UPLOAD_DIR = DATA_DIR / "raw_pdf"
 PAGES_DIR = DATA_DIR / "page_images"
 CROPS_DIR = DATA_DIR / "voter_crops"
 for p in [UPLOAD_DIR, PAGES_DIR, CROPS_DIR]: p.mkdir(parents=True, exist_ok=True)
+LOG_DIR = DATA_DIR / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+global_log_file = LOG_DIR / "production.log"
+
 
 # Processors
 # state_manager is already initialized above
@@ -393,15 +397,30 @@ async def health():
         "build_version": "2026-03-20T03:30:00"
     }
     
-    # 1. Check Poppler (pdftoppm)
+    # 1. Check User Base
+    try:
+        from django.contrib.auth.models import User
+        health_data["db_users"] = User.objects.count()
+        health_data["has_admin"] = User.objects.filter(username="admin").exists()
+    except Exception as db_err:
+        health_data["db_error"] = str(db_err)
+    
+    # 2. Check Poppler (pdftoppm)
     p_path = os.getenv("POPPLER_PATH")
     if p_path and os.path.exists(os.path.join(p_path, "pdftoppm.exe")):
         health_data["poppler"] = "ready"
     elif not os.name == 'nt' or os.path.exists("/usr/bin/pdftoppm"): # Unix/Docker fallback
         health_data["poppler"] = "ready (system)"
 
+    # 3. Last Log Entry (Safe read)
+    try:
+        if global_log_file.exists():
+            with open(global_log_file, "r", errors="ignore") as lf:
+                health_data["last_log"] = lf.readlines()[-3:]
+    except: pass
+
     # If critical path is broken, mark as degraded
-    if health_data["poppler"] == "missing" or health_data["google_ai"] == "missing":
+    if health_data.get("db_error") or health_data["poppler"] == "missing" or health_data["google_ai"] == "missing":
         health_data["status"] = "degraded"
         
     return health_data
