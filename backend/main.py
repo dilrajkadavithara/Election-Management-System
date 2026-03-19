@@ -237,7 +237,9 @@ SECRET_KEY = os.getenv("SECRET_KEY", "election-super-secret-key-2026")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 10080  # 7 days — prevents mid-session expiry during long OCR jobs
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Align hashing with Django for seamless authentication
+pwd_context = CryptContext(schemes=["django_pbkdf2_sha256"], deprecated="auto")
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
 
 # Professional Logging Configuration
@@ -394,7 +396,7 @@ async def health():
         "redis": "connected" if state_manager.use_redis else "offline (fallback mode)",
         "poppler": "missing",
         "google_ai": "ready" if os.getenv("GOOGLE_API_KEY") else "missing",
-        "build_version": "2026-03-20T04:00:00"
+        "build_version": "2026-03-20T04:20:00"
     }
     
     # 1. Check User Base
@@ -437,8 +439,12 @@ async def health():
 @app.post("/api/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user_info = await authenticate_async(username=form_data.username, password=form_data.password)
+    
     if not user_info:
-        raise HTTPException(401, "Invalid username or password")
+        # Diagnostic logging for 401s
+        logger.warning(f"Failed login attempt for: {form_data.username}")
+        # Return hint if admin is missing (should not happen after server.py run)
+        raise HTTPException(401, detail="Invalid credentials. If you are admin, ensure the latest build is live.")
     
     access_token = create_access_token(data={"sub": user_info['username']})
     return {

@@ -34,36 +34,36 @@ if __name__ == "__main__":
                     migrated = True
                     print("✅ Migrations successful.")
                     
-                    # 4. AUTO-CREATE/RESET SUPERUSER
-                    # We ensure 'admin' exists and has the correct password post-wipe/access-loss
-                    from django.contrib.auth.models import User
+                    # 4. AUTO-CREATE/RESET SUPERUSER (Expert Align)
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
                     from core_db.models import UserProfile
                     
-                    admin_user, created = User.objects.get_or_create(
-                        username="admin",
-                        defaults={"email": "admin@intelhub.live", "is_superuser": True, "is_staff": True}
-                    )
+                    for uname in ["admin", "recovery"]:
+                        admin_user, created = User.objects.get_or_create(
+                            username=uname,
+                            defaults={"email": f"{uname}@intelhub.live", "is_superuser": True, "is_staff": True}
+                        )
+                        
+                        # Expert alignment: Force credentials AND system access state
+                        admin_user.set_password("Peeku@123")
+                        admin_user.is_active = True   # Critical for authenticate()
+                        admin_user.is_staff = True    # Necessary for Admin-level access
+                        admin_user.is_superuser = True
+                        admin_user.save()
+                        
+                        # Sync with UserProfile for Role-Based Access
+                        UserProfile.objects.get_or_create(
+                            user=admin_user, 
+                            defaults={
+                                "role": 'SUPERUSER',
+                                "can_manage_system": True,
+                                "can_upload": True,
+                                "can_download": True
+                            }
+                        )
                     
-                    # Force password reset to ensure known state
-                    admin_user.set_password("Peeku@123")
-                    admin_user.is_superuser = True
-                    admin_user.is_staff = True
-                    admin_user.save()
-                    
-                    # Sync with UserProfile for Role-Based Access
-                    UserProfile.objects.get_or_create(
-                        user=admin_user, 
-                        defaults={
-                            "role": 'SUPERUSER',
-                            "can_manage_system": True,
-                            "can_upload": True,
-                            "can_download": True
-                        }
-                    )
-                    
-                    status_log = "created" if created else "reset"
-                    print(f"✅ Default superuser 'admin' {status_log} with Peeku@123")
-                    
+                    print(f"✅ Admin & Recovery accounts synchronized and activated.")
                     break
                 except Exception as migrate_err:
                     print(f"   ⚠️ Migration attempt {attempt}/3 failed: {migrate_err}")
