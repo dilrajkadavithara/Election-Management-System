@@ -683,12 +683,29 @@ async def get_system_logs(user_info=Depends(get_current_user)):
         if not log_file.exists():
             return {"logs": ["System initializing..."]}
         
-        with open(log_file, "r", encoding="utf-8", errors="replace") as f:
-            lines = f.readlines()
-        
-        # Get last 30 lines and reverse them so newest is at the bottom of the array
-        last_lines = [line.strip() for line in lines[-30:] if line.strip()]
-        return {"logs": last_lines}
+        # Optimized tail: Seek to near-end and read only the tail chunk
+        # This handles massive log files (GBs) without memory spikes
+        try:
+            with open(log_file, "rb") as f:
+                # Seek to 1MB from the end or beginning if file is smaller
+                f.seek(0, 2)
+                file_size = f.tell()
+                chunk_size = min(file_size, 1024 * 128) # Read last 128KB
+                f.seek(file_size - chunk_size)
+                # Decode bytes to text, ignoring partial multi-byte chars at the start
+                tail_data = f.read().decode("utf-8", errors="ignore")
+                lines = tail_data.splitlines()
+                
+            # Get last 30 lines and reverse them so newest is at the bottom for the UI array
+            last_lines = [line.strip() for line in lines[-30:] if line.strip()]
+            return {"logs": last_lines}
+        except Exception as read_err:
+            logger.error(f"Failed to read tail chunk: {read_err}")
+            # Fallback for small files or unexpected errors
+            with open(log_file, "r", encoding="utf-8", errors="replace") as f:
+                lines = f.readlines()
+            last_lines = [line.strip() for line in lines[-30:] if line.strip()]
+            return {"logs": last_lines}
     except Exception as e:
         return {"logs": [f"Error reading logs: {e}"]}
 

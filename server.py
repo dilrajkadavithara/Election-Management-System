@@ -49,6 +49,7 @@ if __name__ == "__main__":
 
             # 3. SYNC SHARED VOLUMES (Forced Production Sync)
             # Surgical shell copy to bypass mountpoint restrictions and ensure global 755 permissions.
+            # Using 'cp -a' to preserve links/metadata and avoid the destructive 'rm -rf *' which can be slow.
             export_paths = {
                 "/app/frontend/dist": "/mnt/static_export/frontend",
                 "/app/voter_vault/static": "/mnt/static_export/backend"
@@ -56,12 +57,13 @@ if __name__ == "__main__":
             
             for src, dst in export_paths.items():
                 if os.path.exists(src) and os.path.exists(str(Path(dst).parent)):
-                    print(f"   - Tank-syncing {src} to {dst}...")
-                    os.system(f"mkdir -p {dst}")
-                    os.system(f"rm -rf {dst}/* || true")
-                    os.system(f"cp -R {src}/. {dst}/ || true")
+                    print(f"   - Syncing {src} to {dst}...")
+                    os.makedirs(dst, exist_ok=True)
+                    # We copy contents surgically. Using a temp-over-swap approach is safer 
+                    # but simple cp -a with update flag is often faster.
+                    os.system(f"cp -aT {src}/ {dst}/ || cp -RT {src}/ {dst}/ || true")
                     os.system(f"chmod -R 755 {dst} || true")
-                    print(f"     ✅ Forced sync complete.")
+                    print(f"     ✅ Sync complete.")
 
             print("✅ Deployment Gates Complete.")
 
