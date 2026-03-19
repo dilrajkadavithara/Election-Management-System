@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     libgomp1 \
     fonts-noto \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Backend Requirements

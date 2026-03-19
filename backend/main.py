@@ -25,6 +25,14 @@ from fastapi.middleware.wsgi import WSGIMiddleware
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
+import django
+try:
+    if os.environ.get('DJANGO_SETTINGS_MODULE'):
+        django.setup()
+        print("✅ Django Bridge Initialized in Main")
+except Exception as e:
+    print(f"⚠️ Django Setup Bypass/Error: {e}")
+
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
@@ -1117,10 +1125,14 @@ async def seed_demo_data(background_tasks: BackgroundTasks, user_info=Depends(ge
     background_tasks.add_task(run_seeder)
     return {"success": True, "message": "Neural Command initialization sequence started in background. Full sync will complete in ~3 minutes."}
 
-# Django Admin Integration
-from voter_vault.wsgi import application as django_app
-app.mount("/voter-vault-static", StaticFiles(directory=str(BASE_DIR / "voter_vault" / "static")), name="static_django")
-app.mount("/voter-intel-hq-2026", WSGIMiddleware(django_app))
+# Django Admin Integration (Bypass on setup failure)
+try:
+    from voter_vault.wsgi import application as django_app
+    app.mount("/voter-vault-static", StaticFiles(directory=str(BASE_DIR / "voter_vault" / "static")), name="static_django")
+    app.mount("/voter-intel-hq-2026", WSGIMiddleware(django_app))
+except Exception as e:
+    print(f"🛑 CRITICAL: Django WSGI Integration failed: {e}")
+    # We still allow FastAPI to run so /api/health works for diagnostics
 
 # Static Frontend Support
 dist_path = BASE_DIR / "frontend" / "dist"
