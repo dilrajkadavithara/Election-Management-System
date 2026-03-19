@@ -394,14 +394,23 @@ async def health():
         "redis": "connected" if state_manager.use_redis else "offline (fallback mode)",
         "poppler": "missing",
         "google_ai": "ready" if os.getenv("GOOGLE_API_KEY") else "missing",
-        "build_version": "2026-03-20T03:55:00"
+        "build_version": "2026-03-20T04:00:00"
     }
     
     # 1. Check User Base
     try:
         from django.contrib.auth.models import User
-        health_data["db_users"] = User.objects.count()
-        health_data["has_admin"] = User.objects.filter(username="admin").exists()
+        from asgiref.sync import sync_to_async
+        
+        def get_db_stats():
+            return {
+                "count": User.objects.count(),
+                "admin_exists": User.objects.filter(username="admin").exists()
+            }
+        
+        db_stats = await sync_to_async(get_db_stats)()
+        health_data["db_users"] = db_stats["count"]
+        health_data["has_admin"] = db_stats["admin_exists"]
     except Exception as db_err:
         health_data["db_error"] = str(db_err)
     
