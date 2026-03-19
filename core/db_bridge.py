@@ -13,7 +13,7 @@ PROJECT_PATH = os.path.join(BASE_DIR, 'voter_vault')
 if PROJECT_PATH not in sys.path:
     sys.path.insert(0, PROJECT_PATH)
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'voter_vault.settings')
+os.environ['DJANGO_SETTINGS_MODULE'] = 'voter_vault.settings'
 django.setup()
 
 from core_db.models import Voter, Booth, Constituency, LocalBody, PoliticalParty, UserProfile, MessageTemplate, CommunicationLog
@@ -144,6 +144,7 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
                     source_file=filename,
                     original_serial=t_(get_val(['original_serial', 'Raw Serial', 'Serial_OCR']) or "", 50),
                     status='VERIFIED',
+                    is_digitized=False,
                     created_by=created_by_user
                 )
                 voters_to_create.append(voter)
@@ -561,22 +562,15 @@ def get_all_locations(user_profile=None):
         for lb in c.local_bodies.all():
             lb_node = {"id": lb.id, "name": lb.name, "booths": []}
             for b in lb.booths.all():
-                # For agents, we still show the full tree structure but might mark assigned ones?
-                # Actually, the frontend expects the full tree to resolve parent IDs (Const/LB).
                 lb_node["booths"].append({
                     "id": b.id,
                     "number": b.number,
                     "ps_name": b.polling_station_name or "",
                     "ps_no": b.polling_station_no or ""
                 })
-            
-            # If it's an agent, only include LB if it has at least one assigned booth
-            # OR just return everything and let frontend handle it (simpler for now)
-            if lb_node["booths"]:
-                c_node["local_bodies"].append(lb_node)
+            c_node["local_bodies"].append(lb_node)
         
-        if c_node["local_bodies"]:
-            data.append(c_node)
+        data.append(c_node)
             
     return data
 

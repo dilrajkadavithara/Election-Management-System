@@ -1,19 +1,21 @@
-name: Cloud Deployment Pipeline
+name: Tank Deployment Pipeline (GHCR Optimized)
 
 on:
   push:
     branches: [ master ]
 
-# Prevent simultaneous deploys. New pushes QUEUE (don't cancel) so the server
-# is never left in a half-restarted state from a mid-SSH kill.
 concurrency:
   group: production-deploy
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -29,72 +31,55 @@ jobs:
           npm install
           npm run build
 
-      - name: Update Code on Server
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/voter-vault:latest
+            ghcr.io/${{ github.repository_owner }}/voter-vault:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to DigitalOcean Tank via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
+          command_timeout: 40m
           script: |
             mkdir -p /opt/voterslist
             cd /opt/voterslist
-            if [ ! -d ".git" ]; then
-              git clone https://github.com/${{ github.repository }}.git .
-            else
-              git fetch origin master
-              git reset --hard origin/master
+
+            # 1. Update orchestration file (only Pulls, no local builds)
+            if [ ! -f "docker-compose.remote.yml" ]; then
+                # Fetch only the compose file if it doesn't exist
+                curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                     -L https://raw.githubusercontent.com/${{ github.repository }}/master/docker-compose.remote.yml \
+                     -o docker-compose.remote.yml
             fi
 
-      - name: Transfer Build to Server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          source: "frontend/dist/**,Paravur_Polling_Stations_list (1).xlsx"
-          target: "/opt/voterslist/"
-          strip_components: 0
+            # 2. Re-pull the logic files (excluding sensitive .env)
+            git fetch origin master && git reset --hard origin/master
 
-      - name: Start Application
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          command_timeout: 20m
-          script: |
-            cd /opt/voterslist
+            # 3. Pull the pre-built optimized image
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose -f docker-compose.remote.yml pull
 
-            # STEP 1: Build new images while old containers keep serving traffic.
-            # This is the slow part (pip install, etc.) — zero downtime during build.
-            docker compose build
-
-            # STEP 2: Swap containers with pre-built images — fast, seconds of downtime.
-            docker compose up -d --no-build --remove-orphans
-
-            # Prune stopped containers only — preserve image cache for next deploy
-            docker container prune -f
-            echo "✅ Containers swapped. Health check running from GitHub Actions."
-
-      - name: Verify Deployment Health
-        # Polls the live URL and checks for 'healthy' in the response body —
-        # more robust than HTTP status alone (a 200 from a bad proxy won't fool this).
-        continue-on-error: true
-        run: |
-          echo "Waiting 60s for Django migrations and uvicorn to finish starting..."
-          sleep 60
-          echo "Polling https://intelhub.live/api/health (up to 5 minutes)..."
-          for i in $(seq 1 20); do
-            BODY=$(curl -s https://intelhub.live/api/health 2>/dev/null || echo "")
-            echo "  Attempt $i/20: $BODY"
-            if echo "$BODY" | grep -q '"healthy"'; then
-              echo "🚀 DEPLOYMENT SUCCESSFUL — app is live and genuinely healthy."
-              exit 0
-            fi
-            sleep 15
-          done
-          echo "⚠️  Health check timed out — site may still be starting up."
-          exit 1
+            # 4. Swap and Clean
+            docker compose -f docker-compose.remote.yml up -d --remove-orphans
+            docker image prune -f
+            
+            echo "🚀 TANK DEPLOYMENT COMPLETE. App is now running at ultra-speed."

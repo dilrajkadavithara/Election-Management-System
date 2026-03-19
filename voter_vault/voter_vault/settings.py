@@ -32,8 +32,11 @@ DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "intelhub.live www.intelhub.live localhost 127.0.0.1 [::1]").split()
 
-# Ensure Django knows it is behind a proxy sub-folder
-FORCE_SCRIPT_NAME = "/voter-intel-hq-2026"
+# Ensure Django knows it is behind a proxy sub-folder only in production
+if not DEBUG:
+    FORCE_SCRIPT_NAME = "/voter-intel-hq-2026"
+else:
+    FORCE_SCRIPT_NAME = None # Clean local pathing
 
 # Required for Django 4.0+ for admin login to work behind https
 CSRF_TRUSTED_ORIGINS = ["https://intelhub.live", "https://www.intelhub.live"]
@@ -142,5 +145,5 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = "/voter-intel-hq-2026/static/"
+STATIC_URL = "/voter-vault-static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "static")

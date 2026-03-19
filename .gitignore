@@ -1,9 +1,15 @@
+# ---------------------------------------------------
+
 # Python
+
+# ---------------------------------------------------
+
 .venv/
+venv/
 bin/
 include/
 lib/
-__pycache__/
+**pycache**/
 *.pyc
 *.pyo
 *.pyd
@@ -11,44 +17,104 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Node.js
+# ---------------------------------------------------
+
+# Node / Frontend
+
+# ---------------------------------------------------
+
 node_modules/
 frontend/node_modules/
 dist/
 frontend/dist/
 .npm
-package-lock.json
+
+# Keep lock files for reproducible builds
+
+!package.json
+!package-lock.json
+
+# ---------------------------------------------------
 
 # Environment & Secrets
+
+# ---------------------------------------------------
+
 .env
+.env.*
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-*.pdf
+
+# Private credentials / access docs
+
 scripts/test_creds/
 PRIVATE_SERVER_ACCESS.md
+intelhub_deploy_key
+intelhub_deploy_key.pub
 
-# Project Specific Data (Should stay local or in S3)
-test_*.py
-!tests/          # Allow the tests/ directory to be tracked despite test_*.py rule
-debug_*.py
-diagnostics.py
+# ---------------------------------------------------
+
+# Local Data & OCR Processing Files
+
+# ---------------------------------------------------
+
 data/*
 !data/party_symbols/
+
 PAGES/
-output/
 voter_crops/
+output/
 temp_blocks/
+
+# Uploaded or generated files
+
+*.pdf
 *.csv
 *.json
 *.log
 
-# Contradiction Fixes
-!package.json
-!package-lock.json
+# ---------------------------------------------------
 
-# IDE & OS
+# Database & Backup Files
+
+# ---------------------------------------------------
+
+*.sql
+*.tar.gz
+*.gz
+backups/
+
+# ---------------------------------------------------
+
+# Temporary / Runtime Files
+
+# ---------------------------------------------------
+
+*.pid
+*.sock
+*.tmp
+tmp/
+var/
+
+# ---------------------------------------------------
+
+# Test & Debug Files
+
+# ---------------------------------------------------
+
+test_*.py
+!tests/
+debug_*.py
+diagnostics.py
+
+# ---------------------------------------------------
+
+# IDE & OS Files
+
+# ---------------------------------------------------
+
 .vscode/
 .idea/
 .DS_Store
@@ -58,20 +124,37 @@ desktop.ini
 .agent/
 .cortex/
 
-# Deployment
+# ---------------------------------------------------
+
+# Deployment Files
+
+# ---------------------------------------------------
+
 docker-compose.override.yml
-intelhub_deploy_key
-intelhub_deploy_key.pub
 certbot/
 
-# Django Static
-voter_vault/static/
-var/
-.vite/
-# Local Backups
-backups/
+# ---------------------------------------------------
 
-# Image Files
+# Django Static Build Output
+
+# ---------------------------------------------------
+
+voter_vault/static/
+
+# ---------------------------------------------------
+
+# Vite / Frontend Cache
+
+# ---------------------------------------------------
+
+.vite/
+
+# ---------------------------------------------------
+
+# Image Files (local assets not needed in repo)
+
+# ---------------------------------------------------
+
 *.png
 *.jpg
 *.jpeg
@@ -80,12 +163,24 @@ backups/
 *.webp
 *.ico
 
-# Marketing & Presentation Assets
+# ---------------------------------------------------
+
+# Marketing / Presentation Files
+
+# ---------------------------------------------------
+
 brochure.html
 slides.html
 brochure_assets/
 pptx_images/
 Profile L'AUTRE VISAO Media- 0.pdf
+
+# ---------------------------------------------------
+
+# Experimental Scripts
+
+# ---------------------------------------------------
+
 gen_slides.py
 rearrange.py
 redesign_page*.py

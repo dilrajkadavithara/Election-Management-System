@@ -81,6 +81,7 @@ class Voter(models.Model):
     # Custom Fields (Actionable Campaign Intelligence)
     phone_no = models.CharField(max_length=20, blank=True, null=True, db_index=True)
     is_head_of_family = models.BooleanField(default=False, db_index=True)
+    is_digitized = models.BooleanField(default=False, db_index=True)
     
     LOCATION_CHOICES = [
         ('LOCAL', 'Local'),

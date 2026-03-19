@@ -311,6 +311,10 @@ async def admin_add_lb(data: dict, user_info=Depends(get_current_user)):
     if user_info['role'] not in allowed: raise HTTPException(403, "Access Denied: High-level privilege required")
     return await add_lb_async(data['const_id'], data['name'], data['type'])
 
+@app.post("/api/admin/add-booth")
+async def admin_add_booth(data: dict, user_info=Depends(get_current_user)):
+    allowed = ['SUPERUSER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'MANAGER', 'OPERATOR', 'ZONE_COMMANDER']
+    if user_info['role'] not in allowed: raise HTTPException(403, "Access Denied: High-level privilege required")
     return await add_booth_async(data['const_id'], data['lb_id'], data['number'], data.get('ps_name', ''), data.get('ps_no', ''))
 
 @app.put("/api/admin/update-const/{uid}")
@@ -433,11 +437,16 @@ async def get_my_profile(user_info=Depends(get_current_user)):
     return user_info
 
 @app.get("/api/stats")
+@app.get("/api/stats/summary")
 async def get_stats(constituency: str = None, lb: str = None, booth: str = None, user_info=Depends(get_current_user)):
     c_id = int(constituency) if constituency and str(constituency).isdigit() else None
     l_id = int(lb) if lb and str(lb).isdigit() else None
     b_id = int(booth) if booth and str(booth).isdigit() else None
-    return await get_stats_async(user_info['username'], c_id, l_id, b_id)
+    data = await get_stats_async(user_info['username'], c_id, l_id, b_id)
+    # Surgical fix: Align backend keys with React Card 1 expectation
+    if isinstance(data, dict):
+        data["total_voters"] = data.get("total", 0)
+    return data
 
 @app.get("/api/analytics/strategic")
 async def get_strategic_analytics_api(constituency_id: str = None, user_info=Depends(get_current_user)):
@@ -1093,6 +1102,7 @@ async def seed_demo_data(background_tasks: BackgroundTasks, user_info=Depends(ge
 
 # Django Admin Integration
 from voter_vault.wsgi import application as django_app
+app.mount("/voter-vault-static", StaticFiles(directory=str(BASE_DIR / "voter_vault" / "static")), name="static_django")
 app.mount("/voter-intel-hq-2026", WSGIMiddleware(django_app))
 
 # Static Frontend Support
@@ -1101,5 +1111,7 @@ if dist_path.exists():
     app.mount("/assets", StaticFiles(directory=str(dist_path / "assets")), name="assets")
     @app.get("/{full_path:path}")
     async def serve_react(full_path: str):
-        if full_path.startswith("api"): raise HTTPException(404)
+        # Prevent React from swallowing API, Admin, or Static requests
+        if any(full_path.startswith(p) for p in ["api", "voter-intel-hq-2026", "voter-vault-static"]):
+            raise HTTPException(404)
         return FileResponse(dist_path / "index.html")

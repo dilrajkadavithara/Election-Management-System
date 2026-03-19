@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = ROOT_DIR / "voter_vault"
 sys.path.insert(0, str(ROOT_DIR))
-if PROJECT_DIR not in sys.path:
+if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
 
 # 2. Entry Point
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # In production, we need to ensure the DB schema is up to date and static files are collected
     if os.getenv("RUN_MIGRATIONS", "True").lower() == "true":
         print("🚀 Running Deployment Gates (Migrations & Static)...")
-        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'voter_vault.settings')
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'voter_vault.settings'
         try:
             import django
             django.setup()

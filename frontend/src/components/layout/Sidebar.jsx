@@ -30,7 +30,10 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout, setShowChang
                         <div className="flex flex-col gap-2 mt-2">
                             <p className="text-[12px] text-white font-black uppercase tracking-widest">{username}</p>
                             <button
-                                onClick={() => setShowChangePassword(true)}
+                                onClick={() => {
+                                    setShowChangePassword(true);
+                                    setIsOpen(false);
+                                }}
                                 className="w-fit flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 group"
                             >
                                 <span className="text-[10px] group-hover:scale-110 transition-transform">🔐</span>
@@ -54,7 +57,10 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout, setShowChang
                     ].map(item => (
                         <button
                             key={item.id}
-                            onClick={() => setView(item.id)}
+                            onClick={() => {
+                                setView(item.id);
+                                setIsOpen(false);
+                            }}
                             className={`w-full flex items-center gap-5 px-8 py-5 rounded-[1.5rem] transition-all duration-700 group relative overflow-hidden ${view === item.id ? 'bg-indigo-500/10 text-white lux-neon-border' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
                         >
                             <span className={`text-2xl transition-all duration-700 ${view === item.id ? 'scale-125 rotate-6' : 'grayscale group-hover:grayscale-0 group-hover:scale-110 opacity-40 group-hover:opacity-100'}`}>{item.icon}</span>
@@ -70,7 +76,10 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout, setShowChang
                 <div className="mt-8 px-8 opacity-20 hover:opacity-100 transition-opacity">
                     <p className="text-[7px] font-black text-white tracking-[0.4em] uppercase">Build: v5.2-Strategic</p>
                 </div>
-                <button onClick={handleLogout} className="mt-4 flex-shrink-0 flex items-center gap-5 px-8 py-5 rounded-[1.5rem] text-rose-500 font-black text-[10px] tracking-[0.2em] hover:bg-rose-500/10 transition-all group">
+                <button onClick={() => {
+                    handleLogout();
+                    setIsOpen(false);
+                }} className="mt-4 flex-shrink-0 flex items-center gap-5 px-8 py-5 rounded-[1.5rem] text-rose-500 font-black text-[10px] tracking-[0.2em] hover:bg-rose-500/10 transition-all group">
                     <span className="text-2xl group-hover:rotate-12 transition-transform">🚪</span>
                     <span>LOGOUT</span>
                 </button>
