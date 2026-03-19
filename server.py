@@ -34,27 +34,35 @@ if __name__ == "__main__":
                     migrated = True
                     print("✅ Migrations successful.")
                     
-                    # 4. AUTO-CREATE SUPERUSER (If missing)
-                    # We ensure at least one admin exists post-wipe
+                    # 4. AUTO-CREATE/RESET SUPERUSER
+                    # We ensure 'admin' exists and has the correct password post-wipe/access-loss
                     from django.contrib.auth.models import User
                     from core_db.models import UserProfile
                     
-                    if not User.objects.filter(is_superuser=True).exists():
-                        print("🛠️  No superuser detected. Creating default 'admin'...")
-                        admin_user = User.objects.create_superuser(
-                            username="admin",
-                            email="admin@intelhub.live",
-                            password="Peeku@123"
-                        )
-                        # Sync with UserProfile for Role-Based Access
-                        UserProfile.objects.get_or_create(
-                            user=admin_user, 
-                            role='SUPERUSER',
-                            can_manage_system=True,
-                            can_upload=True,
-                            can_download=True
-                        )
-                        print("✅ Default superuser 'admin' created pulse-active.")
+                    admin_user, created = User.objects.get_or_create(
+                        username="admin",
+                        defaults={"email": "admin@intelhub.live", "is_superuser": True, "is_staff": True}
+                    )
+                    
+                    # Force password reset to ensure known state
+                    admin_user.set_password("Peeku@123")
+                    admin_user.is_superuser = True
+                    admin_user.is_staff = True
+                    admin_user.save()
+                    
+                    # Sync with UserProfile for Role-Based Access
+                    UserProfile.objects.get_or_create(
+                        user=admin_user, 
+                        defaults={
+                            "role": 'SUPERUSER',
+                            "can_manage_system": True,
+                            "can_upload": True,
+                            "can_download": True
+                        }
+                    )
+                    
+                    status_log = "created" if created else "reset"
+                    print(f"✅ Default superuser 'admin' {status_log} with Peeku@123")
                     
                     break
                 except Exception as migrate_err:
