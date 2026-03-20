@@ -26,7 +26,7 @@ class BatchProcessor:
         pdf_proc = PDFProcessor()
         
         # Concurrency Management: 3 is the sweet spot for maximum stability without triggering token burst limits on AI endpoints
-        max_workers = 5  # 300 DPI requires more RAM; dropping to 5 workers for 4GB stability
+        max_workers = 15  # Increased from 5 for 16GB high-speed 300 DPI extraction
         
         # Determine pages to process
         if page_range:
@@ -104,7 +104,7 @@ class BatchProcessor:
         # Increased page-level concurrency to utilize concurrent network waiting
         # Since Gemini API processing is mostly network-bound IO, we can afford
         # to upload and wait for 4-5 pages at the absolute same time.
-        actual_page_workers = min(max_workers, 5)
+        actual_page_workers = min(max_workers, 15)
         with concurrent.futures.ThreadPoolExecutor(max_workers=actual_page_workers) as executor:
             future_to_page = {executor.submit(process_page, p): p for p in pages}
             ordered_results = {}
