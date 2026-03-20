@@ -142,9 +142,9 @@ class OCREngine:
         )
 
         last_error = "Unknown"
-        # Apply Global Throttling
-        with self.get_throttle():
-            for attempt in range(3):
+        for attempt in range(5): # Increased to 5 attempts for production reliability
+            # Apply Global Throttling inside the loop to allow better concurrency
+            with self.get_throttle():
                 try:
                     response = self.client.models.generate_content(
                         model=self.gemini_model,
@@ -152,31 +152,40 @@ class OCREngine:
                         config=genai_types.GenerateContentConfig(
                             thinking_config=genai_types.ThinkingConfig(include_thoughts=False),
                             temperature=0.0,
-                            max_output_tokens=32768, # Increased for larger batches
+                            max_output_tokens=32768, 
                             response_mime_type="application/json",
                             response_schema=batch_schema
                         )
                     )
                     
                     text = response.text.strip()
-                    if not text: continue
+                    if not text: 
+                        last_error = "Empty response from Gemini"
+                        continue
 
                     results = json.loads(text)
                     if isinstance(results, list):
                         # Verify Alignment
                         if len(results) != count:
                             last_error = f"Alignment mismatch: Got {len(results)}, expected {count}"
-                            logger.warning(f"⚠️ {last_error}. Retrying...")
+                            logger.warning(f"⚠️ {last_error} (Attempt {attempt+1}). Retrying...")
                             continue
                         return results
                     return [results]
 
                 except Exception as e:
                     last_error = str(e)
-                    logger.error(f"❌ Turbo Batch Failure (Attempt {attempt+1}): {e}")
-                    time.sleep(2 * (attempt + 1))
+                    # Specific handling for Rate Limits (429)
+                    if "429" in last_error or "RESOURCE_EXHAUSTED" in last_error:
+                        # Back off significantly to allow quota to reset (10s per retry)
+                        wait_time = 10 * (attempt + 1)
+                        logger.warning(f"⏳ Quota Limit Hit (429). Waiting {wait_time}s to reset... (Attempt {attempt+1})")
+                        time.sleep(wait_time)
+                    else:
+                        logger.error(f"❌ Gemini Batch Failure (Attempt {attempt+1}): {e}")
+                        time.sleep(2 * (attempt + 1))
         
-        raise Exception(f"Gemini API failed after 3 attempts. Last error: {last_error}")
+        raise Exception(f"Gemini API failed after 5 attempts. Last error: {last_error}")
 
     def get_zone_coords(self, img_shape, zone_name):
         h, w = img_shape[:2]

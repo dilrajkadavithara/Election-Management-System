@@ -101,10 +101,10 @@ class BatchProcessor:
                 if 'temp_dir' in locals():
                     shutil.rmtree(temp_dir, ignore_errors=True)
 
-        # Increased page-level concurrency to utilize concurrent network waiting
-        # Since Gemini API processing is mostly network-bound IO, we can afford
-        # to upload and wait for 4-5 pages at the absolute same time.
-        actual_page_workers = min(max_workers, 10)
+        # Reduced page-level concurrency to avoid Gemini API burst limits.
+        # Pay-as-you-go Tier 0/1 accounts hit 429s with 10 parallel threads.
+        # 4 workers provides a safe balance of speed and quota health.
+        actual_page_workers = min(max_workers, 4)
         with concurrent.futures.ThreadPoolExecutor(max_workers=actual_page_workers) as executor:
             future_to_page = {executor.submit(process_page, p): p for p in pages}
             ordered_results = {}
