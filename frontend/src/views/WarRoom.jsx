@@ -300,7 +300,7 @@ const WarRoom = ({ allLocations, dashFilters, listFilters, setListFilters, setVi
                             <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-5 mt-1">Comparison of new voters digitized and confirmed supporters</p>
                         </div>
                         <div className="flex flex-wrap gap-4">
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-indigo-500 shadow-[0_0_10px_#6366f1]" /> <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Added Digitally</span></div>
+                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]" /> <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Added Digitally</span></div>
                             <div className="flex items-center gap-2"><div className={`w-3 h-3 rounded-full bg-[${activeBrand.color}] ${activeBrand.shadow}`} style={{ backgroundColor: activeBrand.color }} /> <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Confirmed {perspective}</span></div>
                         </div>
                     </div>
@@ -310,7 +310,7 @@ const WarRoom = ({ allLocations, dashFilters, listFilters, setListFilters, setVi
                             <AreaChart data={stats?.history || []}>
                                 <defs>
                                     <linearGradient id="colorDig" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} /><stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                                     </linearGradient>
                                     <linearGradient id="colorPersp" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor={activeBrand.color} stopOpacity={0.3} /><stop offset="95%" stopColor={activeBrand.color} stopOpacity={0} />
@@ -323,7 +323,7 @@ const WarRoom = ({ allLocations, dashFilters, listFilters, setListFilters, setVi
                                     contentStyle={{ background: '#020617', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem' }}
                                     itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
                                 />
-                                <Area type="monotone" dataKey="new_dig" stroke="#6366f1" fillOpacity={1} fill="url(#colorDig)" strokeWidth={3} name="Newly Digitized" />
+                                <Area type="monotone" dataKey="new_dig" stroke="#10b981" fillOpacity={1} fill="url(#colorDig)" strokeWidth={3} name="Newly Digitized" />
                                 <Area type="monotone" dataKey="new_supporters" stroke={activeBrand.color} fillOpacity={1} fill="url(#colorPersp)" strokeWidth={3} name={`Newly Confirmed ${perspective}`} />
                             </AreaChart>
                         </ResponsiveContainer>
