@@ -54,11 +54,11 @@ class OCREngine:
 
     @contextmanager
     def get_throttle(self):
-        """Simple rate limiter to prevent Gemini API 429 errors from parallel page threads."""
+        """Standard thread-safe throttle for API calls."""
         with self.throttle_lock:
-            # Enforce minimal safe buffer for parallel API calls
-            time.sleep(0.2)
-        yield
+            # Enforce 4.5-second buffer (13 RPM max) to prevent Gemini 429s
+            time.sleep(4.5)
+            yield
 
     def extract_batch_from_images(self, img_list):
         """
