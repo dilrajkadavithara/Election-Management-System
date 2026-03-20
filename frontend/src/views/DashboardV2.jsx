@@ -507,9 +507,9 @@ const DashboardV2 = ({
             </div>
 
             {/* 📊 DEMOGRAPHIC PILLARS */}
-            <div className="grid grid-cols-2 gap-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
                 {/* Age Profile Pillar */}
-                <div className="lux-card p-10 bg-slate-900/40 border-white/5 shadow-2xl">
+                <div className="lux-card p-6 lg:p-10 bg-slate-900/40 border-white/5 shadow-2xl">
                     <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-indigo-400 mb-8 border-b border-white/5 pb-4">Age Profile (Political Split)</h3>
                     <div className="h-[350px] w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
@@ -539,7 +539,7 @@ const DashboardV2 = ({
                 </div>
 
                 {/* Gender Alignment Pillar */}
-                <div className="lux-card p-10 bg-slate-900/40 border-white/5 shadow-2xl">
+                <div className="lux-card p-6 lg:p-10 bg-slate-900/40 border-white/5 shadow-2xl">
                     <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-indigo-400 mb-8 border-b border-white/5 pb-4">Gender Alignment (Political Split)</h3>
                     <div className="h-[350px] w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
