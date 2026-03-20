@@ -136,6 +136,9 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
         batch['status'] = 'processing'
         state_manager.set_batch(batch_id, batch)
 
+        import threading
+        update_lock = threading.Lock()
+        
         if direct_pdf:
             # Force Gemini for Direct PDF mode as Tesseract can't process raw PDFs
             use_gemini = True 
@@ -158,8 +161,9 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
             
             completed_pages = set() # Track unique finished pages
             def update_progress(page_num, page_results, success=True):
-                current_batch = state_manager.get_batch(batch_id)
-                if not current_batch: return
+                with update_lock:
+                    current_batch = state_manager.get_batch(batch_id)
+                    if not current_batch: return
                 
                 if success:
                     completed_pages.add(page_num)
