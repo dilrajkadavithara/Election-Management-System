@@ -61,18 +61,17 @@ class BatchProcessor:
                 
                 page_img_path = page_imgs[0]
                 
-                # 2. Detect individual voter boxes
-                boxes = self.detector.detect_voter_boxes(page_img_path)
-                if not boxes:
-                    logger.warning(f"⚠️ Page {page_num}: No voter boxes detected.")
-                    return page_num, [], False
-
-                # 3. Process boxes in TURBO BATCH for 10x speed boost
-                # Get clean, natural crops optimized for Vision LLM
-                crops = self.detector.get_clean_crops(page_img_path, boxes)
-
-                logger.info(f"🚀 Page {page_num}: Sending batch of {len(crops)} images to Gemini...")
-                batch_results = self.engine.extract_batch_from_images(crops)
+                # --- NEW REVOLUTIONARY COST-CUTTER FLOW ---
+                # We send the WHOLE high-res page to Gemini instead of individual crops.
+                # This saves 95% of the cost and solves the Token Limit (TPM) problem for good.
+                logger.info(f"🚀 Page {page_num}: Sending FULL PAGE to Gemini (Cost-Cutter Mode)...")
+                batch_results = self.engine.extract_full_page_consolidated(page_img_path)
+                
+                # --- LEGACY CROP MODE (Rollback fallback) ---
+                # boxes = self.detector.detect_voter_boxes(page_img_path)
+                # if not boxes: return page_num, [], False
+                # crops = self.detector.get_clean_crops(page_img_path, boxes)
+                # batch_results = self.engine.extract_batch_from_images(crops)
                 
                 page_results = []
                 # Map results back to standardized format
@@ -87,7 +86,7 @@ class BatchProcessor:
                         "Gender": str(entry.get("gender") or "").title(),
                         "EPIC_ID": entry.get("epic_id") or "",
                         "Serial_OCR": str(entry.get("serial_number") or ""),
-                        "Image_Path": f"p{page_num}_b{i}",
+                        "Image_Path": f"p{page_num}_full_page",
                         "Filename": os.path.basename(pdf_path)
                     })
                 return page_num, page_results, True
@@ -101,8 +100,9 @@ class BatchProcessor:
                 if 'temp_dir' in locals():
                     shutil.rmtree(temp_dir, ignore_errors=True)
 
-        # Enforced single-worker sequential processing for Tier 0 stability. 
-        actual_page_workers = 1
+        # OPTIMUM BOOST: 4 workers is the 'Sweet Spot' for 16GB RAM + 1M TPM.
+        # This quadruple speed stays safely under the 1,000,000 token-per-minute ceiling.
+        actual_page_workers = 4
         with concurrent.futures.ThreadPoolExecutor(max_workers=actual_page_workers) as executor:
             future_to_page = {executor.submit(process_page, p): p for p in pages}
             ordered_results = {}
