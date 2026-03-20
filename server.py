@@ -112,5 +112,6 @@ if __name__ == "__main__":
         port=8000,
         reload=False,
         proxy_headers=True,
-        forwarded_allow_ips="*"  
+        forwarded_allow_ips="*",
+        workers=min(3, os.cpu_count() or 1) # Parallel app workers for 8-core server
     )

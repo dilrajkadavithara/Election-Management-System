@@ -53,12 +53,12 @@ services:
   worker:
     image: ghcr.io/dilrajkadavithara/voter-vault:latest
     restart: always
-    command: celery -A backend.celery_app worker --loglevel=info -P solo --concurrency=20 --max-tasks-per-child=5
+    command: celery -A backend.celery_app worker --loglevel=info --concurrency=7 --max-tasks-per-child=5 --prefetch-multiplier=1
     environment:
       - DATABASE_URL=postgres://admin:secretpassword@db:5432/voter_db
       - REDIS_URL=redis://redis:6379/0
       - DJANGO_SETTINGS_MODULE=voter_vault.settings
-      - PYTHONPATH=/app
+      - PYTHONPATH=/app/voter_vault
       - OMP_THREAD_LIMIT=1 
     env_file:
       - .env
