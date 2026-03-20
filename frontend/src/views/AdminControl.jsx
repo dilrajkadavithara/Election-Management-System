@@ -55,6 +55,8 @@ const AdminControl = ({
 }) => {
     const [activeTab, setActiveTab] = useState('users'); // users | locations | parties
     const [boothFilterConst, setBoothFilterConst] = useState('');
+    const [userSearchTerm, setUserSearchTerm] = useState('');
+    const [userRoleFilter, setUserRoleFilter] = useState('');
 
     const selectedRole = newUserData.role;
     const roleScope = ROLE_INFO[selectedRole]?.scope || '';
@@ -346,50 +348,84 @@ const AdminControl = ({
 
                     {/* Right: Staff List */}
                     <div className="col-span-12 lg:col-span-7">
-                        <div className="lux-glass p-6 rounded-3xl border-white/5">
-                            <div className="flex justify-between items-center mb-5">
-                                <h2 className="text-base font-bold text-white">Staff Members</h2>
-                                <span className="text-xs text-slate-400">{allUsers.length} accounts</span>
-                            </div>
-                            <div className="space-y-2">
-                                {allUsers.map(u => (
-                                    <div key={u.id} className="flex items-center justify-between gap-4 px-4 py-3 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/8 hover:border-indigo-500/20 transition-all group">
-                                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                                            <div className="w-9 h-9 rounded-xl bg-indigo-500/15 border border-white/10 flex items-center justify-center text-sm font-black text-indigo-400 shrink-0 uppercase">
-                                                {u.username.substring(0, 2)}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="font-semibold text-sm text-white">{u.full_name || u.username}</span>
-                                                    {u.full_name && <span className="text-[10px] text-slate-500">@{u.username}</span>}
-                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/10 text-slate-300">{ROLE_INFO[u.role]?.label || u.role}</span>
-                                                    {u.phone_number && <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">{u.phone_number}</span>}
-                                                </div>
-                                                <div className="flex flex-wrap gap-1 mt-1">
-                                                    {(u.constituencies || []).map(n => <span key={n} className="text-[9px] text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">{n}</span>)}
-                                                    {(u.local_bodies || []).map(n => <span key={n} className="text-[9px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">{n}</span>)}
-                                                    {(u.booths || []).length > 0 && <span className="text-[9px] text-slate-400 bg-white/5 px-1.5 py-0.5 rounded">{u.booths.length} booth{u.booths.length > 1 ? 's' : ''}</span>}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2 shrink-0">
-                                            <button
-                                                onClick={() => startEditUser(u)}
-                                                className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-semibold text-slate-300 hover:bg-white hover:text-black transition-all"
-                                            >
-                                                Edit
-                                            </button>
-                                            {(userRole === 'SUPERUSER' || userRole === 'MANAGER') && (
-                                                <button
-                                                    onClick={() => handleDeleteUser(u.id)}
-                                                    className="px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs font-semibold text-rose-400 hover:bg-rose-500 hover:text-white transition-all"
-                                                >
-                                                    Remove
-                                                </button>
-                                            )}
-                                        </div>
+                        <div className="lux-glass p-6 rounded-3xl border-white/5 space-y-6">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                <div>
+                                    <h2 className="text-base font-bold text-white">Staff Members</h2>
+                                    <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">{allUsers.length} accounts total</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                                    <div className="relative flex-1 sm:min-w-[200px]">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">🔍</span>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Search name, user or phone..." 
+                                            value={userSearchTerm}
+                                            onChange={(e) => setUserSearchTerm(e.target.value)}
+                                            className="w-full bg-black/40 border border-white/5 rounded-xl pl-9 pr-4 py-2 text-xs text-white outline-none focus:border-indigo-500/50 transition-all"
+                                        />
                                     </div>
-                                ))}
+                                    <select 
+                                        value={userRoleFilter}
+                                        onChange={(e) => setUserRoleFilter(e.target.value)}
+                                        className="bg-black/40 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-400 outline-none focus:border-indigo-500/50 appearance-none cursor-pointer"
+                                    >
+                                        <option value="">All Roles</option>
+                                        {Object.entries(ROLE_INFO).map(([val, info]) => (
+                                            <option key={val} value={val} className="bg-slate-900">{info.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 max-h-[700px] overflow-y-auto pr-1">
+                                {allUsers
+                                    .filter(u => {
+                                        const matchesSearch = !userSearchTerm || 
+                                            u.username?.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
+                                            u.full_name?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                                            u.phone_number?.includes(userSearchTerm);
+                                        const matchesRole = !userRoleFilter || u.role === userRoleFilter;
+                                        return matchesSearch && matchesRole;
+                                    })
+                                    .map(u => (
+                                        <div key={u.id} className="flex items-center justify-between gap-4 px-4 py-3 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/8 hover:border-indigo-500/20 transition-all group">
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <div className="w-9 h-9 rounded-xl bg-indigo-500/15 border border-white/10 flex items-center justify-center text-sm font-black text-indigo-400 shrink-0 uppercase">
+                                                    {u.username.substring(0, 2)}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-semibold text-sm text-white">{u.full_name || u.username}</span>
+                                                        {u.full_name && <span className="text-[10px] text-slate-500">@{u.username}</span>}
+                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/10 text-slate-300">{ROLE_INFO[u.role]?.label || u.role}</span>
+                                                        {u.phone_number && <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">{u.phone_number}</span>}
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {(u.constituencies || []).map(n => <span key={n} className="text-[9px] text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">{n}</span>)}
+                                                        {(u.local_bodies || []).map(n => <span key={n} className="text-[9px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">{n}</span>)}
+                                                        {(u.booths || []).length > 0 && <span className="text-[9px] text-slate-400 bg-white/5 px-1.5 py-0.5 rounded">{u.booths.length} booth{u.booths.length > 1 ? 's' : ''}</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2 shrink-0">
+                                                <button
+                                                    onClick={() => startEditUser(u)}
+                                                    className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-semibold text-slate-300 hover:bg-white hover:text-black transition-all"
+                                                >
+                                                    Edit
+                                                </button>
+                                                {(userRole === 'SUPERUSER' || userRole === 'MANAGER') && (
+                                                    <button
+                                                        onClick={() => handleDeleteUser(u.id)}
+                                                        className="px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs font-semibold text-rose-400 hover:bg-rose-500 hover:text-white transition-all"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
                                 {allUsers.length === 0 && (
                                     <div className="text-center py-12 text-slate-500 text-sm">No staff accounts yet. Create the first one →</div>
                                 )}
