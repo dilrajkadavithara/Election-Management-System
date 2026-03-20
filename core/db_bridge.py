@@ -89,6 +89,12 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
             constituency, _ = Constituency.objects.get_or_create(name=c_name)
             local_body, _ = LocalBody.objects.get_or_create(constituency=constituency, name=lb_name, body_type=local_body_type)
 
+            # PREVENT DUPLICATION: Check if booth already has voters before allowing new upload
+            # This allows uploading to a "manual empty booth" but blocks re-uploading to an OCR'd booth.
+            existing_booth = Booth.objects.filter(constituency=constituency, number=b_num).first()
+            if existing_booth and existing_booth.voters.exists():
+                raise Exception(f"Booth {b_num} in {c_name} already contains a voter list. Re-uploading is blocked to prevent duplication.")
+
             booth, created = Booth.objects.get_or_create(
                 constituency=constituency,
                 number=b_num,
@@ -617,12 +623,21 @@ def update_booth(booth_id, number=None, ps_name=None, ps_no=None, head_name=None
 
 def add_booth(const_id, lb_id, number, ps_name="", ps_no=""):
     num_str = str(number).zfill(3)
-    b, created = Booth.objects.get_or_create(constituency_id=const_id, local_body_id=lb_id, number=num_str)
-    if ps_name or ps_no:
-        b.polling_station_name = ps_name
-        b.polling_station_no = ps_no
-        b.save()
-    return {"id": b.id, "number": b.number, "created": created}
+    # STRICT UNIQUENESS: Prevents "creating" a booth that already exists in this constituency
+    # This ensures a booth number is truly unique within its constituency parent.
+    if Booth.objects.filter(constituency_id=const_id, number=num_str).exists():
+        existing = Booth.objects.filter(constituency_id=const_id, number=num_str).first()
+        loc_name = existing.local_body.name if existing.local_body else "this constituency"
+        return {"error": f"Booth {num_str} already exists in {loc_name}. Creation blocked."}
+
+    b = Booth.objects.create(
+        constituency_id=const_id, 
+        local_body_id=lb_id, 
+        number=num_str,
+        polling_station_name=ps_name,
+        polling_station_no=ps_no
+    )
+    return {"id": b.id, "number": b.number, "created": True}
 
 def get_all_users():
     from django.contrib.auth.models import User

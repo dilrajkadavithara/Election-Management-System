@@ -118,13 +118,15 @@ const api = {
             }).catch(e => alert("Download Error: " + e.message));
     },
 
-    saveToDB: async (batchId, constituency, lgbType, lgbName, booth, psNo, psName) => {
+    saveToDB: async (batchId, constituency, lgbType, lgbName, boothId, boothNo, psNo, psName) => {
         const response = await client.post(`/api/save-to-db`, {
             batch_id: batchId,
             constituency,
             lgb_type: lgbType,
             lgb_name: lgbName,
-            booth,
+            booth_id: boothId,
+            booth_number: boothNo,
+            booth: boothNo, // Redundant for absolute safety
             ps_no: psNo,
             ps_name: psName
         });

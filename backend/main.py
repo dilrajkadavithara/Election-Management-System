@@ -46,7 +46,9 @@ class SaveBatchRequest(BaseModel):
     constituency: str = ""
     lgb_type: str = ""
     lgb_name: str = ""
-    booth: str = ""
+    booth: str = ""  # Legacy
+    booth_id: str = "" # Explicit ID for existing booths
+    booth_number: str = "" # Explicit Number for new booths
     ps_no: str = ""
     ps_name: str = ""
 
@@ -775,8 +777,22 @@ def sync_save_batch_wrapper(payload_dict, user_id):
     c_name = resolve_val(payload_dict.get('constituency'), Constituency)
     lb_name = resolve_val(payload_dict.get('lgb_name'), LocalBody)
     
-    # Special handling for Booth number (we want it as a string)
-    b_num = resolve_val(payload_dict.get('booth'), Booth, 'number')
+    # REFINED BOOTH RESOLUTION: Prioritize explicit ID/Number to avoid sequence collisions
+    b_num = ""
+    b_id = payload_dict.get('booth_id')
+    b_manual_num = payload_dict.get('booth_number')
+    
+    if b_id:
+        try:
+            # If ID is provided, resolve it directly to its number
+            obj = Booth.objects.get(id=int(b_id))
+            b_num = obj.number
+        except: pass
+    
+    # Fallback to manual number or legacy 'booth' field
+    if not b_num:
+        b_num = str(b_manual_num or payload_dict.get('booth') or "")
+        
     if b_num.isdigit():
         b_num = b_num.zfill(3)
 

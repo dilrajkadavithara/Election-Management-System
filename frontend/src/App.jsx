@@ -311,7 +311,8 @@ const App = () => {
                 ocrTargetLoc.constId || ocrTargetLoc.constName,
                 '',
                 ocrTargetLoc.lbId || ocrTargetLoc.lbName,
-                ocrTargetLoc.boothId || ocrTargetLoc.boothNo,
+                ocrTargetLoc.boothId,
+                ocrTargetLoc.boothNo,
                 ocrTargetLoc.psNo,
                 ocrTargetLoc.psName
             );
@@ -403,12 +404,23 @@ const App = () => {
     const handleAddLocation = async () => {
         setLoading(true);
         try {
-            if (newLocData.type === 'const') await api.addConst(newLocData.name);
-            else if (newLocData.type === 'lb') await api.addLB(newLocData.parentId, newLocData.name, newLocData.lbType);
-            else if (newLocData.type === 'booth') await api.addBooth(newLocData.grandParentId, newLocData.parentId, newLocData.boothNum, newLocData.psName, newLocData.psNo);
+            let res;
+            if (newLocData.type === 'const') res = await api.addConst(newLocData.name);
+            else if (newLocData.type === 'lb') res = await api.addLB(newLocData.parentId, newLocData.name, newLocData.lbType);
+            else if (newLocData.type === 'booth') res = await api.addBooth(newLocData.grandParentId, newLocData.parentId, newLocData.boothNum, newLocData.psName, newLocData.psNo);
+            
+            if (res && res.error) {
+                alert("🛑 Blocked: " + res.error);
+                return;
+            }
+
+            alert(`✅ ${newLocData.type.toUpperCase()} successfully registered.`);
             loadAdminData();
             setNewLocData({ type: 'const', name: '', parentId: '', lbType: 'PANCHAYAT', boothNum: '', psName: '', psNo: '' });
-        } catch (e) { console.error(e); }
+        } catch (e) { 
+            console.error(e);
+            alert("⚠️ Error: " + (e.response?.data?.detail || e.message));
+        }
         finally { setLoading(false); }
     };
 
