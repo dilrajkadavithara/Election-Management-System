@@ -64,10 +64,10 @@ class BatchProcessor:
                 page_img_path = page_imgs[0]
                 
                 # --- TRACER PASSTHROUGH ---
-                batch_results = self.engine.extract_full_page_consolidated(page_img_path, page_num=page_num)
+                p_num, batch_results, success = self.engine.extract_full_page_consolidated(page_img_path, page_num=page_num)
                 
                 # SANITY CHECK: Ensure results is a list (Prevents 'int' error)
-                if not isinstance(batch_results, list):
+                if not success or not isinstance(batch_results, list):
                     logger.error(f"❌ Critical Failure on Page {page_num}: Gemini returned {type(batch_results)} instead of list.")
                     return page_num, f"Unexpected AI response format: {type(batch_results)}", False
                 
