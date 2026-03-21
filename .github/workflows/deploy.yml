@@ -71,14 +71,13 @@ jobs:
                      -o docker-compose.remote.yml
             fi
 
-            # 2. Re-pull the logic files (excluding sensitive .env)
+            # 2. Re-pull the logic files (including sensitive .env)
             git fetch origin master && git reset --hard origin/master
 
-            # 3. Pull the pre-built optimized image
+            # 3. Pull the specific pre-built image (SHA-LOCK PROOF)
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            export IMAGE_TAG=${{ github.sha }}
             docker compose -f docker-compose.remote.yml pull
-
-            # 4. Swap and Clean
             docker compose -f docker-compose.remote.yml up -d --remove-orphans
             docker image prune -f
             
