@@ -6,7 +6,7 @@ git pull origin master
 # 2. Get the unique commit SHA (The Serial Number)
 export IMAGE_TAG=$(git rev-parse HEAD)
 
-echo "🚀 [SHA-LOCK]: Starting deployment for Commit: $IMAGE_TAG"
+echo "🚀 [SHA-LOCK]: Starting Nuclear-Cleanup Deployment for Commit: $IMAGE_TAG"
 
 # 3. Pull the specific image (The 'Waiter' Loop)
 # We pull BEFORE we stop anything to keep your current server running!
@@ -15,11 +15,14 @@ until docker compose -f docker-compose.remote.yml pull; do
   sleep 30
 done
 
-# 4. SWAP PROTOCOL (Clean Slate Automation)
-echo "✅ Build Found! Clearing old memory and stopping 'Zombie' processes..."
+# 4. NUCLEAR PROTOCOL (Zero Tolerance for 'Zombies')
+echo "🛠️ Clearing all 'Zombie' memory and stubborn containers..."
 
-# Force-kill any stubborn containers to prevent "Conflict" errors
-docker compose -f docker-compose.remote.yml down --remove-orphans || true
+# First, force-kill the known stubborn containers (Nuclear Step)
+docker rm -f voterslist-redis-1 voterslist-worker-1 voterslist-app-1 voterslist-nginx-1 voterslist-certbot-1 voterslist-db-1 2>/dev/null || true
+
+# Second, perform a full atomic shutdown (Safety Step)
+docker compose -f docker-compose.remote.yml down --volumes --remove-orphans --timeout 1 || true
 
 # 5. Start the new version into the empty house
 echo "✨ Starting the fresh v3.2.1-SHA-LOCK engine..."
