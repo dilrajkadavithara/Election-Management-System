@@ -340,8 +340,13 @@ const App = () => {
         if (!ocrBatch) return;
         try {
             await api.stopAndClearRAM(ocrBatch.id);
+        } catch (e) { 
+            console.error("Cancellation Error:", e);
+        } finally {
+            // ALWAYS clear the UI state, even if the API call errored (e.g. 404 already deleted)
             setOcrBatch(null);
-        } catch (e) { console.error(e); }
+            setOcrError(null);
+        }
     };
 
     const discardBatch = () => setOcrBatch(null);
