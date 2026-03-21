@@ -179,13 +179,13 @@ class OCREngine:
                     last_error = str(e)
                     # Specific handling for Rate Limits (429)
                     if "429" in last_error or "RESOURCE_EXHAUSTED" in last_error:
-                        # Back off significantly to allow quota to reset (10s per retry)
-                        wait_time = 10 * (attempt + 1)
-                        logger.warning(f"⏳ Quota Limit Hit (429). Waiting {wait_time}s to reset... (Attempt {attempt+1})")
+                        # Back off slightly shorter to check quota faster (3s per retry)
+                        wait_time = 3 * (attempt + 1)
+                        logger.warning(f"⏳ Quota Limit Hit (429). Waiting {wait_time}s... (Attempt {attempt+1})")
                         time.sleep(wait_time)
                     else:
                         logger.error(f"❌ Gemini Batch Failure (Attempt {attempt+1}): {e}")
-                        time.sleep(2 * (attempt + 1))
+                        time.sleep(1) # Quick fail for non-rate issues
         
         raise Exception(f"Gemini API failed after 5 attempts. Last error: {last_error}")
 

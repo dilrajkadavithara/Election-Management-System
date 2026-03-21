@@ -160,6 +160,7 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
             processor = BatchProcessor()
             
             completed_pages = set() # Track unique finished pages
+            failed_pages = set()    # Track unique failed pages
             def update_progress(page_num, page_results, success=True):
                 with update_lock:
                     current_batch = state_manager.get_batch(batch_id)
@@ -170,6 +171,7 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
                 else:
                     error_reason = page_results if isinstance(page_results, str) else "Unknown Failure"
                     logger.error(f"⚠️ Page {page_num} marked as FAILED in Integrity Shield. Reason: {error_reason}")
+                    failed_pages.add(page_num)
                     # Track failed pages for UI warning
                     if 'failed_pages' not in current_batch: current_batch['failed_pages'] = []
                     if page_num not in current_batch['failed_pages']:
@@ -191,8 +193,8 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
                 current_batch['total_voters'] = len(existing_results)
                 current_batch['voters_processed'] = len(existing_results)
                 
-                # Honest Progress: Only count successful pages
-                current_batch['pages_processed'] = len(completed_pages)
+                # Progress: Sum of successful + failed. Forces 100% even on unreadable pages.
+                current_batch['pages_processed'] = len(completed_pages) + len(failed_pages)
                 
                 current_batch['clean_count'] = len([r for r in existing_results if r.get('Status') == '✅ OK'])
                 current_batch['flagged_count'] = len([r for r in existing_results if r.get('Status') != '✅ OK'])
