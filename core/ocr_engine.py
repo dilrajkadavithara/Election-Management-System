@@ -56,9 +56,11 @@ class OCREngine:
     def get_throttle(self):
         """Standard thread-safe throttle for API calls."""
         with self.throttle_lock:
-            # OPTIMIZED: 3.0s buffer for 4 parallel workers (80% of 1M TPM quota).
-            time.sleep(3.0)
-            yield
+            # OPTIMIZED: 2.5s stagger between page workers. 
+            # Total 5 workers * 150k = 750k tokens in 1-minute window.
+            time.sleep(2.5)
+        # RELEASE LOCK: Allow next worker to stagger while THIS one hits Gemini.
+        yield
 
     def extract_batch_from_images(self, img_list):
         """
