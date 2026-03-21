@@ -709,13 +709,14 @@ async def cancel_batch(batch_id: str, request: Request):
 
 @app.get("/api/batch/latest")
 async def get_latest_batch(user_info=Depends(get_current_user)):
-    """Return the most recent 'processed' batch for this user so the UI can auto-reconnect."""
+    """Return an ongoing batch ONLY if it is currently being scanned. 
+    Prevents loading completed 'processed' results from previous sessions, as requested."""
     all_batches = state_manager.list_all_batches()
-    # Filter: same user, status is 'processed' (ready to commit)
-    user_batches = [b for b in all_batches if b.get('user') == user_info['username'] and b.get('status') == 'processed']
+    # Filter: same user, status is 'processing' or 'uploaded' (Skip 'processed' to avoid history loading)
+    user_batches = [b for b in all_batches if b.get('user') == user_info['username'] and b.get('status') in ['processing', 'uploaded']]
     if not user_batches:
         return {"found": False}
-    # Return the one with the most results (most recent meaningful batch)
+    # Return the most active one
     best = max(user_batches, key=lambda b: len(b.get('results', [])))
     return {"found": True, "batch": best}
 
