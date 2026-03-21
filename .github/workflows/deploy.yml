@@ -63,22 +63,18 @@ jobs:
             mkdir -p /opt/voterslist
             cd /opt/voterslist
 
-            # 1. Update orchestration file (only Pulls, no local builds)
-            if [ ! -f "docker-compose.remote.yml" ]; then
-                # Fetch only the compose file if it doesn't exist
-                curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                     -L https://raw.githubusercontent.com/${{ github.repository }}/master/docker-compose.remote.yml \
-                     -o docker-compose.remote.yml
-            fi
-
-            # 2. Re-pull the logic files (including sensitive .env)
+            # 1. Update logic files (Ensure no local Git conflicts)
             git fetch origin master && git reset --hard origin/master
 
-            # 3. Pull the specific pre-built image (SHA-LOCK PROOF)
+            # 2. Hard-Locked Pull (CRASH ON FAILURE)
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             export IMAGE_TAG=${{ github.sha }}
-            docker compose -f docker-compose.remote.yml pull
+            
+            echo "🚀 Verifying Serial Number: $IMAGE_TAG"
+            docker compose -f docker-compose.remote.yml pull || (echo "🚨 CRITICAL ERROR: Version $IMAGE_TAG was not found on GitHub. Stopping update to prevent old code use." && exit 1)
+
+            # 3. Swap and Clean (Only if pull succeeded)
             docker compose -f docker-compose.remote.yml up -d --remove-orphans
             docker image prune -f
             
-            echo "🚀 TANK DEPLOYMENT COMPLETE. App is now running at ultra-speed."
+            echo "✅ SERIAL-NUMBER MATCHED. Your server is now running Commit: ${{ github.sha }}"
