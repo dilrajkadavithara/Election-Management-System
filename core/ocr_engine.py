@@ -56,9 +56,9 @@ class OCREngine:
     def get_throttle(self):
         """Standard thread-safe throttle for API calls."""
         with self.throttle_lock:
-            # OPTIMIZED: 2.5s stagger between page workers. 
-            # Total 5 workers * 150k = 750k tokens in 1-minute window.
-            time.sleep(2.5)
+            # --- GOD MODE (TIER 2): 0.5s stagger for 12 parallel workers. ---
+            # Total 12 workers * 150k = 1.8 Million tokens (Limit is 4M TPM).
+            time.sleep(0.5)
         # RELEASE LOCK: Allow next worker to stagger while THIS one hits Gemini.
         yield
 

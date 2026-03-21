@@ -100,9 +100,9 @@ class BatchProcessor:
                 if 'temp_dir' in locals():
                     shutil.rmtree(temp_dir, ignore_errors=True)
 
-        # TURBO BOOST 5: Optimized for 8 vCPUs + 1M TPM budget.
-        # This will process 5 pages in parallel, finishing whole files in 6-8 mins.
-        actual_page_workers = 5
+        # --- GOD MODE (TIER 2): 12 Workers Parallel Scan ---
+        # Optimized for 8 vCPUs and 4,000,000 Tokens-Per-Minute limit.
+        actual_page_workers = 12
         with concurrent.futures.ThreadPoolExecutor(max_workers=actual_page_workers) as executor:
             future_to_page = {executor.submit(process_page, p): p for p in pages}
             ordered_results = {}
