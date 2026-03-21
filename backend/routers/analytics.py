@@ -17,8 +17,14 @@ async def get_stats(constituency: str = None, lb: str = None, booth: str = None,
 
 @router.get("/analytics/strategic")
 async def get_strategic_analytics_api(constituency_id: str = None, user_info=Depends(get_current_user)):
-    c_id = int(constituency_id) if constituency_id and str(constituency_id).isdigit() else None
-    return await get_strategic_analytics_async(user_info['username'], c_id)
+    try:
+        c_id = int(constituency_id) if constituency_id and str(constituency_id).isdigit() else None
+        return await get_strategic_analytics_async(user_info['username'], c_id)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger("ElectionEngine")
+        logger.error(f"💥 Strategic Analytics Error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Strategic Analytics Failure: {str(e)}")
 
 @router.get("/war-room/stats")
 async def get_war_stats(

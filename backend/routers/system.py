@@ -50,3 +50,9 @@ async def get_system_logs(user_info=Depends(get_current_user)):
             lines = tail_data.splitlines()[-30:]
         return {"logs": [l.strip() for l in lines if l.strip()]}
     except Exception as e: return {"logs": [f"Error reading logs: {e}"]}
+
+@router.get("/parties")
+async def api_get_parties(user_info=Depends(get_current_user)):
+    """Fetch all active political parties for the dashboard UI."""
+    from backend.django_bridge import get_parties_async
+    return await get_parties_async()

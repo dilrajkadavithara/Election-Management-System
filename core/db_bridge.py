@@ -285,7 +285,7 @@ def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id
         nda=Count(Case(When(voter_leaning='NDA', then=1), output_field=IntegerField())),
         neutral=Count(Case(When(voter_leaning='NEUTRAL', then=1), output_field=IntegerField())),
         # Outreach
-        with_phone=Count(Case(When(phone_no__isnull=False, then=Case(When(~Q(phone_no=''), then=1))), output_field=IntegerField())),
+        with_phone=Count(Case(When(Q(phone_no__isnull=False) & ~Q(phone_no=''), then=1), output_field=IntegerField())),
         # Age Distribution
         age_18_25=Count(Case(When(age__gte=18, age__lte=25, then=1), output_field=IntegerField())),
         age_26_40=Count(Case(When(age__gte=26, age__lte=40, then=1), output_field=IntegerField())),
