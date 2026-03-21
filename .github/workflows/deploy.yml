@@ -77,8 +77,8 @@ jobs:
             echo "🧹 Clearing old memory and stubborn containers..."
             # Force-kill known stubborn names
             docker rm -f voterslist-redis-1 voterslist-worker-1 voterslist-app-1 voterslist-nginx-1 voterslist-certbot-1 2>/dev/null || true
-            # Nuclear stop
-            docker compose -f docker-compose.remote.yml down --volumes --remove-orphans --timeout 1 || true
+            # Nuclear stop (DATA-SAFE: No --volumes flag)
+            docker compose -f docker-compose.remote.yml down --remove-orphans --timeout 1 || true
             # Restart
             docker compose -f docker-compose.remote.yml up -d
             docker image prune -f
