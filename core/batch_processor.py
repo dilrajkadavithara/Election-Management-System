@@ -14,12 +14,13 @@ class BatchProcessor:
         self.detector = VoterDetector()
         self.results = []
 
-    def process_pdf_directly(self, pdf_path, page_range=None, callback=None):
+    def process_pdf_directly(self, pdf_path, batch_id=None, page_range=None, callback=None):
         """High-Precision Image Mode: Converts PDF pages to high-res images before AI extraction."""
         import concurrent.futures
         from core.pdf_processor import PDFProcessor
         import tempfile
         import shutil
+        from backend.state_manager import state_manager
         all_standardized = []
         
         # Cross-platform processor initialization
@@ -108,6 +109,10 @@ class BatchProcessor:
             ordered_results = {}
             
             for future in concurrent.futures.as_completed(future_to_page):
+                if batch_id and state_manager.is_cancelled(batch_id):
+                    logger.warning(f"🛑 Batch {batch_id} cancelled during result collection. Halting.")
+                    return all_standardized # Return what we have, tasks.py will ignore it
+                
                 page, res, success = future.result()
                 ordered_results[page] = res
                 if callback:

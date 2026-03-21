@@ -702,10 +702,12 @@ async def cancel_batch(batch_id: str, request: Request):
         raise HTTPException(404, "Batch not found")
     
     state_manager.mark_cancelled(batch_id)
+    # 🚨 Hard Clear: Delete the batch object so Auto-Reconnect doesn't find it
+    state_manager.delete_batch(batch_id)
     # Trigger immediate GC
     import gc
     gc.collect()
-    return {"success": True, "message": "Batch cancellation requested"}
+    return {"success": True, "message": "Batch permanently cancelled and memory purged."}
 
 @app.get("/api/batch/latest")
 async def get_latest_batch(user_info=Depends(get_current_user)):

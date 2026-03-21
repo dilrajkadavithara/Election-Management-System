@@ -163,6 +163,9 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
             failed_pages = set()    # Track unique failed pages
             def update_progress(page_num, page_results, success=True):
                 with update_lock:
+                    if state_manager.is_cancelled(batch_id):
+                        logger.warning(f"🛑 Batch {batch_id} cancelled. Stopping worker.")
+                        return
                     current_batch = state_manager.get_batch(batch_id)
                     if not current_batch: return
                 
@@ -213,7 +216,7 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
                 target_pages = [1]
             logger.info(f"Processing pages {target_pages[0]}–{target_pages[-1]} of {total_pdf_pages} total (skipping covers + back-cover)")
 
-            results = processor.process_pdf_directly(processing_path, page_range=target_pages, callback=update_progress)
+            results = processor.process_pdf_directly(processing_path, batch_id=batch_id, page_range=target_pages, callback=update_progress)
             
             # Final status update: Save the perfectly ORDERED results
             batch = state_manager.get_batch(batch_id)
