@@ -46,14 +46,15 @@ class PDFProcessor:
         for start_page in range(start, end + 1, BATCH_SIZE):
             chunk_end = min(start_page + BATCH_SIZE - 1, end)
             
-            # Convert only this specific chunk/page
+            # PARALLEL RENDER: Use all 8 vCPUs for rendering (Removes the 0% gap)
             pages = convert_from_path(
                 pdf_path,
                 dpi=dpi,
-                grayscale=False, # Changed to False for better AI accuracy
+                grayscale=False, 
                 first_page=start_page,
                 last_page=chunk_end,
-                poppler_path=self.poppler_path
+                poppler_path=self.poppler_path,
+                thread_count=8 
             )
             
             for i, page in enumerate(pages):
