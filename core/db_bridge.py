@@ -6,15 +6,14 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 
-# Setup Django Environment for standalone script usage
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PROJECT_PATH = os.path.join(BASE_DIR, 'voter_vault')
-
-if PROJECT_PATH not in sys.path:
-    sys.path.insert(0, PROJECT_PATH)
-
-os.environ['DJANGO_SETTINGS_MODULE'] = 'voter_vault.settings'
-django.setup()
+# Setup Django Environment - Moved to main.py for server-side initialization
+# If running this script standalone, use: python -m core.db_bridge
+if __name__ == "__main__":
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    PROJECT_PATH = os.path.join(BASE_DIR, 'voter_vault')
+    if PROJECT_PATH not in sys.path: sys.path.insert(0, PROJECT_PATH)
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'voter_vault.settings'
+    django.setup()
 
 from core_db.models import Voter, Booth, Constituency, LocalBody, PoliticalParty, UserProfile, MessageTemplate, CommunicationLog
 import time
