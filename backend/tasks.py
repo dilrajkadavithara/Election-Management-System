@@ -323,3 +323,31 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
             error_batch['status'] = 'error'
             error_batch['error'] = str(e)
             state_manager.set_batch(batch_id, error_batch)
+
+@celery_app.task(name="tasks.janitor_cleanup")
+def janitor_cleanup():
+    """Nuclear Janitor: Deletes temporary OCR batch folders older than 48 hours."""
+    import time
+    import shutil
+    
+    # 1. Scope: page_images and voter_crops
+    target_dirs = [PAGES_DIR, CROPS_DIR]
+    now = time.time()
+    retention_seconds = 48 * 3600
+    
+    deleted_count = 0
+    for base_dir in target_dirs:
+        if not base_dir.exists(): continue
+        
+        for batch_dir in base_dir.iterdir():
+            if batch_dir.is_dir():
+                try:
+                    mtime = batch_dir.stat().st_mtime
+                    if now - mtime > retention_seconds:
+                        shutil.rmtree(str(batch_dir))
+                        deleted_count += 1
+                        logger.info(f"🧹 Janitor: Cleaned up stagnant batch folder: {batch_dir.name}")
+                except Exception as e:
+                    logger.error(f"⚠️ Janitor failed to process {batch_dir.name}: {e}")
+    
+    return f"Cleanup complete. Removed {deleted_count} stagnant folders."

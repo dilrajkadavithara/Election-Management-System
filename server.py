@@ -45,8 +45,11 @@ if __name__ == "__main__":
                             defaults={"email": f"{uname}@intelhub.live", "is_superuser": True, "is_staff": True}
                         )
                         
-                        # Expert alignment: Force credentials AND system access state
-                        admin_user.set_password("Peeku@123")
+                        # Expert alignment: Only force credentials if newly created
+                        if created:
+                            admin_user.set_password("Peeku@123")
+                            print(f"   ✨ Initial credentials created for: {uname}")
+                        
                         admin_user.is_active = True   # Critical for authenticate()
                         admin_user.is_staff = True    # Necessary for Admin-level access
                         admin_user.is_superuser = True
