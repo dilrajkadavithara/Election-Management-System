@@ -6,18 +6,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 
-# Fix path for Django
-BASE_DIR = Path(__file__).resolve().parent.parent
-if str(BASE_DIR) not in sys.path:
-    sys.path.insert(0, str(BASE_DIR))
+# 1. Strict Path Resolution
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
+PROJECT_ROOT = os.path.join(ROOT_DIR, "voter_vault")
 
-# 1. Django Setup
-try:
-    if os.environ.get('DJANGO_SETTINGS_MODULE'):
-        django.setup()
-        print("✅ Django Bridge Initialized in Main")
-except Exception as e:
-    print(f"⚠️ Django Setup Bypass/Error: {e}")
+sys.path.insert(0, ROOT_DIR)
+sys.path.insert(0, PROJECT_ROOT)
+
+# 2. Force Environment
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "voter_vault.settings")
+
+# 3. Explicit Django Setup (Loud Fail)
+import django
+django.setup()
+print("✅ Django Bridge Initialized (Production Strict Mode)")
 
 # 2. Router Imports
 from backend.routers import auth, admin, voters, analytics, ocr, system, communications
