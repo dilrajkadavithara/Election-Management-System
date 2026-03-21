@@ -27,7 +27,7 @@ class BatchProcessor:
         pdf_proc = PDFProcessor()
         
         # Concurrency Management: 3 is the sweet spot for maximum stability without triggering token burst limits on AI endpoints
-        max_workers = 10  # Stable-Nitro Mode: Optimum for 8-core / 16GB stability without API burst caps
+        max_workers = 5  # Stable-Nitro Mode: Optimum for 8-core / 16GB stability without API burst caps
         
         # Determine pages to process
         if page_range:
@@ -62,11 +62,8 @@ class BatchProcessor:
                 
                 page_img_path = page_imgs[0]
                 
-                # --- NEW REVOLUTIONARY COST-CUTTER FLOW ---
-                # We send the WHOLE high-res page to Gemini instead of individual crops.
-                # This saves 95% of the cost and solves the Token Limit (TPM) problem for good.
-                logger.info(f"🚀 Page {page_num}: Sending FULL PAGE to Gemini (Cost-Cutter Mode)...")
-                batch_results = self.engine.extract_full_page_consolidated(page_img_path)
+                # --- TRACER PASSTHROUGH ---
+                batch_results = self.engine.extract_full_page_consolidated(page_img_path, page_num=page_num)
                 
                 # --- LEGACY CROP MODE (Rollback fallback) ---
                 # boxes = self.detector.detect_voter_boxes(page_img_path)
@@ -101,9 +98,9 @@ class BatchProcessor:
                 if 'temp_dir' in locals():
                     shutil.rmtree(temp_dir, ignore_errors=True)
 
-        # --- GOD MODE (TIER 2): 12 Workers Parallel Scan ---
+        # --- SAFE MODE (TIER 2): 5 Workers Parallel Scan ---
         # Optimized for 8 vCPUs and 4,000,000 Tokens-Per-Minute limit.
-        actual_page_workers = 12
+        actual_page_workers = 5
         with concurrent.futures.ThreadPoolExecutor(max_workers=actual_page_workers) as executor:
             future_to_page = {executor.submit(process_page, p): p for p in pages}
             ordered_results = {}

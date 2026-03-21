@@ -189,13 +189,11 @@ class OCREngine:
         
         raise Exception(f"Gemini API failed after 5 attempts. Last error: {last_error}")
 
-    def extract_full_page_consolidated(self, page_image_path):
-        """
+    def extract_full_page_consolidated(self, img, page_num="?"):
+        """High-precision extraction for full raw pages (Cost-Cutter Mode).
         🚀 REVOLUTIONARY COST-CUTTER: Processes the ENTIRE PAGE in one high-res request.
         Reduces costs by 95% by avoiding the 'Image Base Fee' per crop.
         """
-        import PIL.Image
-        img = PIL.Image.open(page_image_path)
         
         # We use a specialized prompt for full-page extraction
         prompt = """
@@ -219,10 +217,19 @@ class OCREngine:
         2. Do not skip any voter box you see. 
         3. If a box is partially blurry, do your best to read the EPIC ID and Serial.
         """
+        content_parts = [prompt, img]
+        voter_count = 30 # Assuming 30 voters per page for full page extraction
 
-        # We use the same schema as the batch mode
-        # (This is already defined in extract_batch_from_images, so we'll refactor the schema)
-        return self._run_gemini_request([prompt, img], count=30, mode="FULL_PAGE")
+        # 3. Final Call with TRACER
+        logger.info(f"Neural Sync: Page {page_num} -> Initiating API Request...")
+        results = self._run_gemini_request(content_parts, count=voter_count, mode="FULL_PAGE", page_num=page_num)
+        
+        if results:
+            logger.info(f"Neural Sync: Page {page_num} -> Extraction Successful ({len(results)} voters found)")
+            return page_num, results, True
+        
+        logger.error(f"Neural Sync: Page {page_num} -> Final failure after retries.")
+        return page_num, f"Final AI extraction failure after retries", False
 
     def _get_voter_schema(self):
         return genai_types.Schema(
@@ -247,8 +254,8 @@ class OCREngine:
             required=["serial_number", "epic_id", "name_malayalam"]
         )
 
-    def _run_gemini_request(self, content_parts, count=30, mode="BATCH"):
-        """Internal helper to run the Gemini request with retries and backoff."""
+    def _run_gemini_request(self, content_parts, count=30, mode="BATCH", page_num="?"):
+        """Internal helper to run the Gemini request with retries and Tracer logs."""
         batch_schema = genai_types.Schema(
             type=genai_types.Type.ARRAY,
             items=self._get_voter_schema()
