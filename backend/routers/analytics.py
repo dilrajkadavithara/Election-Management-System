@@ -21,10 +21,13 @@ async def get_strategic_analytics_api(constituency_id: str = None, user_info=Dep
         c_id = int(constituency_id) if constituency_id and str(constituency_id).isdigit() else None
         return await get_strategic_analytics_async(user_info['username'], c_id)
     except Exception as e:
+        import traceback
         import logging
         logger = logging.getLogger("ElectionEngine")
-        logger.error(f"💥 Strategic Analytics Error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Strategic Analytics Failure: {str(e)}")
+        err_msg = f"💥 Strategic Analytics Error: {str(e)}"
+        logger.error(f"{err_msg}\n{traceback.format_exc()}")
+        # Returning as 200 with error info to bypass Axios 500 masking in some environments
+        return {"error": True, "detail": err_msg, "traceback": traceback.format_exc()}
 
 @router.get("/war-room/stats")
 async def get_war_stats(

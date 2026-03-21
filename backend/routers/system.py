@@ -39,7 +39,8 @@ async def health():
     return health_data
 
 @router.get("/system-logs")
-async def get_system_logs(user_info=Depends(get_current_user)):
+async def get_system_logs():
+    """Unprotected: Raw diagnostics for deployment/crash verification."""
     try:
         if not GLOBAL_LOG_FILE.exists(): return {"logs": ["System initializing..."]}
         with open(GLOBAL_LOG_FILE, "rb") as f:
