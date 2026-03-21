@@ -26,6 +26,7 @@ load_dotenv(BASE_DIR / ".env")
 logger = logging.getLogger("OCREngine")
 
 class OCREngine:
+    VERSION = "3.2.1-SHA-LOCK"
     # Zones defined as percentages of the box: (x1, y1, x2, y2)
     ZONES = {
         "A_SERIAL": (0.05, 0.02, 0.40, 0.18),  # Top Left

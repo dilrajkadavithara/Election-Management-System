@@ -11,6 +11,7 @@ logger = logging.getLogger("BatchProcessor")
 class BatchProcessor:
     def __init__(self):
         self.engine = OCREngine()
+        logger.info(f"🚀 Neural Sync {self.engine.VERSION} Ready.")
         self.detector = VoterDetector()
         self.results = []
 
@@ -64,6 +65,11 @@ class BatchProcessor:
                 
                 # --- TRACER PASSTHROUGH ---
                 batch_results = self.engine.extract_full_page_consolidated(page_img_path, page_num=page_num)
+                
+                # SANITY CHECK: Ensure results is a list (Prevents 'int' error)
+                if not isinstance(batch_results, list):
+                    logger.error(f"❌ Critical Failure on Page {page_num}: Gemini returned {type(batch_results)} instead of list.")
+                    return page_num, f"Unexpected AI response format: {type(batch_results)}", False
                 
                 # --- LEGACY CROP MODE (Rollback fallback) ---
                 # boxes = self.detector.detect_voter_boxes(page_img_path)
