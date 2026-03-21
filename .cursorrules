@@ -7,6 +7,8 @@
 4.  **Deployment Safety:** Never trigger a deployment or push to `master` without the user saying "Yes, deploy this".
 5.  **Loop-Breaking Protocol (LBP):** If any tool or logic fails **3 times consecutively** with the same error, **STOP** immediately. Provide a "Deadlock Report" and wait for manual guidance.
 6.  **Progress Tracking:** Maintain an `implementation_plan.md` for any task requiring more than 2 tool calls.
+7.  **Deferred Success Protocol (DSP):** Never claim "Success" immediately after a `git push`. Only offer to wait or have the user check GitHub Actions. Final "Success" can only be claimed after the CI/CD pipeline finishes **and** the user confirms the results.
+8.  **PowerShell Syntax Safety (PSSS):** For Windows/PowerShell environments, **never use `&&`** for command chaining. Always use **`;`** to ensure compatibility across all versions of PowerShell.
 
 ## 🧠 Reasoning
 The user values stability and control over speed. Better to ask twice than to break once.
