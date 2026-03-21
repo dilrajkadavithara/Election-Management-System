@@ -91,11 +91,22 @@ def run_extraction_task(batch_id: str, dpi: int, direct_pdf: bool = False):
             return
 
         # 2. Conversion & Processing (Legacy Mode)
-        page_images = pdf_processor.convert_to_images(pdf_path, str(p_dir), dpi=dpi)
-        batch['total_pages'] = len(page_images)
+        batch['status'] = 'extracting'
+        batch['status_text'] = 'Rendering Master Images...'
         state_manager.set_batch(batch_id, batch)
+
+        page_images = []
+        # Consume the generator to provide real-time updates
+        for batch_paths in pdf_processor.convert_to_images(pdf_path, str(p_dir), dpi=dpi):
+            page_images.extend(batch_paths)
+            batch['pages_processed'] = len(page_images)
+            batch['status_text'] = f"Preparing High-Res Pages ({len(page_images)}/{batch['total_pages']})..."
+            state_manager.set_batch(batch_id, batch)
         
         total_voters = 0
+        batch['status_text'] = "Locating Voter Boxes..."
+        state_manager.set_batch(batch_id, batch)
+
         for i, page_path in enumerate(page_images):
             if state_manager.is_cancelled(batch_id):
                 state_manager.delete_batch(batch_id)
@@ -103,6 +114,7 @@ def run_extraction_task(batch_id: str, dpi: int, direct_pdf: bool = False):
                 return
 
             batch['pages_processed'] = i + 1
+            batch['status_text'] = f"Scanning Grid: Page {i+1} of {len(page_images)}..."
             state_manager.set_batch(batch_id, batch)
             
             boxes = detector.detect_voter_boxes(page_path) 
@@ -112,8 +124,7 @@ def run_extraction_task(batch_id: str, dpi: int, direct_pdf: bool = False):
         
         batch['total_voters'] = total_voters
         batch['status'] = 'extracted'
-        state_manager.set_batch(batch_id, batch)
-        import time; time.sleep(1) # Final Sync Buffer
+        batch['status_text'] = 'Master Extraction Complete.'
         state_manager.set_batch(batch_id, batch)
     except Exception as e:
         logger.error(f"Extraction Error: {e}")

@@ -186,7 +186,7 @@ const api = {
     },
 
     editVoterInDB: async (voterId, data) => {
-        const response = await client.post(`/api/edit-voter/${voterId}`, data);
+        const response = await client.post(`/api/voters/edit/${voterId}`, data);
         return response.data;
     },
 
@@ -268,7 +268,7 @@ const api = {
     },
 
     sendBroadcast: async (data) => {
-        const response = await client.post('/api/comm/send', data);
+        const response = await client.post('/api/comm/send-broadcast', data);
         return response.data;
     },
     sendBroadcastForm: async (data) => {
@@ -279,7 +279,7 @@ const api = {
         formData.append('filters', data.filters || '{}');
         if (data.image) formData.append('image', data.image);
 
-        const response = await client.post('/api/comm/send-form', formData, {
+        const response = await client.post('/api/comm/send-broadcast', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
         return response.data;

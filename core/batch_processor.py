@@ -44,71 +44,71 @@ class BatchProcessor:
         
         logger.info(f"🎯 High-Precision Box Mode: {len(pages)} pages | {max_workers} Workers | 300 DPI")
         
-        def process_page(page_num):
-            try:
-                temp_dir = tempfile.mkdtemp(prefix=f"ocr_page_{page_num}_")
-            except Exception as e:
-                import traceback
-                trace = traceback.format_exc()
-                logger.error(f"❌ Failed to create temp directory for Page {page_num}: {trace}")
-                return page_num, str(e), False
+        # --- STABLE-BATCH CONVERSION (O(1) Overhead) ---
+        # Instead of re-opening the PDF for every single page in a thread (High IOPS + RAM),
+        # we render the needed pages into a persistent temp directory FIRST.
+        temp_root = tempfile.mkdtemp(prefix="ocr_master_batch_")
+        page_to_image_map = {}
+        
+        try:
+            logger.info(f"🎨 Rendering {len(pages)} pages to high-res images (300 DPI)...")
+            # Consume the generator to get ALL target images in one pass
+            for batch_paths in pdf_proc.convert_to_images(
+                pdf_path, temp_root, dpi=300, 
+                first_page=min(pages), last_page=max(pages)
+            ):
+                for path in batch_paths:
+                    # Extract page number from filename (e.g., page_003.jpg -> 3)
+                    p_num_match = re.search(r'page_(\d+)', os.path.basename(path))
+                    if p_num_match:
+                        p_num = int(p_num_match.group(1))
+                        if p_num in pages:
+                            page_to_image_map[p_num] = path
 
-            try:
-                # 1. Page-to-Image (300 DPI for box detection accuracy)
-                page_imgs = pdf_proc.convert_to_images(
-                    pdf_path, temp_dir, dpi=300, 
-                    first_page=page_num, last_page=page_num
-                )
-                if not page_imgs: return page_num, [], False
-                
-                page_img_path = page_imgs[0]
-                
-                # --- TRACER PASSTHROUGH ---
-                p_num, batch_results, success = self.engine.extract_full_page_consolidated(page_img_path, page_num=page_num)
-                
-                # SANITY CHECK: Ensure results is a list (Prevents 'int' error)
-                if not success or not isinstance(batch_results, list):
-                    logger.error(f"❌ Critical Failure on Page {page_num}: Gemini returned {type(batch_results)} instead of list.")
-                    return page_num, f"Unexpected AI response format: {type(batch_results)}", False
-                
-                # --- LEGACY CROP MODE (Rollback fallback) ---
-                # boxes = self.detector.detect_voter_boxes(page_img_path)
-                # if not boxes: return page_num, [], False
-                # crops = self.detector.get_clean_crops(page_img_path, boxes)
-                # batch_results = self.engine.extract_batch_from_images(crops)
-                
-                page_results = []
-                # Map results back to standardized format
-                for i, entry in enumerate(batch_results):
-                    page_results.append({
-                        "Full Name": entry.get("name_malayalam") or "",
-                        "Relation Name": entry.get("relation_name_malayalam") or "",
-                        "Relation Type": str(entry.get("relation_type") or "").title(),
-                        "House Name": entry.get("house_name_malayalam") or "",
-                        "House Number": entry.get("house_number") or "",
-                        "Age": str(entry.get("age") or ""),
-                        "Gender": str(entry.get("gender") or "").title(),
-                        "EPIC_ID": entry.get("epic_id") or "",
-                        "Serial_OCR": str(entry.get("serial_number") or ""),
-                        "Image_Path": f"p{page_num}_full_page",
-                        "Filename": os.path.basename(pdf_path)
-                    })
-                return page_num, page_results, True
+            # 🎯 TRACER: Ensure we got all requested pages
+            missing_pages = [p for p in pages if p not in page_to_image_map]
+            if missing_pages:
+                logger.warning(f"⚠️ Missing images for pages: {missing_pages}. Attempting rescue...")
 
-            except Exception as e:
-                import traceback
-                trace = traceback.format_exc()
-                logger.error(f"❌ Thread Error on Page {page_num}: {trace}")
-                return page_num, str(e), False
-            finally:
-                if 'temp_dir' in locals():
-                    shutil.rmtree(temp_dir, ignore_errors=True)
+            def process_page_extraction(page_num):
+                page_img_path = page_to_image_map.get(page_num)
+                if not page_img_path or not os.path.exists(page_img_path):
+                    logger.error(f"❌ Page {page_num} image not found at {page_img_path}")
+                    return page_num, "Image Missing", False
 
-        # --- SAFE MODE (TIER 2): 5 Workers Parallel Scan ---
-        # Optimized for 8 vCPUs and 4,000,000 Tokens-Per-Minute limit.
-        actual_page_workers = 5
-        with concurrent.futures.ThreadPoolExecutor(max_workers=actual_page_workers) as executor:
-            future_to_page = {executor.submit(process_page, p): p for p in pages}
+                try:
+                    # --- GEMINI TRACER PASSTHROUGH ---
+                    p_num, batch_results, success = self.engine.extract_full_page_consolidated(page_img_path, page_num=page_num)
+                    
+                    if not success or not isinstance(batch_results, list):
+                        return page_num, f"AI Error: {batch_results}", False
+                    
+                    page_results = []
+                    for entry in batch_results:
+                        page_results.append({
+                            "Full Name": entry.get("name_malayalam") or "",
+                            "Relation Name": entry.get("relation_name_malayalam") or "",
+                            "Relation Type": str(entry.get("relation_type") or "").title(),
+                            "House Name": entry.get("house_name_malayalam") or "",
+                            "House Number": entry.get("house_number") or "",
+                            "Age": str(entry.get("age") or ""),
+                            "Gender": str(entry.get("gender") or "").title(),
+                            "EPIC_ID": entry.get("epic_id") or "",
+                            "Serial_OCR": str(entry.get("serial_number") or ""),
+                            "Image_Path": f"p{page_num}_full_page",
+                            "Filename": os.path.basename(pdf_path)
+                        })
+                    return page_num, page_results, True
+
+                except Exception as e:
+                    logger.error(f"❌ Extraction Error on Page {page_num}: {e}")
+                    return page_num, str(e), False
+
+            # --- PARALLEL EXTRACTION: Only the AI calls are threaded now ---
+            # This prevents Poppler Thread-Locking and reduces RAM overhead by 70%
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_page = {executor.submit(process_page_extraction, p): p for p in pages}
+
             ordered_results = {}
             
             for future in concurrent.futures.as_completed(future_to_page):
@@ -121,13 +121,17 @@ class BatchProcessor:
                 if callback:
                     callback(page, res, success)
 
-            # 3. Final Serialization (Maintain Perfect Order)
-            for p in pages:
-                if p in ordered_results and isinstance(ordered_results[p], list):
-                    for voter in ordered_results[p]:
-                        voter["voter_id"] = len(all_standardized) + 1
-                        self._apply_standardization(voter, voter["voter_id"])
-                        all_standardized.append(voter)
+        finally:
+            # Cleanup target temp root
+            shutil.rmtree(temp_root, ignore_errors=True)
+
+        # 3. Final Serialization (Maintain Perfect Order)
+        for p in pages:
+            if p in ordered_results and isinstance(ordered_results[p], list):
+                for voter in ordered_results[p]:
+                    voter["voter_id"] = len(all_standardized) + 1
+                    self._apply_standardization(voter, voter["voter_id"])
+                    all_standardized.append(voter)
         
         return all_standardized
 

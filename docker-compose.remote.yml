@@ -9,13 +9,13 @@ services:
     environment:
       - POSTGRES_DB=voter_db
       - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=secretpassword
+      - POSTGRES_PASSWORD=Peeku@123
     logging:
       driver: "json-file"
       options:
         max-size: "100m"
         max-file: "3"
-    # Internal usage: admin/secretpassword (production local auth)
+    # Internal usage: admin/Peeku@123 (production local auth)
 
   redis:
     image: redis:7-alpine
@@ -34,7 +34,7 @@ services:
     expose:
       - "8000"
     environment:
-      - DATABASE_URL=postgres://admin:secretpassword@db:5432/voter_db
+      - DATABASE_URL=postgres://admin:Peeku@123@db:5432/voter_db
       - REDIS_URL=redis://redis:6379/0
       - DJANGO_SETTINGS_MODULE=voter_vault.settings
       - RUN_MIGRATIONS=True
@@ -70,7 +70,7 @@ services:
     restart: always
     command: celery -A backend.celery_app worker --loglevel=info --concurrency=7 --max-tasks-per-child=5 --prefetch-multiplier=1
     environment:
-      - DATABASE_URL=postgres://admin:secretpassword@db:5432/voter_db
+      - DATABASE_URL=postgres://admin:Peeku@123@db:5432/voter_db
       - REDIS_URL=redis://redis:6379/0
       - DJANGO_SETTINGS_MODULE=voter_vault.settings
       - PYTHONPATH=/app/voter_vault

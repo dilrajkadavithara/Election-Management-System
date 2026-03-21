@@ -5,6 +5,8 @@
 2.  **No "silent" Fixes:** Do not attempt to fix things in the background (like `docker-compose.yml` changes) without explaining the change first.
 3.  **Destructive Command Warning:** Any command that deletes data (e.g., `rm`, `docker system prune`, `git reset --hard`) must be flagged with a **CRITICAL WARNING** and require explicit user approval.
 4.  **Deployment Safety:** Never trigger a deployment or push to `master` without the user saying "Yes, deploy this".
+5.  **Loop-Breaking Protocol (LBP):** If any tool or logic fails **3 times consecutively** with the same error, **STOP** immediately. Provide a "Deadlock Report" and wait for manual guidance.
+6.  **Progress Tracking:** Maintain an `implementation_plan.md` for any task requiring more than 2 tool calls.
 
 ## 🧠 Reasoning
 The user values stability and control over speed. Better to ask twice than to break once.
