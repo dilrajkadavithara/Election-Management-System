@@ -34,9 +34,15 @@ COPY frontend/dist ./frontend/dist
 # Create necessary directories for runtime
 RUN mkdir -p data/raw_pdf data/page_images data/voter_crops data/party_symbols
 
+# Create non-root user
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+
 # Environment Variables
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8000
+
+# Switch to non-root user
+USER appuser
 
 # Metadata
 EXPOSE 8000

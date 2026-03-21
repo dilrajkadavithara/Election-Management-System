@@ -28,9 +28,7 @@ const ElectionDay = ({ userRole, userAssignments, username, setShowChangePasswor
     const lastTapRef = useRef({});
 
     useEffect(() => {
-        console.log("ElectionDay Init: userRole =", userRole, "userAssignments =", userAssignments);
         api.getLocations().then(data => {
-            console.log("Locations loaded:", data?.length, "items");
             setLocations(data);
             if (userAssignments?.constituencies?.length > 0) {
                 const cid = parseInt(userAssignments.constituencies[0]);
@@ -45,14 +43,11 @@ const ElectionDay = ({ userRole, userAssignments, username, setShowChangePasswor
                 }
             } else if (userAssignments?.booths?.length > 0) {
                 const bid = parseInt(userAssignments.booths[0]);
-                console.log("Auto-selecting booth for agent:", bid);
                 setSelBooth(bid);
-                // Also resolve parent IDs from locations tree
                 let resolved = false;
                 for (const c of data) {
                     for (const lb of c.local_bodies) {
                         if (lb.booths.some(b => parseInt(b.id) === bid)) {
-                            console.log("Resolved parents:", { const: c.id, lb: lb.id });
                             setSelConst(c.id);
                             setSelLB(lb.id);
                             resolved = true;
@@ -61,12 +56,8 @@ const ElectionDay = ({ userRole, userAssignments, username, setShowChangePasswor
                     }
                     if (resolved) break;
                 }
-            } else {
-                console.warn("No assignments found for current user.");
             }
-        }).catch(err => {
-            console.error("Failed to load locations:", err);
-        });
+        }).catch(() => {});
     }, [userAssignments, userRole]);
 
     const fetchData = useCallback(async (boothId) => {

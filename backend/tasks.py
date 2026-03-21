@@ -58,7 +58,12 @@ def run_extraction_task(batch_id: str, dpi: int, direct_pdf: bool = False):
     try:
         batch = state_manager.get_batch(batch_id)
         if not batch: return
-        
+
+        # Idempotency: skip if already extracted or further along
+        if batch.get('status') in ('extracted', 'processing', 'completed'):
+            logger.info(f"Batch {batch_id} already in status '{batch['status']}', skipping extraction.")
+            return
+
         pdf_path = batch['file_path']
         
         # 0. Bird's-Eye Synchronization: Prefer database state over passed arguments
@@ -79,53 +84,13 @@ def run_extraction_task(batch_id: str, dpi: int, direct_pdf: bool = False):
         p_dir = PAGES_DIR / batch_id
         c_dir = CROPS_DIR / batch_id
 
-        if direct_pdf:
-            # --- STRATEGIC SHORTCUT (Safe Mode) ---
-            batch['direct_pdf'] = True
-            batch['pages_processed'] = 0 
-            batch['status'] = 'extracted'
-            state_manager.set_batch(batch_id, batch)
-            import time; time.sleep(1) # Final Sync Buffer
-            state_manager.set_batch(batch_id, batch)
-            logger.info(f"Batch {batch_id} ready for Strategic AI extraction.")
-            return
-
-        # 2. Conversion & Processing (Legacy Mode)
-        batch['status'] = 'extracting'
-        batch['status_text'] = 'Rendering Master Images...'
-        state_manager.set_batch(batch_id, batch)
-
-        page_images = []
-        # Consume the generator to provide real-time updates
-        for batch_paths in pdf_processor.convert_to_images(pdf_path, str(p_dir), dpi=dpi):
-            page_images.extend(batch_paths)
-            batch['pages_processed'] = len(page_images)
-            batch['status_text'] = f"Preparing High-Res Pages ({len(page_images)}/{batch['total_pages']})..."
-            state_manager.set_batch(batch_id, batch)
-        
-        total_voters = 0
-        batch['status_text'] = "Locating Voter Boxes..."
-        state_manager.set_batch(batch_id, batch)
-
-        for i, page_path in enumerate(page_images):
-            if state_manager.is_cancelled(batch_id):
-                state_manager.delete_batch(batch_id)
-                gc.collect()
-                return
-
-            batch['pages_processed'] = i + 1
-            batch['status_text'] = f"Scanning Grid: Page {i+1} of {len(page_images)}..."
-            state_manager.set_batch(batch_id, batch)
-            
-            boxes = detector.detect_voter_boxes(page_path) 
-            if boxes:
-                count = detector.crop_and_save(page_path, boxes, str(c_dir), i+1, start_index=total_voters)
-                total_voters += count
-        
-        batch['total_voters'] = total_voters
+        # All modes now use Gemini page-by-page — rendering handled inside process_pdf_directly
+        batch['direct_pdf'] = True
+        batch['pages_processed'] = 0
         batch['status'] = 'extracted'
-        batch['status_text'] = 'Master Extraction Complete.'
+        batch['status_text'] = 'Ready for Gemini page-by-page extraction at 300 DPI.'
         state_manager.set_batch(batch_id, batch)
+        logger.info(f"Batch {batch_id} ready for Gemini extraction ({batch['total_pages']} pages).")
     except Exception as e:
         logger.error(f"Extraction Error: {e}")
         batch = state_manager.get_batch(batch_id)
@@ -140,9 +105,10 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
         batch = state_manager.get_batch(batch_id)
         if not batch: return
         
-        # Bird's-Eye Synchronization: Ensure we know if we are in Safe Mode
-        direct_pdf = batch.get('direct_pdf', direct_pdf)
-        use_gemini = batch.get('use_gemini', use_gemini)
+        # Always use Gemini page-by-page extraction (renders at 300 DPI internally)
+        # Tesseract+crop legacy flow is deprecated — Gemini reads full pages directly
+        direct_pdf = True
+        use_gemini = True
         
         batch['status'] = 'processing'
         state_manager.set_batch(batch_id, batch)
@@ -326,28 +292,34 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
 
 @celery_app.task(name="tasks.janitor_cleanup")
 def janitor_cleanup():
-    """Nuclear Janitor: Deletes temporary OCR batch folders older than 48 hours."""
+    """Janitor: Deletes temporary OCR batch folders older than 48 hours if not actively in use."""
     import time
     import shutil
-    
-    # 1. Scope: page_images and voter_crops
+
+    # Get active batch IDs to avoid deleting in-use data
+    active_batches = state_manager.list_all_batches()
+    active_ids = {b.get('id') for b in active_batches if b.get('status') in ('uploaded', 'extracting', 'processing', 'extracted')}
+
     target_dirs = [PAGES_DIR, CROPS_DIR]
     now = time.time()
     retention_seconds = 48 * 3600
-    
+
     deleted_count = 0
     for base_dir in target_dirs:
         if not base_dir.exists(): continue
-        
+
         for batch_dir in base_dir.iterdir():
             if batch_dir.is_dir():
+                # Skip directories belonging to active batches
+                if any(aid in batch_dir.name for aid in active_ids):
+                    continue
                 try:
                     mtime = batch_dir.stat().st_mtime
                     if now - mtime > retention_seconds:
                         shutil.rmtree(str(batch_dir))
                         deleted_count += 1
-                        logger.info(f"🧹 Janitor: Cleaned up stagnant batch folder: {batch_dir.name}")
+                        logger.info(f"Janitor: Cleaned up stagnant batch folder: {batch_dir.name}")
                 except Exception as e:
-                    logger.error(f"⚠️ Janitor failed to process {batch_dir.name}: {e}")
-    
+                    logger.error(f"Janitor failed to process {batch_dir.name}: {e}")
+
     return f"Cleanup complete. Removed {deleted_count} stagnant folders."

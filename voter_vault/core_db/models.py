@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.indexes import GistIndex
+from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
 
 class Constituency(models.Model):
     name = models.CharField(max_length=200, unique=True, help_text="e.g. Trippunithura")
@@ -75,11 +76,13 @@ class Voter(models.Model):
     # Demographics
     house_no = models.CharField(max_length=100, blank=True)
     house_name = models.CharField(max_length=1000, blank=True, db_index=True)
-    age = models.PositiveIntegerField(null=True, blank=True)
-    gender = models.CharField(max_length=20, blank=True)
+    age = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(18), MaxValueValidator(150)])
+    GENDER_CHOICES = [('M', 'Male'), ('F', 'Female'), ('O', 'Other')]
+    gender = models.CharField(max_length=20, blank=True, choices=GENDER_CHOICES)
     
     # Custom Fields (Actionable Campaign Intelligence)
-    phone_no = models.CharField(max_length=20, blank=True, null=True, db_index=True)
+    phone_no = models.CharField(max_length=20, blank=True, null=True, db_index=True,
+        validators=[RegexValidator(r'^\d{10,15}$', 'Phone number must be 10-15 digits')])
     is_head_of_family = models.BooleanField(default=False, db_index=True)
     is_digitized = models.BooleanField(default=False, db_index=True)
     
@@ -127,6 +130,7 @@ class Voter(models.Model):
         indexes = [
             GistIndex(fields=['full_name'], name='voter_name_gist_trgm', opclasses=['gist_trgm_ops']),
             GistIndex(fields=['house_name'], name='voter_house_gist_trgm', opclasses=['gist_trgm_ops']),
+            models.Index(fields=['booth', 'serial_no'], name='voter_booth_serial_idx'),
         ]
 
     def __str__(self):
@@ -285,7 +289,7 @@ class DailyProgress(models.Model):
     Tracks tactical metrics on a daily basis for War Room analysis.
     This allows monitoring of digitization speed and political conversion rates.
     """
-    booth = models.ForeignKey(Booth, on_delete=models.CASCADE, related_name='tracking_stats')
+    booth = models.ForeignKey(Booth, on_delete=models.CASCADE, related_name='tracking_stats', db_index=True)
     date = models.DateField(db_index=True)
     
     # Cumulative Totals (Snapshots)
@@ -302,7 +306,7 @@ class DailyProgress(models.Model):
     new_nda = models.IntegerField(default=0)
     
     # Analytic Snapshot
-    winning_chance = models.FloatField(default=0.0, help_text="Winning probability based on current confirmed + likely trend")
+    winning_chance = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(1.0)], help_text="Winning probability (0.0-1.0) based on current confirmed + likely trend")
     
     class Meta:
         unique_together = ('booth', 'date')

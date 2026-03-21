@@ -1,17 +1,35 @@
 import axios from 'axios';
 
-const API_BASE_URL = '';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 const client = axios.create({
     baseURL: API_BASE_URL,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json' },
+    timeout: 30000, // 30 second default timeout
 });
+
+// Session helpers — single JSON object instead of 8 separate keys
+const SESSION_KEY = 'voter_session';
+
+export function getSession() {
+    try {
+        return JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+    } catch { return {}; }
+}
+
+export function setSession(data) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(data));
+}
+
+export function clearSession() {
+    localStorage.removeItem(SESSION_KEY);
+}
 
 // Add Interceptor for Token
 client.interceptors.request.use((config) => {
-    const token = localStorage.getItem('voter_token');
-    if (token && token !== 'undefined') {
-        config.headers.Authorization = `Bearer ${token}`;
+    const session = getSession();
+    if (session.token && session.token !== 'undefined') {
+        config.headers.Authorization = `Bearer ${session.token}`;
     }
     return config;
 });
@@ -21,9 +39,7 @@ client.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 401) {
-            console.warn("Session Expired - Auto Logout Triggered");
-            localStorage.clear();
-            // Force reload to clear React state
+            clearSession();
             window.location.reload();
         }
         return Promise.reject(error);
@@ -39,23 +55,24 @@ const api = {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
         if (response.data.access_token) {
-            localStorage.setItem('voter_token', response.data.access_token);
-            localStorage.setItem('voter_role', response.data.role);
-            localStorage.setItem('voter_user', response.data.username);
-            localStorage.setItem('voter_assignments', JSON.stringify(response.data.assignments || {}));
-            // Save permissions
-            localStorage.setItem('voter_can_download', response.data.can_download);
-            localStorage.setItem('voter_can_upload', response.data.can_upload);
-            localStorage.setItem('voter_can_verify', response.data.can_verify);
-            localStorage.setItem('voter_can_edit_voters', response.data.can_edit_voters);
-            localStorage.setItem('voter_can_send_broadcasts', response.data.can_send_broadcasts);
-            localStorage.setItem('voter_can_manage_system', response.data.can_manage_system);
+            setSession({
+                token: response.data.access_token,
+                role: response.data.role,
+                username: response.data.username,
+                assignments: response.data.assignments || {},
+                can_download: response.data.can_download,
+                can_upload: response.data.can_upload,
+                can_verify: response.data.can_verify,
+                can_edit_voters: response.data.can_edit_voters,
+                can_send_broadcasts: response.data.can_send_broadcasts,
+                can_manage_system: response.data.can_manage_system,
+            });
         }
         return response.data;
     },
 
     logout: () => {
-        localStorage.clear();
+        clearSession();
     },
 
     checkHealth: async () => {
@@ -68,12 +85,12 @@ const api = {
         return response.data;
     },
 
-
     uploadPDF: async (file) => {
         const formData = new FormData();
         formData.append('file', file);
         const response = await client.post('/api/upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
+            headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 120000, // 2 min for uploads
         });
         return response.data;
     },
@@ -107,7 +124,7 @@ const api = {
         return response.data;
     },
     exportBatchCSV: (batchId) => {
-        client.get(`/api/batch/${batchId}/export-csv`, { responseType: 'blob' })
+        return client.get(`/api/batch/${batchId}/export-csv`, { responseType: 'blob' })
             .then(response => {
                 const url = window.URL.createObjectURL(new Blob([response.data]));
                 const link = document.createElement('a');
@@ -115,6 +132,8 @@ const api = {
                 link.setAttribute('download', `ocr_batch_${batchId}.csv`);
                 document.body.appendChild(link);
                 link.click();
+                link.remove();
+                window.URL.revokeObjectURL(url);
             }).catch(e => alert("Download Error: " + e.message));
     },
 
@@ -126,7 +145,7 @@ const api = {
             lgb_name: lgbName,
             booth_id: boothId,
             booth_number: boothNo,
-            booth: boothNo, // Redundant for absolute safety
+            booth: boothNo,
             ps_no: psNo,
             ps_name: psName
         });
@@ -154,7 +173,7 @@ const api = {
     },
 
     exportVoters: (filters) => {
-        client.get(`/api/export-voters`, { params: filters, responseType: 'blob' })
+        return client.get(`/api/export-voters`, { params: filters, responseType: 'blob', timeout: 120000 })
             .then(response => {
                 const url = window.URL.createObjectURL(new Blob([response.data]));
                 const link = document.createElement('a');
@@ -162,6 +181,8 @@ const api = {
                 link.setAttribute('download', `voters_export.csv`);
                 document.body.appendChild(link);
                 link.click();
+                link.remove();
+                window.URL.revokeObjectURL(url);
             }).catch(e => alert("Access Denied or Download Error: " + (e.response?.status === 403 ? "Restricted for Employees" : e.message)));
     },
 
@@ -303,6 +324,5 @@ const api = {
         return response.data;
     }
 };
-
 
 export default api;

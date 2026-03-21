@@ -47,8 +47,10 @@ if __name__ == "__main__":
                         
                         # Expert alignment: Only force credentials if newly created
                         if created:
-                            admin_user.set_password("Peeku@123")
-                            print(f"   ✨ Initial credentials created for: {uname}")
+                            import secrets as _secrets
+                            default_pw = os.getenv("ADMIN_DEFAULT_PASSWORD", _secrets.token_urlsafe(16))
+                            admin_user.set_password(default_pw)
+                            print(f"   ✨ Initial credentials created for: {uname} (password set from env or generated)")
                         
                         admin_user.is_active = True   # Critical for authenticate()
                         admin_user.is_staff = True    # Necessary for Admin-level access
@@ -96,8 +98,17 @@ if __name__ == "__main__":
                     os.makedirs(dst, exist_ok=True)
                     # We copy contents surgically. Using a temp-over-swap approach is safer 
                     # but simple cp -a with update flag is often faster.
-                    os.system(f"cp -aT {src}/ {dst}/ || cp -RT {src}/ {dst}/ || true")
-                    os.system(f"chmod -R 755 {dst} || true")
+                    import shutil as _shutil
+                    import stat
+                    # Safe copy without shell injection risk
+                    if os.path.exists(dst):
+                        _shutil.rmtree(dst)
+                    _shutil.copytree(src, dst, dirs_exist_ok=True)
+                    for root, dirs, files in os.walk(dst):
+                        for d in dirs:
+                            os.chmod(os.path.join(root, d), stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
+                        for f in files:
+                            os.chmod(os.path.join(root, f), stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
                     print(f"     ✅ Sync complete.")
 
             print("✅ Deployment Gates Complete.")

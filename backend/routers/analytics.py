@@ -1,8 +1,11 @@
+import logging
+import traceback
 from fastapi import APIRouter, Depends, HTTPException
 from backend.dependencies import get_current_user
 from backend.django_bridge import get_stats_async, get_strategic_analytics_async
 
 router = APIRouter(prefix="/api", tags=["Analytics & War Room"])
+logger = logging.getLogger("ElectionEngine")
 
 @router.get("/stats")
 @router.get("/stats/summary")
@@ -21,13 +24,8 @@ async def get_strategic_analytics_api(constituency_id: str = None, user_info=Dep
         c_id = int(constituency_id) if constituency_id and str(constituency_id).isdigit() else None
         return await get_strategic_analytics_async(user_info['username'], c_id)
     except Exception as e:
-        import traceback
-        import logging
-        logger = logging.getLogger("ElectionEngine")
-        err_msg = f"💥 Strategic Analytics Error: {str(e)}"
-        logger.error(f"{err_msg}\n{traceback.format_exc()}")
-        # Returning as 200 with error info to bypass Axios 500 masking in some environments
-        return {"error": True, "detail": err_msg, "traceback": traceback.format_exc()}
+        logger.error(f"Strategic Analytics Error: {e}\n{traceback.format_exc()}")
+        raise HTTPException(500, detail="Strategic analytics failed. Check server logs for details.")
 
 @router.get("/war-room/stats")
 async def get_war_stats(

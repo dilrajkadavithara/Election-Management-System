@@ -71,4 +71,6 @@ jobs:
           DATABASE_URL: postgres://postgres:@localhost:5432/voters_db
           REDIS_URL: redis://localhost:6379/0
           DJANGO_SETTINGS_MODULE: voter_vault.settings
+          SECRET_KEY: ci-test-secret-key-minimum-50-chars-long-for-django-validation
+          DEBUG: "True"
         run: pytest tests/

@@ -622,7 +622,7 @@ const DashboardV2 = ({
                                                 }`} />
 
                                             {/* Massive White External Tooltip */}
-                                            <div className={`absolute ${isTopRow ? 'top-[calc(100%+15px)]' : 'bottom-[calc(100%+15px)]'} ${alignClass} z-[200] w-[300px] bg-white p-6 rounded-3xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 shadow-[0_30px_60px_rgba(0,0,0,0.6)] flex flex-col gap-4 border-4 border-indigo-100 ${isTopRow ? '-translate-y-4 group-hover:translate-y-0' : 'translate-y-4 group-hover:translate-y-0'}`}>
+                                            <div className={`absolute ${isTopRow ? 'top-[calc(100%+15px)]' : 'bottom-[calc(100%+15px)]'} ${alignClass} z-[200] w-[85vw] sm:w-[300px] bg-white p-6 rounded-3xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 shadow-[0_30px_60px_rgba(0,0,0,0.6)] flex flex-col gap-4 border-4 border-indigo-100 ${isTopRow ? '-translate-y-4 group-hover:translate-y-0' : 'translate-y-4 group-hover:translate-y-0'}`}>
                                                 <div className="border-b border-slate-200 pb-3">
                                                     <div className="flex justify-between items-start gap-4">
                                                         <div className="flex-1 min-w-0">
