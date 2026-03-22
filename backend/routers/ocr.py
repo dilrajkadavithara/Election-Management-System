@@ -202,12 +202,13 @@ async def save_to_db(payload: SaveBatchRequest, user_info=Depends(get_current_us
     return {"success": success, "message": msg}
 
 @router.post("/batch/{batch_id}/location")
-async def update_batch_location(batch_id: str, payload: dict, user_info=Depends(get_current_user)):
+async def update_batch_location(batch_id: str, request: Request, user_info=Depends(get_current_user)):
     """Store location data in batch so it persists across page reloads."""
     batch = state_manager.get_batch(batch_id)
     if not batch:
         raise HTTPException(404, "Batch not found")
-    batch['location'] = payload.get('location', {})
+    body = await request.json()
+    batch['location'] = body.get('location', {})
     state_manager.set_batch(batch_id, batch)
     return {"success": True}
 
