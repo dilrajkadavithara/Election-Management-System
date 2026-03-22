@@ -57,9 +57,9 @@ class OCREngine:
     def get_throttle(self):
         """Standard thread-safe throttle for API calls."""
         with self.throttle_lock:
-            # --- GOD MODE (TIER 2): 0.5s stagger for 12 parallel workers. ---
-            # Total 12 workers * 150k = 1.8 Million tokens (Limit is 4M TPM).
-            time.sleep(0.5)
+            # Tier 2: 0.3s stagger for 8 parallel threads per batch
+            # 8 threads × 3 workers = 24 RPM peak, well within Tier 2's 1000+ RPM
+            time.sleep(0.3)
         # RELEASE LOCK: Allow next worker to stagger while THIS one hits Gemini.
         yield
 

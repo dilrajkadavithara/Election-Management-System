@@ -2,6 +2,11 @@ import json
 import os
 import redis
 import logging
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Ensure .env is loaded before reading REDIS_URL
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from backend.logger_setup import setup_logger
 logger = setup_logger("StateManager")
@@ -25,7 +30,9 @@ class StateManager:
             try:
                 with open(self.persistence_path, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except: return {}
+            except (json.JSONDecodeError, IOError) as e:
+                logger.warning(f"Failed to load state from disk: {e}")
+                return {}
         return {}
 
     def _save_to_disk(self):
@@ -33,7 +40,8 @@ class StateManager:
         try:
             with open(self.persistence_path, 'w', encoding='utf-8') as f:
                 json.dump(self._local_storage, f, ensure_ascii=False, indent=4)
-        except: pass
+        except IOError as e:
+            logger.error(f"Failed to save state to disk: {e}")
 
     def get_batch(self, batch_id):
         if self.use_redis:
@@ -64,7 +72,8 @@ class StateManager:
                 data = self.redis.get(k)
                 if data:
                     try: all_batches.append(json.loads(data))
-                    except: pass
+                    except json.JSONDecodeError:
+                        logger.warning(f"Failed to parse batch data for key: {k}")
             return all_batches
         return list(self._local_storage.values())
 

@@ -17,21 +17,28 @@ if __name__ == "__main__":
 
 from core_db.models import Voter, Booth, Constituency, LocalBody, PoliticalParty, UserProfile, MessageTemplate, CommunicationLog
 import time
+import threading
+import logging
+
+logger = logging.getLogger("ElectionEngine")
 
 _stats_cache = {}
+_cache_lock = threading.Lock()
 CACHE_TTL = 30  # 30 seconds
 
 def _get_cache(key):
-    if key in _stats_cache:
-        val, ts = _stats_cache[key]
-        if time.time() - ts < CACHE_TTL:
-            return val
-        else:
-            del _stats_cache[key]
-    return None
+    with _cache_lock:
+        if key in _stats_cache:
+            val, ts = _stats_cache[key]
+            if time.time() - ts < CACHE_TTL:
+                return val
+            else:
+                del _stats_cache[key]
+        return None
 
 def _set_cache(key, val):
-    _stats_cache[key] = (val, time.time())
+    with _cache_lock:
+        _stats_cache[key] = (val, time.time())
 
 def get_parties():
     """Fetch list of active political parties"""
@@ -467,7 +474,7 @@ def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency
             "ps_name": v.booth.polling_station_name or v.booth.name or "N/A",
             "voting_probability": v.voting_probability,
             "has_voted": v.has_voted,
-            "voted_at": str(v.voted_at) if v.voted_at else None
+            "voted_at": v.voted_at.isoformat() if v.voted_at else None
         })
     return {"total": total_count, "results": results}
 
@@ -554,7 +561,7 @@ def get_all_locations(user_profile=None):
                 )
             ).order_by('name')
         )
-    ).order_of_name = 'name' # Sorting handled in queryset
+    ).order_by('name')
 
     data = []
     # If user_profile is a BOOTH_AGENT, we only care about their booths
@@ -876,7 +883,7 @@ def get_war_room_tactical_stats(user_profile, constituency_id=None, lb_id=None, 
         base_booths = base_booths.filter(constituency_id=constituency_id)
         
     booth_ids = list(base_booths.values_list('id', flat=True))
-    print(f"DEBUG: War Room Stats for Const ID: {constituency_id}, Booths found: {len(booth_ids)}")
+    logger.debug(f"War Room Stats for Const ID: {constituency_id}, Booths found: {len(booth_ids)}")
     performance = {"top_win": [], "bottom_win": [], "top_neutrals": [], "bottom_neutrals": []}
 
     if not booth_ids:

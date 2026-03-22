@@ -16,20 +16,20 @@ class BatchProcessor:
         self.results = []
 
     def process_pdf_directly(self, pdf_path, batch_id=None, page_range=None, callback=None):
-        """High-Precision Image Mode: Converts PDF pages to high-res images before AI extraction."""
+        """Pipeline Mode: Renders pages in batches and sends to Gemini immediately.
+        Rendering and Gemini calls overlap — first progress within ~8 seconds."""
         import concurrent.futures
         from core.pdf_processor import PDFProcessor
         import tempfile
         import shutil
         from backend.state_manager import state_manager
         all_standardized = []
-        
-        # Cross-platform processor initialization
+
         pdf_proc = PDFProcessor()
-        
-        # Concurrency Management: 3 is the sweet spot for maximum stability without triggering token burst limits on AI endpoints
-        max_workers = 5  # Stable-Nitro Mode: Optimum for 8-core / 16GB stability without API burst caps
-        
+
+        # Concurrency: 8 parallel Gemini threads (Tier 2: 1000+ RPM)
+        max_workers = 8
+
         # Determine pages to process
         if page_range:
             if isinstance(page_range, (list, tuple)) and len(page_range) == 2:
@@ -38,101 +38,149 @@ class BatchProcessor:
             else:
                 pages = page_range
         else:
-            # Correct method to get total pages safely
             total_pages = pdf_proc.convert_to_images(pdf_path, "", total_pages_only=True)
             pages = list(range(1, total_pages + 1))
-        
-        logger.info(f"🎯 High-Precision Box Mode: {len(pages)} pages | {max_workers} Workers | 300 DPI")
-        
-        # --- STABLE-BATCH CONVERSION (O(1) Overhead) ---
-        # Instead of re-opening the PDF for every single page in a thread (High IOPS + RAM),
-        # we render the needed pages into a persistent temp directory FIRST.
+
+        pages_set = set(pages)
+        logger.info(f"Pipeline Mode: {len(pages)} pages | {max_workers} workers | 300 DPI")
+
         temp_root = tempfile.mkdtemp(prefix="ocr_master_batch_")
         page_to_image_map = {}
-        
+
+        def process_page_extraction(page_num):
+            """Send a single rendered page image to Gemini."""
+            page_img_path = page_to_image_map.get(page_num)
+            if not page_img_path or not os.path.exists(page_img_path):
+                logger.error(f"Page {page_num} image not found")
+                return page_num, "Image Missing", False
+
+            try:
+                p_num, batch_results, success = self.engine.extract_full_page_consolidated(
+                    page_img_path, page_num=page_num
+                )
+                if not success or not isinstance(batch_results, list):
+                    return page_num, f"AI Error: {batch_results}", False
+
+                page_results = []
+                for entry in batch_results:
+                    page_results.append({
+                        "Full Name": entry.get("name_malayalam") or "",
+                        "Relation Name": entry.get("relation_name_malayalam") or "",
+                        "Relation Type": str(entry.get("relation_type") or "").title(),
+                        "House Name": entry.get("house_name_malayalam") or "",
+                        "House Number": entry.get("house_number") or "",
+                        "Age": str(entry.get("age") or ""),
+                        "Gender": str(entry.get("gender") or "").title(),
+                        "EPIC_ID": entry.get("epic_id") or "",
+                        "Serial_OCR": str(entry.get("serial_number") or ""),
+                        "Image_Path": f"p{page_num}_full_page",
+                        "Filename": os.path.basename(pdf_path)
+                    })
+                return page_num, page_results, True
+
+            except Exception as e:
+                logger.error(f"Extraction Error on Page {page_num}: {e}")
+                return page_num, str(e), False
+
+        ordered_results = {}
+
         try:
-            logger.info(f"🎨 Rendering {len(pages)} pages to high-res images (300 DPI)...")
-            # Consume the generator to get ALL target images in one pass
-            for batch_paths in pdf_proc.convert_to_images(
-                pdf_path, temp_root, dpi=300, 
-                first_page=min(pages), last_page=max(pages)
-            ):
-                for path in batch_paths:
-                    # Extract page number from filename (e.g., page_003.jpg -> 3)
-                    p_num_match = re.search(r'page_(\d+)', os.path.basename(path))
-                    if p_num_match:
-                        p_num = int(p_num_match.group(1))
-                        if p_num in pages:
-                            page_to_image_map[p_num] = path
-
-            # 🎯 TRACER: Ensure we got all requested pages
-            missing_pages = [p for p in pages if p not in page_to_image_map]
-            if missing_pages:
-                logger.warning(f"⚠️ Missing images for pages: {missing_pages}. Attempting rescue...")
-
-            def process_page_extraction(page_num):
-                page_img_path = page_to_image_map.get(page_num)
-                if not page_img_path or not os.path.exists(page_img_path):
-                    logger.error(f"❌ Page {page_num} image not found at {page_img_path}")
-                    return page_num, "Image Missing", False
-
-                try:
-                    # --- GEMINI TRACER PASSTHROUGH ---
-                    p_num, batch_results, success = self.engine.extract_full_page_consolidated(page_img_path, page_num=page_num)
-                    
-                    if not success or not isinstance(batch_results, list):
-                        return page_num, f"AI Error: {batch_results}", False
-                    
-                    page_results = []
-                    for entry in batch_results:
-                        page_results.append({
-                            "Full Name": entry.get("name_malayalam") or "",
-                            "Relation Name": entry.get("relation_name_malayalam") or "",
-                            "Relation Type": str(entry.get("relation_type") or "").title(),
-                            "House Name": entry.get("house_name_malayalam") or "",
-                            "House Number": entry.get("house_number") or "",
-                            "Age": str(entry.get("age") or ""),
-                            "Gender": str(entry.get("gender") or "").title(),
-                            "EPIC_ID": entry.get("epic_id") or "",
-                            "Serial_OCR": str(entry.get("serial_number") or ""),
-                            "Image_Path": f"p{page_num}_full_page",
-                            "Filename": os.path.basename(pdf_path)
-                        })
-                    return page_num, page_results, True
-
-                except Exception as e:
-                    logger.error(f"❌ Extraction Error on Page {page_num}: {e}")
-                    return page_num, str(e), False
-
-            # --- PARALLEL EXTRACTION: Only the AI calls are threaded now ---
-            # This prevents Poppler Thread-Locking and reduces RAM overhead by 70%
+            # --- PIPELINE: Render batches + send to Gemini simultaneously ---
+            # The ThreadPool stays open. As each render batch completes,
+            # those pages are immediately submitted to Gemini while the
+            # next batch is rendering.
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                future_to_page = {executor.submit(process_page_extraction, p): p for p in pages}
+                all_futures = {}
 
-            ordered_results = {}
-            
-            for future in concurrent.futures.as_completed(future_to_page):
-                if batch_id and state_manager.is_cancelled(batch_id):
-                    logger.warning(f"🛑 Batch {batch_id} cancelled during result collection. Halting.")
-                    return all_standardized # Return what we have, tasks.py will ignore it
-                
-                page, res, success = future.result()
-                ordered_results[page] = res
-                if callback:
-                    callback(page, res, success)
+                # pdf_proc.convert_to_images yields batches of 5 pages
+                for batch_paths in pdf_proc.convert_to_images(
+                    pdf_path, temp_root, dpi=300,
+                    first_page=min(pages), last_page=max(pages)
+                ):
+                    # Register rendered images
+                    for path in batch_paths:
+                        p_num_match = re.search(r'page_(\d+)', os.path.basename(path))
+                        if p_num_match:
+                            p_num = int(p_num_match.group(1))
+                            if p_num in pages_set:
+                                page_to_image_map[p_num] = path
+                                # Submit to Gemini IMMEDIATELY — don't wait for all pages
+                                future = executor.submit(process_page_extraction, p_num)
+                                all_futures[future] = p_num
+
+                    # While rendering next batch, collect any completed Gemini results
+                    done = set()
+                    for future in list(all_futures):
+                        if future.done():
+                            done.add(future)
+
+                    for future in done:
+                        if batch_id and state_manager.is_cancelled(batch_id):
+                            logger.warning(f"Batch {batch_id} cancelled. Halting.")
+                            return all_standardized
+
+                        page, res, success = future.result()
+
+                        # Retry failed pages or pages with < 30 voters
+                        needs_retry = (not success) or (success and isinstance(res, list) and len(res) < 30)
+                        if needs_retry:
+                            count = len(res) if isinstance(res, list) else 0
+                            reason = "FAILED" if not success else f"{count} voters (expected 30)"
+                            logger.warning(f"Page {page}: {reason}. Retrying...")
+                            page2, res2, success2 = process_page_extraction(page)
+                            if success2 and isinstance(res2, list):
+                                if not success or len(res2) > count:
+                                    logger.info(f"Page {page}: retry got {len(res2)} voters. Using retry.")
+                                    res, success = res2, success2
+                                else:
+                                    logger.info(f"Page {page}: retry got {len(res2)} (was {count}). Keeping original.")
+                            elif not success:
+                                logger.error(f"Page {page}: retry also failed. Page will be missing.")
+
+                        ordered_results[page] = res
+                        if callback:
+                            callback(page, res, success)
+                        del all_futures[future]
+
+                # All rendering done — now wait for remaining Gemini futures
+                for future in concurrent.futures.as_completed(all_futures):
+                    if batch_id and state_manager.is_cancelled(batch_id):
+                        logger.warning(f"Batch {batch_id} cancelled. Halting.")
+                        return all_standardized
+
+                    page, res, success = future.result()
+
+                    # Retry failed pages or pages with < 30 voters
+                    needs_retry = (not success) or (success and isinstance(res, list) and len(res) < 30)
+                    if needs_retry:
+                        count = len(res) if isinstance(res, list) else 0
+                        reason = "FAILED" if not success else f"{count} voters (expected 30)"
+                        logger.warning(f"Page {page}: {reason}. Retrying...")
+                        page2, res2, success2 = process_page_extraction(page)
+                        if success2 and isinstance(res2, list):
+                            if not success or len(res2) > count:
+                                logger.info(f"Page {page}: retry got {len(res2)} voters. Using retry.")
+                                res, success = res2, success2
+                            else:
+                                logger.info(f"Page {page}: retry got {len(res2)} (was {count}). Keeping original.")
+                        elif not success:
+                            logger.error(f"Page {page}: retry also failed. Page will be missing.")
+
+                    ordered_results[page] = res
+                    if callback:
+                        callback(page, res, success)
 
         finally:
-            # Cleanup target temp root
             shutil.rmtree(temp_root, ignore_errors=True)
 
-        # 3. Final Serialization (Maintain Perfect Order)
+        # Final Serialization (Maintain Perfect Order)
         for p in pages:
             if p in ordered_results and isinstance(ordered_results[p], list):
                 for voter in ordered_results[p]:
                     voter["voter_id"] = len(all_standardized) + 1
                     self._apply_standardization(voter, voter["voter_id"])
                     all_standardized.append(voter)
-        
+
         return all_standardized
 
     def _apply_standardization(self, parsed_info, expected_serial):

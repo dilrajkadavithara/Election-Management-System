@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar
 } from 'recharts';
@@ -226,7 +226,7 @@ const WarRoom = ({ allLocations, dashFilters, listFilters, setListFilters, setVi
                                 <div key={i} className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group relative">
 
                                     {/* Massive White Tooltip (Unified Design) */}
-                                    <div className={`absolute z-[250] ${i < 3 ? 'top-[calc(100%+10px)]' : 'bottom-[calc(100%+10px)]'} ${idx === 0 ? 'left-0' : idx === 3 ? 'right-0' : 'left-1/2 -translate-x-1/2'} w-[300px] bg-white p-6 rounded-3xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 shadow-[0_30px_60px_rgba(0,0,0,0.6)] flex flex-col gap-4 border-4 border-indigo-100 ${i < 3 ? '-translate-y-2 group-hover:translate-y-0' : 'translate-y-2 group-hover:translate-y-0'}`}>
+                                    <div className={`absolute z-[250] ${i < 3 ? 'top-[calc(100%+10px)]' : 'bottom-[calc(100%+10px)]'} ${idx === 0 ? 'left-0' : idx === 3 ? 'right-0' : 'left-1/2 -translate-x-1/2'} w-[85vw] sm:w-[300px] bg-white p-6 rounded-3xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 shadow-[0_30px_60px_rgba(0,0,0,0.6)] flex flex-col gap-4 border-4 border-indigo-100 ${i < 3 ? '-translate-y-2 group-hover:translate-y-0' : 'translate-y-2 group-hover:translate-y-0'}`}>
                                         <div className="border-b border-slate-200 pb-3">
                                             <div className="flex justify-between items-start gap-4">
                                                 <div className="flex-1 min-w-0">

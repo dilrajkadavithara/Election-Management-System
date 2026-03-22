@@ -51,7 +51,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
       - name: Install Database/OCR system packages
         run: |
@@ -71,4 +71,6 @@ jobs:
           DATABASE_URL: postgres://postgres:@localhost:5432/voters_db
           REDIS_URL: redis://localhost:6379/0
           DJANGO_SETTINGS_MODULE: voter_vault.settings
+          SECRET_KEY: ci-test-secret-key-minimum-50-chars-long-for-django-validation
+          DEBUG: "True"
         run: pytest tests/

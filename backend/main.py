@@ -29,12 +29,13 @@ from backend.routers import auth, admin, voters, analytics, ocr, system, communi
 app = FastAPI(title="Election Management System Backend (V3)")
 
 # CORS
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "https://intelhub.live,https://www.intelhub.live,http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # 4. Include Routers

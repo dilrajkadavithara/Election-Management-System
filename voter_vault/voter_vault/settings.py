@@ -28,7 +28,11 @@ load_dotenv(BASE_DIR.parent / '.env')
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-development-key-only")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "True").lower() == "true"
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+
+# Validate SECRET_KEY in production
+if not DEBUG and SECRET_KEY == "django-insecure-development-key-only":
+    raise ValueError("SECRET_KEY must be set to a secure value in production. Set it in your .env file.")
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "intelhub.live www.intelhub.live localhost 127.0.0.1 [::1]").split()
 
@@ -39,7 +43,7 @@ else:
     FORCE_SCRIPT_NAME = None # Clean local pathing
 
 # Required for Django 4.0+ for admin login to work behind https
-CSRF_TRUSTED_ORIGINS = ["https://intelhub.live", "https://www.intelhub.live"]
+CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "https://intelhub.live,https://www.intelhub.live").split(",")
 
 
 # Application definition
@@ -144,6 +148,9 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
+
+# Prevent Django from auto-generating BigAutoField migrations on existing tables
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 STATIC_URL = "/voter-vault-static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "static")

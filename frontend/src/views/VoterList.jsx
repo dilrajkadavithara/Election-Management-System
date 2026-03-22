@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import api from '../api';
+import { DEFAULT_PAGE_SIZE } from '../constants';
 
 const VoterList = ({
     voterList,
@@ -19,7 +20,7 @@ const VoterList = ({
     setEditMode,
     handleUpdateIntel
 }) => {
-    const pageSize = 50;
+    const pageSize = DEFAULT_PAGE_SIZE;
     const totalPages = Math.max(1, Math.ceil(voterTotal / pageSize));
 
     React.useEffect(() => {
@@ -69,7 +70,7 @@ const VoterList = ({
                         <input
                             type="text"
                             placeholder="Search Intelligence..."
-                            className="lux-glass w-80 py-4 px-8 rounded-2xl text-[11px] font-black uppercase tracking-widest outline-none border border-white/5 focus:border-indigo-500/50 transition-all text-white placeholder-slate-500"
+                            className="lux-glass w-full sm:w-80 py-4 px-8 rounded-2xl text-[11px] font-black uppercase tracking-widest outline-none border border-white/5 focus:border-indigo-500/50 transition-all text-white placeholder-slate-500"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />

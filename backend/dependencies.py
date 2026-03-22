@@ -28,6 +28,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         if user_info is None:
             raise HTTPException(401, "User not found")
         return user_info
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(401, "Token has expired")
+    except jwt.InvalidTokenError as e:
+        logger.warning(f"Invalid token: {e}")
+        raise HTTPException(401, "Invalid credentials")
     except Exception as e:
         logger.error(f"Auth Error: {e}")
-        raise HTTPException(401, "Invalid credentials")
+        raise HTTPException(401, "Authentication failed")

@@ -8,20 +8,29 @@ services:
       - postgres_data:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=voter_db
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=secretpassword
+      - POSTGRES_USER=${DB_USER:-admin}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
     logging:
       driver: "json-file"
       options:
         max-size: "100m"
         max-file: "3"
-    # Internal usage: admin/secretpassword (production local auth)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
 
   redis:
     image: redis:7-alpine
     restart: always
     volumes:
       - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
     logging:
       driver: "json-file"
       options:
@@ -34,7 +43,7 @@ services:
     expose:
       - "8000"
     environment:
-      - DATABASE_URL=postgres://admin:secretpassword@db:5432/voter_db
+      - DATABASE_URL=postgres://${DB_USER:-admin}:${DB_PASSWORD:?DB_PASSWORD is required}@db:5432/voter_db
       - REDIS_URL=redis://redis:6379/0
       - DJANGO_SETTINGS_MODULE=voter_vault.settings
       - RUN_MIGRATIONS=True
@@ -70,7 +79,7 @@ services:
     restart: always
     command: celery -A backend.celery_app worker --loglevel=info --concurrency=3 --max-tasks-per-child=5 --prefetch-multiplier=1
     environment:
-      - DATABASE_URL=postgres://admin:secretpassword@db:5432/voter_db
+      - DATABASE_URL=postgres://${DB_USER:-admin}:${DB_PASSWORD:?DB_PASSWORD is required}@db:5432/voter_db
       - REDIS_URL=redis://redis:6379/0
       - DJANGO_SETTINGS_MODULE=voter_vault.settings
       - PYTHONPATH=/app:/app/voter_vault

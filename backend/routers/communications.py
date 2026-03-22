@@ -1,9 +1,12 @@
 import json
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from asgiref.sync import sync_to_async
 from backend.dependencies import get_current_user
 from backend.django_bridge import User
 from backend.schemas.communications import BroadcastRequest, TemplateOp
+
+audit_logger = logging.getLogger("AuditLog")
 
 router = APIRouter(prefix="/api/comm", tags=["Communications"])
 
@@ -24,10 +27,13 @@ async def list_templates(user_info=Depends(get_current_user)):
 
 @router.post("/send-broadcast")
 async def send_broadcast(data: BroadcastRequest, user_info=Depends(get_current_user)):
+    if not user_info.get('can_send_broadcasts', False):
+        raise HTTPException(403, "You do not have permission to send broadcasts")
+
     from core.comm_engine import CommunicationEngine
     from backend.django_bridge import get_voter_list
     user = User.objects.get(username=user_info['username'])
-    
+
     # Resolve voters first
     f = data.filters
     voters_data = get_voter_list(
@@ -36,7 +42,9 @@ async def send_broadcast(data: BroadcastRequest, user_info=Depends(get_current_u
         f.leaning, f.serialFrom, f.serialTo, f.location
     )
     voter_ids = [v['id'] for v in voters_data['results'] if v.get('phone_no')]
-    
+
+    audit_logger.info(f"AUDIT: {user_info['username']} BROADCAST medium={data.medium} recipients={len(voter_ids)} filters={f}")
+
     def sync_send():
         return CommunicationEngine.send_direct_broadcast(
             voter_ids=voter_ids,
