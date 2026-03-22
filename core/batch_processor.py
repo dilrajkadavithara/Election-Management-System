@@ -173,7 +173,7 @@ class BatchProcessor:
 
         under_read_pages = self._analyze_serial_gaps(ordered_results, pages)
 
-        if under_read_pages:
+        if under_read_pages and len(under_read_pages) <= 5:
             logger.info(f"🔬 Surgical Phase: {len(under_read_pages)} pages identified as under-read: {[p['page'] for p in under_read_pages]}")
 
             # Re-render only the problem pages for surgical retry
