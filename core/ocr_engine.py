@@ -155,7 +155,7 @@ class OCREngine:
                         config=genai_types.GenerateContentConfig(
                             thinking_config=genai_types.ThinkingConfig(include_thoughts=False),
                             temperature=0.0,
-                            max_output_tokens=32768, 
+                            max_output_tokens=65536, 
                             response_mime_type="application/json",
                             response_schema=batch_schema
                         )
@@ -309,7 +309,7 @@ class OCREngine:
                         config=genai_types.GenerateContentConfig(
                             thinking_config=genai_types.ThinkingConfig(include_thoughts=False),
                             temperature=temperature,
-                            max_output_tokens=32768, 
+                            max_output_tokens=65536, 
                             response_mime_type="application/json",
                             response_schema=batch_schema
                         )
