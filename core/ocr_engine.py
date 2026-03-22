@@ -190,45 +190,77 @@ class OCREngine:
         
         raise Exception(f"Gemini API failed after 5 attempts. Last error: {last_error}")
 
-    def extract_full_page_consolidated(self, img, page_num="?"):
-        """High-precision extraction for full raw pages (Cost-Cutter Mode).
-        🚀 REVOLUTIONARY COST-CUTTER: Processes the ENTIRE PAGE in one high-res request.
-        Reduces costs by 95% by avoiding the 'Image Base Fee' per crop.
-        """
-        
-        # We use a specialized prompt for full-page extraction
-        prompt = """
-        You are a highly accurate Malayalam Voter List OCR engine.
-        Analyze this FULL PAGE image of a voter list and extract ALL voter records displayed.
-        There are typically 30 voter boxes arranged in a 3-column by 10-row grid, or 2x15.
-        
-        For each voter box, extract EXACTLY these fields into a JSON array:
-        - serial_number: The number in the top-left (1-1000).
-        - epic_id: The alphanumeric ID in the top-right (e.g., ABC1234567).
-        - name_malayalam: The full name in Malayalam script.
-        - relation_name_malayalam: The Father/Husband/Mother name in Malayalam.
-        - relation_type: "Father", "Husband", "Mother", or "Other".
-        - house_number: The house ID (numeric/alphanumeric).
-        - house_name_malayalam: The literal house name in Malayalam.
-        - age: The integer age.
-        - gender: "Male" or "Female".
+    def extract_full_page_consolidated(self, img, page_num="?", force_full_scan=False):
+        """High-precision extraction for full raw pages.
+        Processes the ENTIRE PAGE in one high-res request.
 
-        CRITICAL:
-        1. Maintain 100% literal accuracy for Malayalam characters.
-        2. Do not skip any voter box you see. 
-        3. If a box is partially blurry, do your best to read the EPIC ID and Serial.
+        Args:
+            force_full_scan: If True, uses a stronger prompt that explicitly
+                instructs Gemini to scan all 3 columns. Used for retries when
+                the first attempt returned too few voters.
         """
+
+        if force_full_scan:
+            prompt = """
+            You are a highly accurate Malayalam Voter List OCR engine.
+            IMPORTANT: This page has voter boxes arranged in a 3-COLUMN layout.
+            You MUST scan ALL THREE COLUMNS from left to right:
+            - LEFT COLUMN (serial numbers ending in 1, 4, 7, etc.)
+            - MIDDLE COLUMN (serial numbers ending in 2, 5, 8, etc.)
+            - RIGHT COLUMN (serial numbers ending in 3, 6, 9, etc.)
+
+            There should be approximately 30 voter boxes total (10 rows × 3 columns).
+            Scan EVERY box in EVERY column. Do NOT stop after the first column.
+
+            For each voter box, extract EXACTLY these fields into a JSON array:
+            - serial_number: The number in the top-left (1-1000).
+            - epic_id: The alphanumeric ID in the top-right (e.g., ABC1234567).
+            - name_malayalam: The full name in Malayalam script.
+            - relation_name_malayalam: The Father/Husband/Mother name in Malayalam.
+            - relation_type: "Father", "Husband", "Mother", or "Other".
+            - house_number: The house ID (numeric/alphanumeric).
+            - house_name_malayalam: The literal house name in Malayalam.
+            - age: The integer age.
+            - gender: "Male" or "Female".
+
+            CRITICAL:
+            1. Maintain 100% literal accuracy for Malayalam characters.
+            2. Do not skip any voter box in any column.
+            3. If a box is partially blurry, do your best to read the EPIC ID and Serial.
+            """
+        else:
+            prompt = """
+            You are a highly accurate Malayalam Voter List OCR engine.
+            Analyze this FULL PAGE image of a voter list and extract ALL voter records displayed.
+            There are typically 30 voter boxes arranged in a 3-column by 10-row grid, or 2x15.
+
+            For each voter box, extract EXACTLY these fields into a JSON array:
+            - serial_number: The number in the top-left (1-1000).
+            - epic_id: The alphanumeric ID in the top-right (e.g., ABC1234567).
+            - name_malayalam: The full name in Malayalam script.
+            - relation_name_malayalam: The Father/Husband/Mother name in Malayalam.
+            - relation_type: "Father", "Husband", "Mother", or "Other".
+            - house_number: The house ID (numeric/alphanumeric).
+            - house_name_malayalam: The literal house name in Malayalam.
+            - age: The integer age.
+            - gender: "Male" or "Female".
+
+            CRITICAL:
+            1. Maintain 100% literal accuracy for Malayalam characters.
+            2. Do not skip any voter box you see.
+            3. If a box is partially blurry, do your best to read the EPIC ID and Serial.
+            """
+
         content_parts = [prompt, img]
-        voter_count = 30 # Assuming 30 voters per page for full page extraction
+        voter_count = 30
 
-        # 3. Final Call with TRACER
-        logger.info(f"Neural Sync: Page {page_num} -> Initiating API Request...")
+        logger.info(f"Neural Sync: Page {page_num} -> Initiating API Request...{' (FULL SCAN MODE)' if force_full_scan else ''}")
         results = self._run_gemini_request(content_parts, count=voter_count, mode="FULL_PAGE", page_num=page_num)
-        
+
         if results:
             logger.info(f"Neural Sync: Page {page_num} -> Extraction Successful ({len(results)} voters found)")
             return page_num, results, True
-        
+
         logger.error(f"Neural Sync: Page {page_num} -> Final failure after retries.")
         return page_num, f"Final AI extraction failure after retries", False
 

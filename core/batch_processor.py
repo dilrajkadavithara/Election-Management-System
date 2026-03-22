@@ -47,7 +47,7 @@ class BatchProcessor:
         temp_root = tempfile.mkdtemp(prefix="ocr_master_batch_")
         page_to_image_map = {}
 
-        def process_page_extraction(page_num):
+        def process_page_extraction(page_num, force_full_scan=False):
             """Send a single rendered page image to Gemini."""
             page_img_path = page_to_image_map.get(page_num)
             if not page_img_path or not os.path.exists(page_img_path):
@@ -56,7 +56,7 @@ class BatchProcessor:
 
             try:
                 p_num, batch_results, success = self.engine.extract_full_page_consolidated(
-                    page_img_path, page_num=page_num
+                    page_img_path, page_num=page_num, force_full_scan=force_full_scan
                 )
                 if not success or not isinstance(batch_results, list):
                     return page_num, f"AI Error: {batch_results}", False
@@ -127,7 +127,7 @@ class BatchProcessor:
                             count = len(res) if isinstance(res, list) else 0
                             reason = "FAILED" if not success else f"{count} voters (expected 30)"
                             logger.warning(f"Page {page}: {reason}. Retrying...")
-                            page2, res2, success2 = process_page_extraction(page)
+                            page2, res2, success2 = process_page_extraction(page, force_full_scan=True)
                             if success2 and isinstance(res2, list):
                                 if not success or len(res2) > count:
                                     logger.info(f"Page {page}: retry got {len(res2)} voters. Using retry.")
@@ -156,7 +156,7 @@ class BatchProcessor:
                         count = len(res) if isinstance(res, list) else 0
                         reason = "FAILED" if not success else f"{count} voters (expected 30)"
                         logger.warning(f"Page {page}: {reason}. Retrying...")
-                        page2, res2, success2 = process_page_extraction(page)
+                        page2, res2, success2 = process_page_extraction(page, force_full_scan=True)
                         if success2 and isinstance(res2, list):
                             if not success or len(res2) > count:
                                 logger.info(f"Page {page}: retry got {len(res2)} voters. Using retry.")
