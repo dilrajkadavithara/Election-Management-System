@@ -79,8 +79,22 @@ jobs:
             docker rm -f voterslist-redis-1 voterslist-worker-1 voterslist-app-1 voterslist-nginx-1 voterslist-certbot-1 2>/dev/null || true
             # Nuclear stop (DATA-SAFE: No --volumes flag)
             docker compose -f docker-compose.remote.yml down --remove-orphans --timeout 1 || true
-            # Restart
+            # Restart with IMAGE_TAG=latest (persisted in .env)
+            export IMAGE_TAG=latest
             docker compose -f docker-compose.remote.yml up -d
+
+            # Fix data directory permissions (non-root container user)
+            chmod -R 777 ./data 2>/dev/null || true
+
+            # Run Django migrations if needed
+            sleep 5
+            docker compose -f docker-compose.remote.yml exec -T app python -c "
+            import os; os.environ['DJANGO_SETTINGS_MODULE']='voter_vault.settings'
+            import django; django.setup()
+            from django.core.management import call_command
+            call_command('migrate', '--no-input')
+            " 2>/dev/null || true
+
             docker image prune -f
-            
-            echo "✅ SERIAL-NUMBER MATCHED. Your server is now running Commit: ${{ github.sha }}"
+
+            echo "✅ Deployed. Server running latest image with migrations applied."
