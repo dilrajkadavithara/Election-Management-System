@@ -190,7 +190,7 @@ class OCREngine:
         
         raise Exception(f"Gemini API failed after 5 attempts. Last error: {last_error}")
 
-    def extract_full_page_consolidated(self, img, page_num="?", force_full_scan=False):
+    def extract_full_page_consolidated(self, img, page_num="?", force_full_scan=False, temperature=0.0):
         """High-precision extraction for full raw pages.
         Processes the ENTIRE PAGE in one high-res request.
 
@@ -198,6 +198,7 @@ class OCREngine:
             force_full_scan: If True, uses a stronger prompt that explicitly
                 instructs Gemini to scan all 3 columns. Used for retries when
                 the first attempt returned too few voters.
+            temperature: Gemini temperature (0.0 = deterministic, 0.3 = slight variation).
         """
 
         if force_full_scan:
@@ -254,8 +255,8 @@ class OCREngine:
         content_parts = [prompt, img]
         voter_count = 30
 
-        logger.info(f"Neural Sync: Page {page_num} -> Initiating API Request...{' (FULL SCAN MODE)' if force_full_scan else ''}")
-        results = self._run_gemini_request(content_parts, count=voter_count, mode="FULL_PAGE", page_num=page_num)
+        logger.info(f"Neural Sync: Page {page_num} -> Initiating API Request...{' (FULL SCAN MODE)' if force_full_scan else ''}{f' (temp={temperature})' if temperature > 0 else ''}")
+        results = self._run_gemini_request(content_parts, count=voter_count, mode="FULL_PAGE", page_num=page_num, temperature=temperature)
 
         if results:
             logger.info(f"Neural Sync: Page {page_num} -> Extraction Successful ({len(results)} voters found)")
@@ -287,7 +288,7 @@ class OCREngine:
             required=["serial_number", "epic_id", "name_malayalam"]
         )
 
-    def _run_gemini_request(self, content_parts, count=30, mode="BATCH", page_num="?"):
+    def _run_gemini_request(self, content_parts, count=30, mode="BATCH", page_num="?", temperature=0.0):
         """Internal helper to run the Gemini request with retries and Tracer logs."""
         batch_schema = genai_types.Schema(
             type=genai_types.Type.ARRAY,
@@ -295,7 +296,7 @@ class OCREngine:
         )
 
         last_error = "Unknown"
-        for attempt in range(5): 
+        for attempt in range(5):
             with self.get_throttle():
                 try:
                     response = self.client.models.generate_content(
@@ -303,7 +304,7 @@ class OCREngine:
                         contents=content_parts,
                         config=genai_types.GenerateContentConfig(
                             thinking_config=genai_types.ThinkingConfig(include_thoughts=False),
-                            temperature=0.0,
+                            temperature=temperature,
                             max_output_tokens=32768, 
                             response_mime_type="application/json",
                             response_schema=batch_schema
@@ -336,6 +337,107 @@ class OCREngine:
                         time.sleep(2 * (attempt + 1))
         
         raise Exception(f"Gemini API failed ({mode}) after 5 attempts. Last error: {last_error}")
+
+    def extract_column_split(self, img_path, page_num="?"):
+        """Surgical Tactic 2: Split a page image into 3 vertical column strips
+        and extract each column separately. This forces Gemini to focus on
+        one column at a time, preventing the 'only read first column' issue.
+
+        Returns merged list of voter dicts, or None on failure.
+        """
+        import io
+        from PIL import Image as PILImage
+
+        logger.info(f"🔬 Column Split: Page {page_num} — splitting into 3 columns")
+
+        try:
+            full_img = PILImage.open(img_path)
+            width, height = full_img.size
+
+            # Split into 3 roughly equal columns with slight overlap (2%) to catch border voters
+            overlap = int(width * 0.02)
+            columns = [
+                full_img.crop((0, 0, width // 3 + overlap, height)),                          # Left
+                full_img.crop((width // 3 - overlap, 0, 2 * width // 3 + overlap, height)),   # Middle
+                full_img.crop((2 * width // 3 - overlap, 0, width, height)),                  # Right
+            ]
+
+            all_voters = []
+            seen_serials = set()
+
+            for col_idx, col_img in enumerate(columns):
+                col_label = ["LEFT", "MIDDLE", "RIGHT"][col_idx]
+
+                # Convert column to bytes
+                buf = io.BytesIO()
+                col_img.save(buf, format='PNG')
+                buf.seek(0)
+
+                prompt = f"""
+                You are a highly accurate Malayalam Voter List OCR engine.
+                This image shows the {col_label} COLUMN of a voter list page.
+                There should be approximately 10 voter boxes stacked vertically in this column.
+
+                Extract ALL voter boxes visible in this column image.
+
+                For each voter box, extract EXACTLY these fields into a JSON array:
+                - serial_number: The number in the top-left of each box.
+                - epic_id: The alphanumeric ID in the top-right (e.g., ABC1234567).
+                - name_malayalam: The full name in Malayalam script.
+                - relation_name_malayalam: The Father/Husband/Mother name in Malayalam.
+                - relation_type: "Father", "Husband", "Mother", or "Other".
+                - house_number: The house ID (numeric/alphanumeric).
+                - house_name_malayalam: The literal house name in Malayalam.
+                - age: The integer age.
+                - gender: "Male" or "Female".
+
+                CRITICAL:
+                1. Extract EVERY voter box visible — do not skip any.
+                2. Maintain 100% literal accuracy for Malayalam characters.
+                """
+
+                content_parts = [prompt, buf.getvalue()]
+
+                # Use the standard Gemini request pipeline
+                col_img_part = genai_types.Part.from_bytes(data=buf.getvalue(), mime_type="image/png")
+                request_parts = [prompt, col_img_part]
+
+                try:
+                    results = self._run_gemini_request(request_parts, count=10, mode="FULL_PAGE", page_num=f"{page_num}-{col_label}")
+                    if results and isinstance(results, list):
+                        logger.info(f"🔬 Column Split: Page {page_num} {col_label} → {len(results)} voters")
+                        # Deduplicate by serial number (overlap regions may produce dupes)
+                        for voter in results:
+                            serial = str(voter.get("serial_number", "")).strip()
+                            if serial and serial not in seen_serials:
+                                seen_serials.add(serial)
+                                # Convert to standardized format
+                                all_voters.append({
+                                    "Full Name": voter.get("name_malayalam") or "",
+                                    "Relation Name": voter.get("relation_name_malayalam") or "",
+                                    "Relation Type": str(voter.get("relation_type") or "").title(),
+                                    "House Name": voter.get("house_name_malayalam") or "",
+                                    "House Number": voter.get("house_number") or "",
+                                    "Age": str(voter.get("age") or ""),
+                                    "Gender": str(voter.get("gender") or "").title(),
+                                    "EPIC_ID": voter.get("epic_id") or "",
+                                    "Serial_OCR": serial,
+                                    "Image_Path": f"p{page_num}_col_{col_label}",
+                                    "Filename": os.path.basename(img_path)
+                                })
+                            elif serial:
+                                logger.debug(f"🔬 Column Split: Duplicate serial {serial} skipped")
+                except Exception as e:
+                    logger.error(f"🔬 Column Split: Page {page_num} {col_label} failed: {e}")
+
+            # Sort by serial number
+            all_voters.sort(key=lambda v: int(v.get("Serial_OCR", 0)) if str(v.get("Serial_OCR", "")).isdigit() else 0)
+            logger.info(f"🔬 Column Split: Page {page_num} total after merge: {len(all_voters)} unique voters")
+            return all_voters if all_voters else None
+
+        except Exception as e:
+            logger.error(f"🔬 Column Split: Page {page_num} failed entirely: {e}")
+            return None
 
     def get_zone_coords(self, img_shape, zone_name):
         h, w = img_shape[:2]
