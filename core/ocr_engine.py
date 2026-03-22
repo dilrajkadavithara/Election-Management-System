@@ -216,8 +216,8 @@ class OCREngine:
             Only extract what you can actually see.
 
             For each voter box, extract EXACTLY these fields into a JSON array:
-            - serial_number: The number in the top-left (1-1000).
-            - epic_id: The alphanumeric ID in the top-right (e.g., ABC1234567).
+            - serial_number: READ the PRINTED number from the top-left corner of each voter box. This is a sequential number printed on the document (e.g., 31, 32, 33... on one page, continuing from the previous page). Do NOT generate your own numbers — read the actual printed serial from the image.
+            - epic_id: The alphanumeric ID in the top-right (e.g., ABC1234567 or WHL1234567).
             - name_malayalam: The full name in Malayalam script.
             - relation_name_malayalam: The Father/Husband/Mother name in Malayalam.
             - relation_type: "Father", "Husband", "Mother", or "Other".
@@ -230,6 +230,7 @@ class OCREngine:
             1. Maintain 100% literal accuracy for Malayalam characters.
             2. Do not skip any voter box in any column.
             3. If a box is partially blurry, do your best to read the EPIC ID and Serial.
+            4. The serial_number MUST be read from the printed document, not auto-generated.
             """
         else:
             prompt = """
@@ -238,8 +239,8 @@ class OCREngine:
             There are typically 30 voter boxes arranged in a 3-column by 10-row grid, or 2x15.
 
             For each voter box, extract EXACTLY these fields into a JSON array:
-            - serial_number: The number in the top-left (1-1000).
-            - epic_id: The alphanumeric ID in the top-right (e.g., ABC1234567).
+            - serial_number: READ the PRINTED number from the top-left corner of each voter box. This is a sequential number printed on the document (e.g., 31, 32, 33... on one page, continuing from the previous page). Do NOT generate your own numbers — read the actual printed serial from the image.
+            - epic_id: The alphanumeric ID in the top-right (e.g., ABC1234567 or WHL1234567).
             - name_malayalam: The full name in Malayalam script.
             - relation_name_malayalam: The Father/Husband/Mother name in Malayalam.
             - relation_type: "Father", "Husband", "Mother", or "Other".
@@ -252,6 +253,7 @@ class OCREngine:
             1. Maintain 100% literal accuracy for Malayalam characters.
             2. Do not skip any voter box you see.
             3. If a box is partially blurry, do your best to read the EPIC ID and Serial.
+            4. The serial_number MUST be read from the printed document, not auto-generated.
             """
 
         content_parts = [prompt, img]
