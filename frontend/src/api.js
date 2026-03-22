@@ -152,6 +152,11 @@ const api = {
         return response.data;
     },
 
+    updateBatchLocation: async (batchId, loc) => {
+        const response = await client.post(`/api/batch/${batchId}/location`, { location: loc });
+        return response.data;
+    },
+
     getConstituencies: async () => {
         const response = await client.get('/api/constituencies');
         return response.data;
