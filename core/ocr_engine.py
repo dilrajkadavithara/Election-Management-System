@@ -443,6 +443,186 @@ class OCREngine:
             logger.error(f"🔬 Column Split: Page {page_num} failed entirely: {e}")
             return None
 
+    def detect_voter_boxes(self, img_path):
+        """Use OpenCV to detect the grid of voter boxes on a page.
+
+        Kerala voter lists have a consistent 3-column × 10-row grid.
+        Detects horizontal and vertical grid lines, then reconstructs
+        the box grid from their intersections.
+
+        Returns:
+            list of (x, y, w, h) bounding boxes sorted in reading order
+            (row by row, left to right — matches serial number order)
+            Returns empty list if detection fails.
+        """
+        img = cv2.imread(img_path)
+        if img is None:
+            logger.error(f"detect_voter_boxes: Could not read image {img_path}")
+            return []
+
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        height, width = gray.shape
+
+        # Adaptive threshold for clean binary
+        binary = cv2.adaptiveThreshold(
+            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 15, 5
+        )
+
+        # Detect horizontal lines (must span at least 1/12 of page width)
+        h_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (width // 12, 1))
+        h_lines = cv2.morphologyEx(binary, cv2.MORPH_OPEN, h_kernel, iterations=2)
+
+        # Detect vertical lines (must span at least 1/30 of page height)
+        # Kerala voter lists have shorter vertical separators between columns
+        v_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, height // 30))
+        v_lines = cv2.morphologyEx(binary, cv2.MORPH_OPEN, v_kernel, iterations=2)
+
+        # Extract line positions from contours
+        def get_positions(line_img, axis):
+            """Get clustered positions of detected lines along given axis (0=x, 1=y)."""
+            contours, _ = cv2.findContours(line_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            positions = sorted(set([cv2.boundingRect(c)[axis] for c in contours]))
+            # Cluster nearby positions (within 20px)
+            if not positions:
+                return []
+            clusters = [[positions[0]]]
+            for p in positions[1:]:
+                if p - clusters[-1][-1] < 20:
+                    clusters[-1].append(p)
+                else:
+                    clusters.append([p])
+            return [int(np.mean(c)) for c in clusters]
+
+        h_pos = get_positions(h_lines, axis=1)  # Y positions of horizontal lines
+        v_pos = get_positions(v_lines, axis=0)  # X positions of vertical lines
+
+        logger.info(f"detect_voter_boxes: {len(h_pos)} H-lines, {len(v_pos)} V-lines")
+
+        # Need at least 2 horizontal and 2 vertical lines to form boxes
+        if len(h_pos) < 2 or len(v_pos) < 2:
+            logger.warning(f"detect_voter_boxes: Insufficient grid lines (H={len(h_pos)}, V={len(v_pos)})")
+            return []
+
+        # Build boxes from grid intersections
+        # A voter box is roughly 1/3 of page width (at 300 DPI: ~780px of ~2480px)
+        # Filter out sub-cells (EPIC ID area, photo area) which are much smaller
+        min_box_width = width // 5  # Must be at least 1/5 of page width (~496px)
+        min_box_height = height // 15  # Must be at least 1/15 of page height (~234px)
+
+        boxes = []
+        for i in range(len(h_pos) - 1):
+            for j in range(len(v_pos) - 1):
+                x = v_pos[j]
+                y = h_pos[i]
+                bw = v_pos[j + 1] - v_pos[j]
+                bh = h_pos[i + 1] - h_pos[i]
+                if bw >= min_box_width and bh >= min_box_height:
+                    boxes.append((x, y, bw, bh))
+
+        # Sort in reading order: row by row (top to bottom), left to right within each row
+        # Group into rows by similar Y values
+        if not boxes:
+            logger.warning(f"detect_voter_boxes: No valid boxes from grid")
+            return []
+
+        boxes.sort(key=lambda b: (b[1], b[0]))
+        expected_h = height / 10
+
+        rows = []
+        current_row = [boxes[0]]
+        for box in boxes[1:]:
+            if abs(box[1] - current_row[0][1]) < expected_h * 0.3:
+                current_row.append(box)
+            else:
+                rows.append(sorted(current_row, key=lambda b: b[0]))
+                current_row = [box]
+        rows.append(sorted(current_row, key=lambda b: b[0]))
+
+        sorted_boxes = [box for row in rows for box in row]
+        logger.info(f"detect_voter_boxes: Found {len(sorted_boxes)} voter boxes ({len(rows)} rows × ~{len(rows[0]) if rows else 0} cols)")
+        return sorted_boxes
+
+    def extract_with_box_guidance(self, img_path, page_num="?"):
+        """OpenCV-guided extraction: detect boxes first, then send full page
+        to Gemini with exact box count and structured field guidance.
+
+        This approach:
+        1. Uses OpenCV to count exact number of voter boxes on the page
+        2. Sends the FULL page image to Gemini (1 API call)
+        3. Tells Gemini exactly how many boxes to find and what fields to read
+        4. Uses Malayalam label keywords as anchors (handles text wrapping)
+
+        Returns: (page_num, results_list, success_bool)
+        """
+        import io
+
+        # Step 1: Detect boxes with OpenCV
+        boxes = self.detect_voter_boxes(img_path)
+        box_count = len(boxes)
+
+        if box_count < 2 or box_count > 35:
+            # Fallback to standard extraction if box detection fails or returns
+            # unreasonable results (e.g., last page with different grid layout)
+            logger.warning(f"Page {page_num}: OpenCV detected {box_count} boxes (unusual), falling back to standard extraction")
+            img = Image.open(img_path)
+            buf = io.BytesIO()
+            img.save(buf, format='PNG')
+            buf.seek(0)
+            img_part = genai_types.Part.from_bytes(data=buf.getvalue(), mime_type="image/png")
+            return self.extract_full_page_consolidated(img_part, page_num=page_num)
+
+        # Step 2: Prepare the full page image for Gemini
+        img = Image.open(img_path)
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        buf.seek(0)
+        img_part = genai_types.Part.from_bytes(data=buf.getvalue(), mime_type="image/png")
+
+        # Step 3: Build a precise prompt with box count and field anchors
+        prompt = f"""You are a highly accurate Malayalam Voter List OCR engine.
+
+This page has a grid of voter boxes arranged in 3 columns × multiple rows.
+Reading order is LEFT to RIGHT across each row, then next row down.
+
+IMPORTANT: Some boxes on this page may be EMPTY (just grid lines with no voter data printed inside).
+Only extract boxes that actually contain printed voter information.
+Do NOT invent or hallucinate data for empty grid cells.
+
+EACH filled voter box has these fields identified by Malayalam label keywords:
+- serial_number: The number printed in the TOP-LEFT corner of the box (e.g., 1, 2, 31, 32...).
+  READ this number from the image. Do NOT auto-generate sequential numbers.
+- epic_id: The alphanumeric code in the TOP-RIGHT corner (format: 3 letters + 7 digits, e.g., WHL1565365).
+- name_malayalam: Text after the label "പേര് :" — this is the voter's name in Malayalam.
+  May wrap to the next line — capture the FULL name.
+- relation_name_malayalam: Text after "ഭർത്താവിന്റെ പേര്:" OR "അച്ഛന്റെ പേര்:" OR "അമ്മയുടെ പേர്:" —
+  the relation's name in Malayalam. May wrap to the next line.
+- relation_type: Based on which label appears:
+  "ഭർത്താവിന്റെ" → "Husband", "അച്ഛന്റെ" → "Father", "അമ്മയുടെ" → "Mother", else → "Other"
+- house_number: Text after "വീട്ടു നമ്പർ :" — the house number/ID.
+- house_name_malayalam: Text after "വീട്ടു നമ്പർ :" that appears to be a name rather than a number,
+  OR text on the same line as house number if it's a place name in Malayalam.
+- age: Integer after "പ്രായം :"
+- gender: Text after "ലിംഗം :" — "സ്ത്രീ" → "Female", "പുരുഷൻ" → "Male"
+
+CRITICAL RULES:
+1. Only extract boxes that contain ACTUAL PRINTED voter data. Skip empty grid cells.
+2. Read serial_number from the PRINTED number on the page — do NOT auto-generate.
+3. Maintain 100% literal accuracy for all Malayalam text.
+4. If a box is marked as "DELETED" (with diagonal lines), still include it with whatever fields are readable.
+5. Do NOT invent data for empty boxes. If a box has no text inside, skip it entirely."""
+
+        content_parts = [prompt, img_part]
+
+        logger.info(f"Neural Sync: Page {page_num} -> OpenCV detected {box_count} grid cells. Sending to Gemini...")
+        results = self._run_gemini_request(content_parts, count=box_count, mode="FULL_PAGE", page_num=page_num)
+
+        if results:
+            logger.info(f"Neural Sync: Page {page_num} -> Box-guided extraction: {len(results)} voters (expected {box_count})")
+            return page_num, results, True
+
+        logger.error(f"Neural Sync: Page {page_num} -> Box-guided extraction failed after retries.")
+        return page_num, "Box-guided extraction failed", False
+
     def get_zone_coords(self, img_shape, zone_name):
         h, w = img_shape[:2]
         x1p, y1p, x2p, y2p = self.ZONES[zone_name]
