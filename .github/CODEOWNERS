@@ -1,0 +1,4 @@
+# Critical OCR pipeline — requires owner review before merge
+core/ocr_engine.py @dilrajkadavithara
+core/batch_processor.py @dilrajkadavithara
+backend/routers/ocr.py @dilrajkadavithara
