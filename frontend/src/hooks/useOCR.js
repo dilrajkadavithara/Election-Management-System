@@ -79,19 +79,30 @@ export default function useOCR({ isLoggedIn, view, loadStats, loadAdminData, set
     };
 
     const handleSaveBatch = async () => {
-        if (!ocrBatch) return;
+        if (!ocrBatch) {
+            alert('No batch data available. Please upload and extract first.');
+            return;
+        }
         setOcrLoading(true);
         setOcrError(null);
         try {
             // Use current location state, fall back to snapshot stored at upload time or in Redis
             const loc = (ocrTargetLoc.constId) ? ocrTargetLoc : (ocrBatch._loc || ocrBatch.location || ocrTargetLoc);
+            console.log('Save to DB:', { batchId: ocrBatch.id, loc, status: ocrBatch.status });
+
+            if (!loc.constId && !loc.constName) {
+                alert('Location not set. Please select Constituency, Local Body, and Booth before saving.');
+                setOcrLoading(false);
+                return;
+            }
+
             const res = await api.saveToDB(
                 ocrBatch.id,
                 loc.constId || loc.constName,
                 '',
                 loc.lbId || loc.lbName,
                 loc.boothId,
-                loc.boothNo,
+                loc.boothNo || loc.boothId,
                 loc.psNo,
                 loc.psName
             );
@@ -106,10 +117,12 @@ export default function useOCR({ isLoggedIn, view, loadStats, loadAdminData, set
                     setView('dashboard');
                 }, 2000);
             } else {
+                alert('Save failed: ' + (res.message || 'Unknown error'));
                 setOcrError(res.message || "Failed to commit data to Intelligence Engine.");
             }
         } catch (e) {
             const msg = e.response?.data?.detail || e.message;
+            alert('Save error: ' + (typeof msg === 'string' ? msg : JSON.stringify(msg)));
             setOcrError(typeof msg === 'string' ? msg : JSON.stringify(msg));
         }
         finally { setOcrLoading(false); }
