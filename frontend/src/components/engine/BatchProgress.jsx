@@ -156,7 +156,7 @@ const BatchProgress = ({ ocrBatch, startExtraction, startOcr, handleSaveBatch, s
                     )}
                     {isComplete && (
                         <div className="flex-1 flex gap-6">
-                            <button onClick={handleSaveBatch} disabled={!isLocationValid} className="flex-1 bg-white text-black py-8 rounded-2xl font-bold uppercase text-[11px] tracking-[0.2em] shadow-2xl hover:bg-indigo-400 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed" style={{ fontFamily: '"Rajdhani", sans-serif' }}>
+                            <button onClick={handleSaveBatch} className="flex-1 bg-white text-black py-8 rounded-2xl font-bold uppercase text-[11px] tracking-[0.2em] shadow-2xl hover:bg-indigo-400 hover:text-white transition-all" style={{ fontFamily: '"Rajdhani", sans-serif' }}>
                                 Save to Database
                             </button>
                             <button onClick={() => api.exportBatchCSV(ocrBatch.id)} className="px-12 lux-glass rounded-2xl font-bold text-white text-[11px] uppercase tracking-widest border-white/10 hover:bg-white/10" style={{ fontFamily: '"Rajdhani", sans-serif' }}>Export Result</button>
