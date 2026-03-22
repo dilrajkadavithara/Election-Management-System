@@ -30,6 +30,9 @@ class BatchProcessor:
         # Concurrency: 12 parallel Gemini threads (single-user optimized, Tier 2: 1000+ RPM)
         max_workers = 12
 
+        # Reset token counters for cost tracking
+        self.engine.reset_token_counts()
+
         # Determine pages to process
         # Kerala voter lists: skip first 2 pages (covers) and last page (summary)
         # Voter pages start from page 3 and go until second-to-last page
@@ -294,6 +297,13 @@ class BatchProcessor:
                 logger.warning(f"📊 Final validation: {len(still_missing)} serial gaps remain: {sorted(still_missing)[:20]}...")
             else:
                 logger.info(f"📊 Final validation: ✅ All {len(all_serials)} serials are continuous. Zero gaps!")
+
+        # Log cost data
+        self._last_token_usage = self.engine.get_token_usage()
+        logger.info(f"💰 Cost Report: {self._last_token_usage['api_calls']} API calls | "
+                     f"{self._last_token_usage['input_tokens']:,} input tokens | "
+                     f"{self._last_token_usage['output_tokens']:,} output tokens | "
+                     f"Est. cost: ${self._last_token_usage['estimated_cost_usd']}")
 
         return all_standardized
 

@@ -142,6 +142,30 @@ const BatchProgress = ({ ocrBatch, startExtraction, startOcr, handleSaveBatch, s
                     </div>
                 </div>
 
+                {/* Cost Report — shown after extraction completes */}
+                {isComplete && ocrBatch.token_usage && (
+                    <div className="lux-card bg-amber-500/5 border-amber-500/20 p-6 flex justify-between items-center shadow-xl">
+                        <div className="flex gap-8 items-center">
+                            <div>
+                                <p className="lux-tech-label !text-amber-400 mb-1">API Calls</p>
+                                <p className="text-2xl font-black text-white">{ocrBatch.token_usage.api_calls || 0}</p>
+                            </div>
+                            <div>
+                                <p className="lux-tech-label !text-amber-400 mb-1">Input Tokens</p>
+                                <p className="text-2xl font-black text-white">{(ocrBatch.token_usage.input_tokens || 0).toLocaleString()}</p>
+                            </div>
+                            <div>
+                                <p className="lux-tech-label !text-amber-400 mb-1">Output Tokens</p>
+                                <p className="text-2xl font-black text-white">{(ocrBatch.token_usage.output_tokens || 0).toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <p className="lux-tech-label !text-amber-400 mb-1">Estimated Cost</p>
+                            <p className="text-3xl font-black text-amber-400">${ocrBatch.token_usage.estimated_cost_usd || '0.00'}</p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Action buttons */}
                 <div className="flex gap-8 mt-10">
                     {ocrBatch.status === 'uploaded' && (
