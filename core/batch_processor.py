@@ -121,20 +121,16 @@ class BatchProcessor:
 
                         page, res, success = future.result()
 
-                        # Retry failed pages or pages with < 30 voters
-                        needs_retry = (not success) or (success and isinstance(res, list) and len(res) < 30)
-                        if needs_retry:
-                            count = len(res) if isinstance(res, list) else 0
-                            reason = "FAILED" if not success else f"{count} voters (expected 30)"
-                            logger.warning(f"Page {page}: {reason}. Retrying...")
-                            page2, res2, success2 = process_page_extraction(page, force_full_scan=True)
-                            if success2 and isinstance(res2, list):
-                                if not success or len(res2) > count:
-                                    logger.info(f"Page {page}: retry got {len(res2)} voters. Using retry.")
-                                    res, success = res2, success2
-                                else:
-                                    logger.info(f"Page {page}: retry got {len(res2)} (was {count}). Keeping original.")
-                            elif not success:
+                        # Only retry pages that completely FAILED (API error, timeout, etc.)
+                        # Do NOT retry pages with < 30 voters — that causes hallucinations.
+                        # Under-read pages are handled by the surgical gap analysis in Phase 2.
+                        if not success:
+                            logger.warning(f"Page {page}: FAILED. Retrying once...")
+                            page2, res2, success2 = process_page_extraction(page)
+                            if success2:
+                                logger.info(f"Page {page}: retry succeeded with {len(res2)} voters.")
+                                res, success = res2, success2
+                            else:
                                 logger.error(f"Page {page}: retry also failed. Page will be missing.")
 
                         ordered_results[page] = res
@@ -150,20 +146,14 @@ class BatchProcessor:
 
                     page, res, success = future.result()
 
-                    # Retry failed pages or pages with < 30 voters
-                    needs_retry = (not success) or (success and isinstance(res, list) and len(res) < 30)
-                    if needs_retry:
-                        count = len(res) if isinstance(res, list) else 0
-                        reason = "FAILED" if not success else f"{count} voters (expected 30)"
-                        logger.warning(f"Page {page}: {reason}. Retrying...")
-                        page2, res2, success2 = process_page_extraction(page, force_full_scan=True)
-                        if success2 and isinstance(res2, list):
-                            if not success or len(res2) > count:
-                                logger.info(f"Page {page}: retry got {len(res2)} voters. Using retry.")
-                                res, success = res2, success2
-                            else:
-                                logger.info(f"Page {page}: retry got {len(res2)} (was {count}). Keeping original.")
-                        elif not success:
+                    # Only retry pages that completely FAILED
+                    if not success:
+                        logger.warning(f"Page {page}: FAILED. Retrying once...")
+                        page2, res2, success2 = process_page_extraction(page)
+                        if success2:
+                            logger.info(f"Page {page}: retry succeeded with {len(res2)} voters.")
+                            res, success = res2, success2
+                        else:
                             logger.error(f"Page {page}: retry also failed. Page will be missing.")
 
                     ordered_results[page] = res
@@ -334,7 +324,8 @@ class BatchProcessor:
 
         logger.info(f"🔍 Gap Analysis: {len(all_missing)} missing serials detected in range {min_serial}-{max_serial}")
 
-        # For each page with < 30 voters, check if the gap falls in its serial range
+        # Check ALL pages for serial gaps — not just those with < 30 voters.
+        # A page may return 30 voters but with wrong/duplicate serials.
         under_read_pages = []
         sorted_pages = sorted(page_serials.keys())
 
@@ -343,10 +334,7 @@ class BatchProcessor:
             if not serials:
                 continue
 
-            # Only check pages with fewer than 30 voters
             results = ordered_results.get(p, [])
-            if len(results) >= 30:
-                continue
 
             page_min = min(serials)
             page_max = max(serials)

@@ -206,12 +206,14 @@ class OCREngine:
             You are a highly accurate Malayalam Voter List OCR engine.
             IMPORTANT: This page has voter boxes arranged in a 3-COLUMN layout.
             You MUST scan ALL THREE COLUMNS from left to right:
-            - LEFT COLUMN (serial numbers ending in 1, 4, 7, etc.)
-            - MIDDLE COLUMN (serial numbers ending in 2, 5, 8, etc.)
-            - RIGHT COLUMN (serial numbers ending in 3, 6, 9, etc.)
+            - LEFT COLUMN
+            - MIDDLE COLUMN
+            - RIGHT COLUMN
 
-            There should be approximately 30 voter boxes total (10 rows × 3 columns).
-            Scan EVERY box in EVERY column. Do NOT stop after the first column.
+            Scan EVERY voter box visible on the page. Do NOT stop after the first column.
+            Do NOT invent or hallucinate voters — only extract boxes that are actually visible.
+            Some pages may have fewer than 30 boxes (especially the last page). That is OK.
+            Only extract what you can actually see.
 
             For each voter box, extract EXACTLY these fields into a JSON array:
             - serial_number: The number in the top-left (1-1000).
