@@ -226,6 +226,10 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
                     batch['status'] = 'warning'
                     batch['error'] = f"Missing data from {num_failed} pages. Check logs."
 
+                # Store cost data from token tracking
+                if hasattr(bp, '_last_token_usage'):
+                    batch['token_usage'] = bp._last_token_usage
+
                 state_manager.set_batch(batch_id, batch)
                 logger.info(f"Extraction Cycle Finished for {batch_id}. Status: {batch['status']}. Total: {len(results)} voters. Serial gaps: {batch.get('serial_gaps', 'N/A')}")
             return

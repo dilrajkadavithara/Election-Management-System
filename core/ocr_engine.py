@@ -26,7 +26,7 @@ load_dotenv(BASE_DIR / ".env")
 logger = logging.getLogger("OCREngine")
 
 class OCREngine:
-    VERSION = "3.2.1-SHA-LOCK"
+    VERSION = "4.0.0-BOX-CROP"
     # Zones defined as percentages of the box: (x1, y1, x2, y2)
     ZONES = {
         "A_SERIAL": (0.05, 0.02, 0.40, 0.18),  # Top Left
@@ -37,7 +37,7 @@ class OCREngine:
 
     def __init__(self):
         # Configuration for specific tasks (Legacy)
-        self.config_numeric = "--oem 3 --psm 6" 
+        self.config_numeric = "--oem 3 --psm 6"
         self.config_eng = "--oem 3 --psm 6"
         self.config_mal = "--oem 3 --psm 6 -l mal+eng"
         self.config_epic = "-c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789. --psm 7"
@@ -46,12 +46,49 @@ class OCREngine:
         api_key = os.getenv("GOOGLE_API_KEY")
         if api_key:
             self.client = genai.Client(api_key=api_key)
-            # Restored standard model for highest accuracy
             self.gemini_model = "gemini-2.5-flash"
         else:
             self.gemini_model = None
-        
+
         self.throttle_lock = threading.Lock()
+
+        # Token tracking for cost estimation
+        self._token_lock = threading.Lock()
+        self._total_input_tokens = 0
+        self._total_output_tokens = 0
+        self._total_api_calls = 0
+
+    def reset_token_counts(self):
+        """Reset token counters at the start of a new batch."""
+        with self._token_lock:
+            self._total_input_tokens = 0
+            self._total_output_tokens = 0
+            self._total_api_calls = 0
+
+    def get_token_usage(self):
+        """Get current token usage and estimated cost."""
+        with self._token_lock:
+            input_cost = (self._total_input_tokens / 1_000_000) * 0.15
+            output_cost = (self._total_output_tokens / 1_000_000) * 0.60
+            return {
+                "input_tokens": self._total_input_tokens,
+                "output_tokens": self._total_output_tokens,
+                "api_calls": self._total_api_calls,
+                "estimated_cost_usd": round(input_cost + output_cost, 4)
+            }
+
+    def _track_tokens(self, response):
+        """Extract and accumulate token counts from Gemini response."""
+        try:
+            usage = response.usage_metadata
+            if usage:
+                with self._token_lock:
+                    self._total_input_tokens += getattr(usage, 'prompt_token_count', 0) or 0
+                    self._total_output_tokens += getattr(usage, 'candidates_token_count', 0) or 0
+                    self._total_api_calls += 1
+        except Exception:
+            with self._token_lock:
+                self._total_api_calls += 1
 
     @contextmanager
     def get_throttle(self):
@@ -315,8 +352,10 @@ class OCREngine:
                         )
                     )
                     
+                    self._track_tokens(response)
+
                     text = response.text.strip()
-                    if not text: 
+                    if not text:
                         last_error = "Empty response from Gemini"
                         continue
 
@@ -339,7 +378,7 @@ class OCREngine:
                     else:
                         logger.error(f"❌ Gemini Failure ({mode}) (Attempt {attempt+1}): {e}")
                         time.sleep(2 * (attempt + 1))
-        
+
         raise Exception(f"Gemini API failed ({mode}) after 5 attempts. Last error: {last_error}")
 
     def extract_column_split(self, img_path, page_num="?"):
@@ -542,28 +581,65 @@ class OCREngine:
         logger.info(f"detect_voter_boxes: Found {len(sorted_boxes)} voter boxes ({len(rows)} rows × ~{len(rows[0]) if rows else 0} cols)")
         return sorted_boxes
 
+    def extract_single_box(self, box_img_bytes, box_index, page_num="?"):
+        """Extract a single voter from a cropped box image.
+
+        Args:
+            box_img_bytes: JPEG bytes of the cropped voter box
+            box_index: Box number on the page (for logging)
+            page_num: Page number (for logging)
+
+        Returns: dict with voter fields, or None if empty/failed
+        """
+        prompt = """Extract the voter details from this single voter box image.
+
+This is ONE voter box from a Kerala electoral roll. It contains:
+- TOP-LEFT corner: Serial number (printed number like 1, 31, 1058 etc.)
+- TOP-RIGHT corner: EPIC ID (alphanumeric code like WHL1565233)
+- Text after "പേര് :" — voter's name in Malayalam (may wrap to next line)
+- Text after "ഭർത്താവിന്റെ പേര്:" or "അച്ഛന്റെ പേര்:" or "അമ്മയുടെ പേര്:" — relation name
+- Text after "വീട്ടു നമ്പർ :" — house number/name
+- Number after "പ്രായം :" — age
+- Text after "ലിംഗം :" — gender (സ്ത്രീ=Female, പുരുഷൻ=Male)
+
+Return a JSON array with exactly 1 object. If the box is empty (no printed data), return an empty array [].
+Maintain 100% literal accuracy for all Malayalam text."""
+
+        img_part = genai_types.Part.from_bytes(data=box_img_bytes, mime_type="image/jpeg")
+        content_parts = [prompt, img_part]
+
+        try:
+            results = self._run_gemini_request(
+                content_parts, count=1, mode="FULL_PAGE", page_num=f"{page_num}-box{box_index}"
+            )
+            if results and len(results) > 0:
+                return results[0]
+            return None
+        except Exception as e:
+            logger.error(f"Box {box_index} on page {page_num} failed: {e}")
+            return None
+
     def extract_with_box_guidance(self, img_path, page_num="?"):
-        """OpenCV-guided extraction: detect boxes first, then send full page
-        to Gemini with exact box count and structured field guidance.
+        """OpenCV box-crop extraction: detect boxes, crop each, send individually.
 
         This approach:
-        1. Uses OpenCV to count exact number of voter boxes on the page
-        2. Sends the FULL page image to Gemini (1 API call)
-        3. Tells Gemini exactly how many boxes to find and what fields to read
-        4. Uses Malayalam label keywords as anchors (handles text wrapping)
+        1. Uses OpenCV to detect voter box grid on the page
+        2. Crops each box into an individual image
+        3. Sends each cropped box to Gemini separately (1 API call per box)
+        4. Zero ambiguity — each call only sees one voter box
 
         Returns: (page_num, results_list, success_bool)
         """
         import io
+        import concurrent.futures
 
         # Step 1: Detect boxes with OpenCV
         boxes = self.detect_voter_boxes(img_path)
         box_count = len(boxes)
 
         if box_count < 2 or box_count > 35:
-            # Fallback to standard extraction if box detection fails or returns
-            # unreasonable results (e.g., last page with different grid layout)
-            logger.warning(f"Page {page_num}: OpenCV detected {box_count} boxes (unusual), falling back to standard extraction")
+            # Fallback to standard full-page extraction
+            logger.warning(f"Page {page_num}: OpenCV detected {box_count} boxes (unusual), falling back to full-page extraction")
             img = Image.open(img_path)
             buf = io.BytesIO()
             img.save(buf, format='PNG')
@@ -571,57 +647,51 @@ class OCREngine:
             img_part = genai_types.Part.from_bytes(data=buf.getvalue(), mime_type="image/png")
             return self.extract_full_page_consolidated(img_part, page_num=page_num)
 
-        # Step 2: Prepare the full page image for Gemini
-        img = Image.open(img_path)
-        buf = io.BytesIO()
-        img.save(buf, format='PNG')
-        buf.seek(0)
-        img_part = genai_types.Part.from_bytes(data=buf.getvalue(), mime_type="image/png")
+        logger.info(f"Neural Sync: Page {page_num} -> Cropping {box_count} boxes for individual extraction...")
 
-        # Step 3: Build a precise prompt with box count and field anchors
-        prompt = f"""You are a highly accurate Malayalam Voter List OCR engine.
+        # Step 2: Crop each box from the full page image
+        full_img = cv2.imread(img_path)
+        if full_img is None:
+            return page_num, "Could not read image", False
 
-This page has a grid of voter boxes arranged in 3 columns × multiple rows.
-Reading order is LEFT to RIGHT across each row, then next row down.
+        cropped_boxes = []
+        for i, (x, y, w, h) in enumerate(boxes):
+            pad = 2
+            y1 = max(0, y - pad)
+            y2 = min(full_img.shape[0], y + h + pad)
+            x1 = max(0, x - pad)
+            x2 = min(full_img.shape[1], x + w + pad)
+            crop = full_img[y1:y2, x1:x2]
+            _, buf = cv2.imencode('.jpg', crop, [cv2.IMWRITE_JPEG_QUALITY, 90])
+            cropped_boxes.append((i + 1, buf.tobytes()))
 
-IMPORTANT: Some boxes on this page may be EMPTY (just grid lines with no voter data printed inside).
-Only extract boxes that actually contain printed voter information.
-Do NOT invent or hallucinate data for empty grid cells.
+        # Step 3: Send each box to Gemini in parallel
+        all_results = [None] * box_count
 
-EACH filled voter box has these fields identified by Malayalam label keywords:
-- serial_number: The number printed in the TOP-LEFT corner of the box (e.g., 1, 2, 31, 32...).
-  READ this number from the image. Do NOT auto-generate sequential numbers.
-- epic_id: The alphanumeric code in the TOP-RIGHT corner (format: 3 letters + 7 digits, e.g., WHL1565365).
-- name_malayalam: Text after the label "പേര് :" — this is the voter's name in Malayalam.
-  May wrap to the next line — capture the FULL name.
-- relation_name_malayalam: Text after "ഭർത്താവിന്റെ പേര്:" OR "അച്ഛന്റെ പേര்:" OR "അമ്മയുടെ പേர്:" —
-  the relation's name in Malayalam. May wrap to the next line.
-- relation_type: Based on which label appears:
-  "ഭർത്താവിന്റെ" → "Husband", "അച്ഛന്റെ" → "Father", "അമ്മയുടെ" → "Mother", else → "Other"
-- house_number: Text after "വീട്ടു നമ്പർ :" — the house number/ID.
-- house_name_malayalam: Text after "വീട്ടു നമ്പർ :" that appears to be a name rather than a number,
-  OR text on the same line as house number if it's a place name in Malayalam.
-- age: Integer after "പ്രായം :"
-- gender: Text after "ലിംഗം :" — "സ്ത്രീ" → "Female", "പുരുഷൻ" → "Male"
+        def process_box(box_data):
+            idx, img_bytes = box_data
+            result = self.extract_single_box(img_bytes, idx, page_num)
+            return idx - 1, result
 
-CRITICAL RULES:
-1. Only extract boxes that contain ACTUAL PRINTED voter data. Skip empty grid cells.
-2. Read serial_number from the PRINTED number on the page — do NOT auto-generate.
-3. Maintain 100% literal accuracy for all Malayalam text.
-4. If a box is marked as "DELETED" (with diagonal lines), still include it with whatever fields are readable.
-5. Do NOT invent data for empty boxes. If a box has no text inside, skip it entirely."""
+        with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
+            futures = {executor.submit(process_box, bd): bd[0] for bd in cropped_boxes}
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    pos, result = future.result()
+                    all_results[pos] = result
+                except Exception as e:
+                    box_idx = futures[future]
+                    logger.error(f"Page {page_num} box {box_idx}: {e}")
 
-        content_parts = [prompt, img_part]
+        # Step 4: Filter out empty/None results
+        valid_results = [r for r in all_results if r is not None]
+        valid_results = [r for r in valid_results if (
+            r.get("serial_number") or r.get("epic_id") or r.get("name_malayalam")
+        )]
 
-        logger.info(f"Neural Sync: Page {page_num} -> OpenCV detected {box_count} grid cells. Sending to Gemini...")
-        results = self._run_gemini_request(content_parts, count=box_count, mode="FULL_PAGE", page_num=page_num)
+        logger.info(f"Neural Sync: Page {page_num} -> Box-crop extraction: {len(valid_results)} voters from {box_count} boxes")
+        return page_num, valid_results, True
 
-        if results:
-            logger.info(f"Neural Sync: Page {page_num} -> Box-guided extraction: {len(results)} voters (expected {box_count})")
-            return page_num, results, True
-
-        logger.error(f"Neural Sync: Page {page_num} -> Box-guided extraction failed after retries.")
-        return page_num, "Box-guided extraction failed", False
 
     def get_zone_coords(self, img_shape, zone_name):
         h, w = img_shape[:2]
