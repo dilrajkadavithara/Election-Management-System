@@ -125,8 +125,27 @@ async def export_batch_csv(batch_id: str, user_info=Depends(get_current_user)):
 @router.post("/save-to-db")
 async def save_to_db(payload: SaveBatchRequest, user_info=Depends(get_current_user)):
     """Commit OCR batch results to the database."""
-    if not payload.constituency or not payload.booth:
-        return {"success": False, "message": "Please select Constituency and Booth before saving."}
+    # If location not in payload, try to read from batch's stored location
+    constituency = payload.constituency
+    booth = payload.booth or payload.booth_number or payload.booth_id
+
+    if not constituency or not booth:
+        batch = state_manager.get_batch(payload.batch_id)
+        if batch and batch.get('location'):
+            loc = batch['location']
+            constituency = constituency or loc.get('constId', '') or loc.get('constName', '')
+            booth = booth or loc.get('boothNo', '') or loc.get('boothId', '')
+            if not payload.lgb_name:
+                payload.lgb_name = loc.get('lbId', '') or loc.get('lbName', '')
+            if not payload.ps_no:
+                payload.ps_no = loc.get('psNo', '')
+            if not payload.ps_name:
+                payload.ps_name = loc.get('psName', '')
+
+    logger.info(f"Save to DB: constituency={constituency}, booth={booth}, lgb={payload.lgb_name}")
+
+    if not constituency or not booth:
+        return {"success": False, "message": f"Please select Constituency and Booth before saving. Got: constituency='{constituency}', booth='{booth}'"}
 
     batch = state_manager.get_batch(payload.batch_id)
     if not batch:
@@ -140,7 +159,7 @@ async def save_to_db(payload: SaveBatchRequest, user_info=Depends(get_current_us
     from asgiref.sync import sync_to_async
     from core_db.models import Constituency, LocalBody
 
-    constituency_name = payload.constituency
+    constituency_name = constituency
     local_body_name = payload.lgb_name
     local_body_type = payload.lgb_type or "PANCHAYAT"
 
