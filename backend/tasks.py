@@ -193,15 +193,30 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
                 target_pages = [1]
             logger.info(f"Processing pages {target_pages[0]}–{target_pages[-1]} of {total_pdf_pages} total (skipping covers + back-cover)")
 
+            # Update status to show surgical phase is starting
+            current_batch = state_manager.get_batch(batch_id)
+            if current_batch:
+                current_batch['status_text'] = 'Phase 1 complete. Running serial gap analysis...'
+                state_manager.set_batch(batch_id, current_batch)
+
             results = processor.process_pdf_directly(processing_path, batch_id=batch_id, page_range=target_pages, callback=update_progress)
-            
+
             # Final status update: Save the perfectly ORDERED results
             batch = state_manager.get_batch(batch_id)
             if batch:
                 batch['results'] = results
                 batch['total_voters'] = len(results)
                 batch['voters_processed'] = len(results)
-                
+
+                # Serial gap validation
+                all_serials = [int(v.get("Serial_OCR", 0)) for v in results if str(v.get("Serial_OCR", "")).isdigit()]
+                if all_serials:
+                    expected = set(range(min(all_serials), max(all_serials) + 1))
+                    found = set(all_serials)
+                    gaps = len(expected - found)
+                    batch['serial_gaps'] = gaps
+                    batch['serial_range'] = f"{min(all_serials)}-{max(all_serials)}"
+
                 # If everything finished, mark as processed
                 num_failed = len(batch.get('failed_pages', []))
                 if num_failed == 0:
@@ -210,9 +225,9 @@ def run_processing_task(batch_id: str, use_gemini: bool = False, direct_pdf: boo
                 else:
                     batch['status'] = 'warning'
                     batch['error'] = f"Missing data from {num_failed} pages. Check logs."
-                
+
                 state_manager.set_batch(batch_id, batch)
-                logger.info(f"Extraction Cycle Finished for {batch_id}. Status: {batch['status']}")
+                logger.info(f"Extraction Cycle Finished for {batch_id}. Status: {batch['status']}. Total: {len(results)} voters. Serial gaps: {batch.get('serial_gaps', 'N/A')}")
             return
 
         # --- LEGACY IMAGE-BASED FLOW ---

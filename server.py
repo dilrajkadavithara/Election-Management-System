@@ -127,5 +127,5 @@ if __name__ == "__main__":
         reload=False,
         proxy_headers=True,
         forwarded_allow_ips="*",
-        workers=min(4, os.cpu_count() or 1) # Increased for 8-core server responsiveness
+        workers=2  # Optimized for single-user extraction: fewer app workers, more resources for Celery
     )
