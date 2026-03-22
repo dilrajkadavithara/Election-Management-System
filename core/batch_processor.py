@@ -53,6 +53,8 @@ class BatchProcessor:
 
         temp_root = tempfile.mkdtemp(prefix="ocr_master_batch_")
         page_to_image_map = {}
+        # Cost tracking
+        total_cost = {"input_tokens": 0, "output_tokens": 0, "api_calls": 0}
 
         def process_page_extraction(page_num, force_full_scan=False):
             """Send a single rendered page image to Gemini using OpenCV box-guided extraction."""
@@ -62,10 +64,17 @@ class BatchProcessor:
                 return page_num, "Image Missing", False
 
             try:
-                # Use OpenCV box-guided extraction (primary method)
-                p_num, batch_results, success = self.engine.extract_with_box_guidance(
+                # Use OpenCV box-guided extraction with 5-box batches
+                result = self.engine.extract_with_box_guidance(
                     page_img_path, page_num=page_num
                 )
+                # Handle both 3-tuple (fallback) and 4-tuple (box-guided with tokens) returns
+                if len(result) == 4:
+                    p_num, batch_results, success, page_tokens = result
+                else:
+                    p_num, batch_results, success = result
+                    page_tokens = {}
+
                 if not success or not isinstance(batch_results, list):
                     return page_num, f"AI Error: {batch_results}", False
 
@@ -92,11 +101,11 @@ class BatchProcessor:
                         "Image_Path": f"p{page_num}_box_guided",
                         "Filename": os.path.basename(pdf_path)
                     })
-                return page_num, page_results, True
+                return page_num, page_results, True, page_tokens
 
             except Exception as e:
                 logger.error(f"Extraction Error on Page {page_num}: {e}")
-                return page_num, str(e), False
+                return page_num, str(e), False, {}
 
         ordered_results = {}
 
@@ -135,14 +144,17 @@ class BatchProcessor:
                             logger.warning(f"Batch {batch_id} cancelled. Halting.")
                             return all_standardized
 
-                        page, res, success = future.result()
+                        page, res, success, tokens = future.result()
+                        total_cost["input_tokens"] += tokens.get("input", 0)
+                        total_cost["output_tokens"] += tokens.get("output", 0)
+                        total_cost["api_calls"] += tokens.get("api_calls", 0)
 
-                        # Only retry pages that completely FAILED (API error, timeout, etc.)
-                        # Do NOT retry pages with < 30 voters — that causes hallucinations.
-                        # Under-read pages are handled by the surgical gap analysis in Phase 2.
                         if not success:
                             logger.warning(f"Page {page}: FAILED. Retrying once...")
-                            page2, res2, success2 = process_page_extraction(page)
+                            page2, res2, success2, tokens2 = process_page_extraction(page)
+                            total_cost["input_tokens"] += tokens2.get("input", 0)
+                            total_cost["output_tokens"] += tokens2.get("output", 0)
+                            total_cost["api_calls"] += tokens2.get("api_calls", 0)
                             if success2:
                                 logger.info(f"Page {page}: retry succeeded with {len(res2)} voters.")
                                 res, success = res2, success2
@@ -160,12 +172,17 @@ class BatchProcessor:
                         logger.warning(f"Batch {batch_id} cancelled. Halting.")
                         return all_standardized
 
-                    page, res, success = future.result()
+                    page, res, success, tokens = future.result()
+                    total_cost["input_tokens"] += tokens.get("input", 0)
+                    total_cost["output_tokens"] += tokens.get("output", 0)
+                    total_cost["api_calls"] += tokens.get("api_calls", 0)
 
-                    # Only retry pages that completely FAILED
                     if not success:
                         logger.warning(f"Page {page}: FAILED. Retrying once...")
-                        page2, res2, success2 = process_page_extraction(page)
+                        page2, res2, success2, tokens2 = process_page_extraction(page)
+                        total_cost["input_tokens"] += tokens2.get("input", 0)
+                        total_cost["output_tokens"] += tokens2.get("output", 0)
+                        total_cost["api_calls"] += tokens2.get("api_calls", 0)
                         if success2:
                             logger.info(f"Page {page}: retry succeeded with {len(res2)} voters.")
                             res, success = res2, success2
@@ -298,12 +315,17 @@ class BatchProcessor:
             else:
                 logger.info(f"📊 Final validation: ✅ All {len(all_serials)} serials are continuous. Zero gaps!")
 
-        # Log cost data
-        self._last_token_usage = self.engine.get_token_usage()
-        logger.info(f"💰 Cost Report: {self._last_token_usage['api_calls']} API calls | "
-                     f"{self._last_token_usage['input_tokens']:,} input tokens | "
-                     f"{self._last_token_usage['output_tokens']:,} output tokens | "
-                     f"Est. cost: ${self._last_token_usage['estimated_cost_usd']}")
+        # Calculate cost (Gemini 2.5 Flash pricing: $0.15/1M input, $0.60/1M output)
+        input_cost = (total_cost["input_tokens"] / 1_000_000) * 0.15
+        output_cost = (total_cost["output_tokens"] / 1_000_000) * 0.60
+        estimated_cost = round(input_cost + output_cost, 4)
+        total_cost["estimated_cost_usd"] = estimated_cost
+
+        self._last_cost = total_cost
+        logger.info(f"💰 Cost Report: {total_cost['api_calls']} API calls | "
+                     f"{total_cost['input_tokens']:,} input tokens | "
+                     f"{total_cost['output_tokens']:,} output tokens | "
+                     f"Est. cost: ${estimated_cost}")
 
         return all_standardized
 

@@ -581,54 +581,111 @@ class OCREngine:
         logger.info(f"detect_voter_boxes: Found {len(sorted_boxes)} voter boxes ({len(rows)} rows × ~{len(rows[0]) if rows else 0} cols)")
         return sorted_boxes
 
-    def extract_single_box(self, box_img_bytes, box_index, page_num="?"):
-        """Extract a single voter from a cropped box image.
+    def extract_box_batch(self, box_images, start_index, page_num="?"):
+        """Extract voters from a small batch of cropped box images (up to 5).
+
+        Each box is a separate cropped image sent together in one API call.
+        With only 5 images, Gemini has no confusion about which data belongs to which box.
 
         Args:
-            box_img_bytes: JPEG bytes of the cropped voter box
-            box_index: Box number on the page (for logging)
-            page_num: Page number (for logging)
+            box_images: list of (index, jpeg_bytes) tuples
+            start_index: starting box number (for logging)
+            page_num: page number (for logging)
 
-        Returns: dict with voter fields, or None if empty/failed
+        Returns: (list of voter dicts, token_usage dict)
         """
-        prompt = """Extract the voter details from this single voter box image.
+        count = len(box_images)
 
-This is ONE voter box from a Kerala electoral roll. It contains:
-- TOP-LEFT corner: Serial number (printed number like 1, 31, 1058 etc.)
-- TOP-RIGHT corner: EPIC ID (alphanumeric code like WHL1565233)
-- Text after "പേര് :" — voter's name in Malayalam (may wrap to next line)
-- Text after "ഭർത്താവിന്റെ പേര്:" or "അച്ഛന്റെ പേര்:" or "അമ്മയുടെ പേര്:" — relation name
-- Text after "വീട്ടു നമ്പർ :" — house number/name
-- Number after "പ്രായം :" — age
-- Text after "ലിംഗം :" — gender (സ്ത്രീ=Female, പുരുഷൻ=Male)
+        prompt = f"""You are extracting voter details from {count} individual voter box images from a Kerala electoral roll.
+Each image is a SEPARATE cropped voter box. Extract details from EACH image independently.
 
-Return a JSON array with exactly 1 object. If the box is empty (no printed data), return an empty array [].
+For EACH box, read these fields using the Malayalam label keywords:
+- serial_number: The PRINTED number in the TOP-LEFT corner (e.g., 1, 31, 1058)
+- epic_id: The alphanumeric code in the TOP-RIGHT corner (e.g., WHL1565233)
+- name_malayalam: Full name in Malayalam after the name label
+- relation_name_malayalam: Relation name in Malayalam after the relation label
+- relation_type: "Husband", "Father", "Mother", or "Other"
+- house_number: House number/ID after house label
+- house_name_malayalam: House/place name in Malayalam
+- age: Integer after age label
+- gender: "Female" or "Male"
+
+Return EXACTLY {count} objects in the JSON array, one per image, in the same order.
+If a box is empty or has no voter data, return an object with empty strings.
 Maintain 100% literal accuracy for all Malayalam text."""
 
-        img_part = genai_types.Part.from_bytes(data=box_img_bytes, mime_type="image/jpeg")
-        content_parts = [prompt, img_part]
-
-        try:
-            results = self._run_gemini_request(
-                content_parts, count=1, mode="FULL_PAGE", page_num=f"{page_num}-box{box_index}"
+        content_parts = [prompt]
+        for _, img_bytes in box_images:
+            content_parts.append(
+                genai_types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg")
             )
-            if results and len(results) > 0:
-                return results[0]
-            return None
-        except Exception as e:
-            logger.error(f"Box {box_index} on page {page_num} failed: {e}")
-            return None
+
+        token_usage = {"input": 0, "output": 0}
+        batch_schema = genai_types.Schema(
+            type=genai_types.Type.ARRAY,
+            items=self._get_voter_schema()
+        )
+
+        last_error = "Unknown"
+        for attempt in range(5):
+            with self.get_throttle():
+                try:
+                    response = self.client.models.generate_content(
+                        model=self.gemini_model,
+                        contents=content_parts,
+                        config=genai_types.GenerateContentConfig(
+                            thinking_config=genai_types.ThinkingConfig(include_thoughts=False),
+                            temperature=0.0,
+                            max_output_tokens=65536,
+                            response_mime_type="application/json",
+                            response_schema=batch_schema
+                        )
+                    )
+
+                    # Track token usage
+                    self._track_tokens(response)
+                    if hasattr(response, 'usage_metadata') and response.usage_metadata:
+                        token_usage["input"] = getattr(response.usage_metadata, 'prompt_token_count', 0) or 0
+                        token_usage["output"] = getattr(response.usage_metadata, 'candidates_token_count', 0) or 0
+
+                    text = response.text.strip()
+                    if not text:
+                        last_error = "Empty response"
+                        continue
+
+                    results = json.loads(text)
+                    if isinstance(results, list):
+                        if len(results) != count:
+                            last_error = f"Got {len(results)}, expected {count}"
+                            logger.warning(f"Box batch mismatch page {page_num}: {last_error} (Attempt {attempt+1})")
+                            continue
+                        return results, token_usage
+                    return [results], token_usage
+
+                except Exception as e:
+                    last_error = str(e)
+                    if "429" in last_error or "RESOURCE_EXHAUSTED" in last_error:
+                        wait_time = 10 * (attempt + 1)
+                        logger.warning(f"Rate limit page {page_num} box batch: {wait_time}s (Attempt {attempt+1})")
+                        time.sleep(wait_time)
+                    else:
+                        logger.error(f"Box batch failed page {page_num} (Attempt {attempt+1}): {e}")
+                        time.sleep(2 * (attempt + 1))
+
+        logger.error(f"Box batch page {page_num} failed after 5 attempts: {last_error}")
+        return [], token_usage
 
     def extract_with_box_guidance(self, img_path, page_num="?"):
-        """OpenCV box-crop extraction: detect boxes, crop each, send individually.
+        """OpenCV box-crop extraction: detect boxes, crop each, send in 5-box batches.
 
         This approach:
         1. Uses OpenCV to detect voter box grid on the page
         2. Crops each box into an individual image
-        3. Sends each cropped box to Gemini separately (1 API call per box)
-        4. Zero ambiguity — each call only sees one voter box
+        3. Sends boxes in batches of 5 to Gemini (6 API calls per 30-box page)
+        4. Each batch only has 5 cropped box images - no cross-box confusion
+        5. Tracks token usage for cost reporting
 
-        Returns: (page_num, results_list, success_bool)
+        Returns: (page_num, results_list, success_bool, token_usage)
         """
         import io
         import concurrent.futures
@@ -636,23 +693,25 @@ Maintain 100% literal accuracy for all Malayalam text."""
         # Step 1: Detect boxes with OpenCV
         boxes = self.detect_voter_boxes(img_path)
         box_count = len(boxes)
+        total_tokens = {"input": 0, "output": 0, "api_calls": 0}
 
         if box_count < 2 or box_count > 35:
-            # Fallback to standard full-page extraction
             logger.warning(f"Page {page_num}: OpenCV detected {box_count} boxes (unusual), falling back to full-page extraction")
             img = Image.open(img_path)
             buf = io.BytesIO()
             img.save(buf, format='PNG')
             buf.seek(0)
             img_part = genai_types.Part.from_bytes(data=buf.getvalue(), mime_type="image/png")
-            return self.extract_full_page_consolidated(img_part, page_num=page_num)
+            p, r, s = self.extract_full_page_consolidated(img_part, page_num=page_num)
+            total_tokens["api_calls"] = 1
+            return p, r, s, total_tokens
 
-        logger.info(f"Neural Sync: Page {page_num} -> Cropping {box_count} boxes for individual extraction...")
+        logger.info(f"Neural Sync: Page {page_num} -> OpenCV detected {box_count} boxes. Cropping for 5-box batch extraction...")
 
         # Step 2: Crop each box from the full page image
         full_img = cv2.imread(img_path)
         if full_img is None:
-            return page_num, "Could not read image", False
+            return page_num, "Could not read image", False, total_tokens
 
         cropped_boxes = []
         for i, (x, y, w, h) in enumerate(boxes):
@@ -665,33 +724,47 @@ Maintain 100% literal accuracy for all Malayalam text."""
             _, buf = cv2.imencode('.jpg', crop, [cv2.IMWRITE_JPEG_QUALITY, 90])
             cropped_boxes.append((i + 1, buf.tobytes()))
 
-        # Step 3: Send each box to Gemini in parallel
-        all_results = [None] * box_count
+        # Step 3: Split into batches of 5
+        BATCH_SIZE = 5
+        batches = []
+        for i in range(0, len(cropped_boxes), BATCH_SIZE):
+            batches.append(cropped_boxes[i:i + BATCH_SIZE])
 
-        def process_box(box_data):
-            idx, img_bytes = box_data
-            result = self.extract_single_box(img_bytes, idx, page_num)
-            return idx - 1, result
+        logger.info(f"Neural Sync: Page {page_num} -> {len(batches)} batches of ~{BATCH_SIZE} boxes")
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
-            futures = {executor.submit(process_box, bd): bd[0] for bd in cropped_boxes}
+        # Step 4: Process batches in parallel (up to 6 concurrent API calls)
+        batch_results_map = {}
+
+        def process_batch(batch_idx, batch_data):
+            results, tokens = self.extract_box_batch(batch_data, batch_idx * BATCH_SIZE + 1, page_num)
+            return batch_idx, results, tokens
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
+            futures = {executor.submit(process_batch, bi, bd): bi for bi, bd in enumerate(batches)}
             for future in concurrent.futures.as_completed(futures):
                 try:
-                    pos, result = future.result()
-                    all_results[pos] = result
+                    batch_idx, results, tokens = future.result()
+                    batch_results_map[batch_idx] = results
+                    total_tokens["input"] += tokens.get("input", 0)
+                    total_tokens["output"] += tokens.get("output", 0)
+                    total_tokens["api_calls"] += 1
                 except Exception as e:
-                    box_idx = futures[future]
-                    logger.error(f"Page {page_num} box {box_idx}: {e}")
+                    batch_idx = futures[future]
+                    logger.error(f"Page {page_num} batch {batch_idx}: {e}")
+                    batch_results_map[batch_idx] = []
 
-        # Step 4: Filter out empty/None results
-        valid_results = [r for r in all_results if r is not None]
-        valid_results = [r for r in valid_results if (
+        # Step 5: Reassemble results in original order
+        all_results = []
+        for bi in range(len(batches)):
+            all_results.extend(batch_results_map.get(bi, []))
+
+        # Step 6: Filter out empty boxes
+        valid_results = [r for r in all_results if (
             r.get("serial_number") or r.get("epic_id") or r.get("name_malayalam")
         )]
 
-        logger.info(f"Neural Sync: Page {page_num} -> Box-crop extraction: {len(valid_results)} voters from {box_count} boxes")
-        return page_num, valid_results, True
-
+        logger.info(f"Neural Sync: Page {page_num} -> Per-box extraction: {len(valid_results)} voters from {box_count} boxes ({total_tokens['api_calls']} calls, {total_tokens['input']}+{total_tokens['output']} tokens)")
+        return page_num, valid_results, True, total_tokens
 
     def get_zone_coords(self, img_shape, zone_name):
         h, w = img_shape[:2]
