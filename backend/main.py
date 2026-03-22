@@ -4,6 +4,7 @@ import django
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 # 1. Strict Path Resolution
@@ -47,7 +48,14 @@ app.include_router(ocr.router)
 app.include_router(system.router)
 app.include_router(communications.router)
 
-# 5. Startup Check
+# 5. Mount Django Admin via WSGI
+from django.core.wsgi import get_wsgi_application
+from starlette.middleware.wsgi import WSGIMiddleware
+
+django_wsgi = get_wsgi_application()
+app.mount("/voter-intel-hq-2026", WSGIMiddleware(django_wsgi))
+
+# 6. Startup Check
 @app.on_event("startup")
 async def startup_event():
     logger = logging.getLogger("ElectionEngine")
