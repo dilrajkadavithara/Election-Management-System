@@ -52,7 +52,12 @@ export default function useOCR({ isLoggedIn, view, loadStats, loadAdminData, set
         try {
             const res = await api.uploadPDF(file);
             // Store location snapshot in batch so Save works even if location state resets
-            setOcrBatch({ ...res, filename: file.name, _loc: { ...ocrTargetLoc } });
+            const loc = { ...ocrTargetLoc };
+            setOcrBatch({ ...res, filename: file.name, _loc: loc });
+            // Persist location to Redis so it survives page reloads
+            try {
+                await api.updateBatchLocation(res.id, loc);
+            } catch (_) {}
         } catch (e) { setOcrError(e.message); }
         finally { setOcrLoading(false); }
     };
@@ -78,8 +83,8 @@ export default function useOCR({ isLoggedIn, view, loadStats, loadAdminData, set
         setOcrLoading(true);
         setOcrError(null);
         try {
-            // Use current location state, fall back to snapshot stored at upload time
-            const loc = (ocrTargetLoc.constId) ? ocrTargetLoc : (ocrBatch._loc || ocrTargetLoc);
+            // Use current location state, fall back to snapshot stored at upload time or in Redis
+            const loc = (ocrTargetLoc.constId) ? ocrTargetLoc : (ocrBatch._loc || ocrBatch.location || ocrTargetLoc);
             const res = await api.saveToDB(
                 ocrBatch.id,
                 loc.constId || loc.constName,

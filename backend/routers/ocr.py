@@ -182,6 +182,16 @@ async def save_to_db(payload: SaveBatchRequest, user_info=Depends(get_current_us
 
     return {"success": success, "message": msg}
 
+@router.post("/batch/{batch_id}/location")
+async def update_batch_location(batch_id: str, payload: dict, user_info=Depends(get_current_user)):
+    """Store location data in batch so it persists across page reloads."""
+    batch = state_manager.get_batch(batch_id)
+    if not batch:
+        raise HTTPException(404, "Batch not found")
+    batch['location'] = payload.get('location', {})
+    state_manager.set_batch(batch_id, batch)
+    return {"success": True}
+
 @router.post("/clear-session/{batch_id}")
 async def clear_session(batch_id: str, user_info=Depends(get_current_user)):
     """Clean up batch data and temporary files."""
