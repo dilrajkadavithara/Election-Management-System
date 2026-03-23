@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import api from '../../api';
 
 const EditProfileModal = ({
@@ -11,21 +11,25 @@ const EditProfileModal = ({
     // Close handler — single source of truth
     const closeModal = useCallback(() => setEditMode(false), [setEditMode]);
 
-    // Intercept browser Back button: push a fake history entry on open,
-    // listen for popstate → close modal instead of navigating away
+    // Intercept browser Back button so it closes the modal instead of leaving the page.
+    // Uses a ref to push exactly one history entry, even under React Strict Mode.
+    const didPushRef = useRef(false);
+
     useEffect(() => {
-        window.history.pushState({ editModal: true }, '');
-        const onBack = (e) => {
-            // If this popstate is ours, close the modal
-            closeModal();
+        if (!didPushRef.current) {
+            window.history.pushState({ editModal: true }, '');
+            didPushRef.current = true;
+        }
+
+        const onBack = () => {
+            if (didPushRef.current) {
+                didPushRef.current = false;
+                closeModal();
+            }
         };
         window.addEventListener('popstate', onBack);
         return () => {
             window.removeEventListener('popstate', onBack);
-            // Clean up the fake history entry if modal is closed via button (not Back)
-            if (window.history.state?.editModal) {
-                window.history.back();
-            }
         };
     }, [closeModal]);
 

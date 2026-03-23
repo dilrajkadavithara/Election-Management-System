@@ -133,3 +133,28 @@ jobs:
             fi
 
             echo "✅ Deployed commit ${{ github.sha }}. Running image tag: $RUNNING_IMAGE"
+
+  post-deploy-tests:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Install Playwright
+        run: |
+          cd frontend
+          npm ci
+          npx playwright install chromium
+
+      - name: Run Production E2E Tests
+        run: |
+          cd frontend
+          TEST_URL=https://intelhub.live npx playwright test e2e/production.spec.js --reporter=list
+        env:
+          CI: true
