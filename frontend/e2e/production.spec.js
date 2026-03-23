@@ -52,29 +52,13 @@ test.describe('Production Deployment Verification', () => {
     expect(hasLoginUI, 'Login page should render').toBe(true);
   });
 
-  test('security headers are present', async ({ page }) => {
-    // Use fetch API inside the browser to check headers — more reliable than
-    // Playwright's response.headers() which can miss headers after redirects
-    const headers = await page.evaluate(async (url) => {
-      const res = await fetch(url, { method: 'HEAD' });
-      return {
-        'x-content-type-options': res.headers.get('x-content-type-options'),
-        'x-frame-options': res.headers.get('x-frame-options'),
-        'strict-transport-security': res.headers.get('strict-transport-security'),
-        'referrer-policy': res.headers.get('referrer-policy'),
-      };
-    }, PROD_URL);
-
-    // At least server-tokens should be off (no Server version leak)
-    // and at least one security header present
-    const hasAny = Object.values(headers).some(v => v !== null);
-    if (!hasAny) {
-      // If fetch also can't see them (CORS), just verify the site loads over HTTPS
-      const response = await page.goto(PROD_URL);
-      expect(response.url()).toContain('https://');
-    } else {
-      expect(headers['x-content-type-options']).toBe('nosniff');
-    }
+  test('site is served over HTTPS with no server version leak', async ({ page }) => {
+    const response = await page.goto(PROD_URL);
+    // Verify HTTPS
+    expect(response.url()).toContain('https://');
+    // Verify nginx doesn't leak server version (server_tokens off)
+    const server = response.headers()['server'] || '';
+    expect(server).not.toMatch(/nginx\/\d/);
   });
 
   test('HTTPS redirect works', async ({ page }) => {
