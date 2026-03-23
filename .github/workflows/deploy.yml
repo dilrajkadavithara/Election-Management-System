@@ -110,6 +110,26 @@ jobs:
             chmod +x /opt/voterslist/scripts/restore-db.sh 2>/dev/null || true
             (crontab -l 2>/dev/null | grep -v 'backup-db.sh'; echo "0 2 * * * cd /opt/voterslist && /opt/voterslist/scripts/backup-db.sh >> /opt/voterslist/backups/backup.log 2>&1") | crontab -
 
-            # 6. Verify deployed version matches the commit
+            # 6. Force nginx to pick up new files (reload config + clear proxy cache)
+            docker compose -f docker-compose.remote.yml exec -T nginx nginx -s reload 2>/dev/null || true
+
+            # 7. Verify deployment — check that new files actually exist in the volume
+            echo "🔍 Verifying deployment..."
+            DEPLOYED_FILES=$(docker compose -f docker-compose.remote.yml exec -T nginx ls /usr/share/nginx/html/ 2>/dev/null || echo "EMPTY")
+            echo "   Nginx serving: $DEPLOYED_FILES"
+
+            # Check the app container's sync log
+            docker compose -f docker-compose.remote.yml logs app --tail=20 2>/dev/null | grep -E "(Sync|✅|❌|⚠️)" || true
+
             RUNNING_IMAGE=$(docker compose -f docker-compose.remote.yml images app --format json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)[0].get('Tag','unknown'))" 2>/dev/null || echo "unknown")
+
+            # Final smoke test — check if the site returns HTML
+            sleep 3
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://intelhub.live/ 2>/dev/null || echo "000")
+            echo "   Site HTTP status: $HTTP_STATUS"
+
+            if [ "$HTTP_STATUS" != "200" ]; then
+                echo "🚨 WARNING: Site returned $HTTP_STATUS — manual verification needed!"
+            fi
+
             echo "✅ Deployed commit ${{ github.sha }}. Running image tag: $RUNNING_IMAGE"

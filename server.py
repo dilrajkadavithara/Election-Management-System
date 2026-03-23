@@ -96,13 +96,21 @@ if __name__ == "__main__":
                 if os.path.exists(src) and os.path.exists(str(Path(dst).parent)):
                     print(f"   - Syncing {src} to {dst}...")
                     os.makedirs(dst, exist_ok=True)
-                    # We copy contents surgically. Using a temp-over-swap approach is safer 
-                    # but simple cp -a with update flag is often faster.
                     import shutil as _shutil
                     import stat
-                    # Safe copy without shell injection risk
-                    if os.path.exists(dst):
-                        _shutil.rmtree(dst)
+                    # CRITICAL FIX: Clear CONTENTS of mount point, not the mount point itself.
+                    # rmtree(dst) fails silently on Docker volume mount points, leaving stale files.
+                    try:
+                        for item in os.listdir(dst):
+                            item_path = os.path.join(dst, item)
+                            if os.path.isdir(item_path):
+                                _shutil.rmtree(item_path)
+                            else:
+                                os.remove(item_path)
+                        print(f"     🧹 Cleared old contents from {dst}")
+                    except Exception as clear_err:
+                        print(f"     ⚠️ Could not clear {dst}: {clear_err}")
+                    # Copy new files into the mount point
                     _shutil.copytree(src, dst, dirs_exist_ok=True)
                     for root, dirs, files in os.walk(dst):
                         for d in dirs:
