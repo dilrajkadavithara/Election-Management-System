@@ -17,6 +17,7 @@ import WarRoom from './views/WarRoom';
 import ElectionDay from './views/ElectionDay';
 import FamilyHeads from './views/FamilyHeads';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
+import InstallPage from './components/InstallPage';
 import { PARTY_PRESETS } from './constants';
 
 const AppInner = () => {
@@ -101,6 +102,12 @@ const AppInner = () => {
     };
 
     // --- Render ---
+
+    // /install page — shown before login, dedicated PWA install experience
+    if (window.location.pathname === '/install') {
+        return <InstallPage onContinue={() => { window.history.replaceState({}, '', '/'); window.location.reload(); }} />;
+    }
+
     if (!isLoggedIn) {
         return <LoginForm
             loginUser={loginUser} setLoginUser={setLoginUser}
