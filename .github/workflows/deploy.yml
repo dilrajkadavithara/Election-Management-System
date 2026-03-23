@@ -28,7 +28,7 @@ jobs:
       - name: Build Frontend
         run: |
           cd frontend
-          npm install
+          npm ci
           npm run build
 
       - name: Log in to GitHub Container Registry
@@ -79,8 +79,9 @@ jobs:
             docker rm -f voterslist-redis-1 voterslist-worker-1 voterslist-app-1 voterslist-nginx-1 voterslist-certbot-1 2>/dev/null || true
             # Nuclear stop (DATA-SAFE: No --volumes flag)
             docker compose -f docker-compose.remote.yml down --remove-orphans --timeout 1 || true
-            # Restart with IMAGE_TAG=latest (persisted in .env)
-            export IMAGE_TAG=latest
+            # Restart with the EXACT commit-SHA image that was just built and pulled
+            export IMAGE_TAG=${{ github.sha }}
+            echo "🚀 Starting containers with IMAGE_TAG=$IMAGE_TAG"
             docker compose -f docker-compose.remote.yml up -d
 
             # Fix data directory permissions (non-root container user)
@@ -97,4 +98,6 @@ jobs:
 
             docker image prune -f
 
-            echo "✅ Deployed. Server running latest image with migrations applied."
+            # 5. Verify deployed version matches the commit
+            RUNNING_IMAGE=$(docker compose -f docker-compose.remote.yml images app --format json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)[0].get('Tag','unknown'))" 2>/dev/null || echo "unknown")
+            echo "✅ Deployed commit ${{ github.sha }}. Running image tag: $RUNNING_IMAGE"

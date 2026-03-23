@@ -11,7 +11,7 @@ const EditProfileModal = ({
     // Large, accessible selection component for Booth Agents
     const ActionCard = ({ label, options, currentVal, onSelect, columns = 2 }) => (
         <div className="space-y-2 sm:space-y-4">
-            <h3 className="text-[10px] sm:text-[11px] font-black uppercase text-slate-400 tracking-[0.2em] ml-1 sm:ml-2 leading-relaxed">{label}</h3>
+            <h3 className="text-[10px] sm:text-[11px] font-black text-slate-400 tracking-[0.15em] ml-1 sm:ml-2 leading-relaxed">{label}</h3>
             <div className={`grid grid-cols-${columns} gap-2 sm:gap-3`}>
                 {options.map(opt => (
                     <button
@@ -33,7 +33,7 @@ const EditProfileModal = ({
                         <span className={`text-xl sm:text-3xl transition-transform duration-500 ${currentVal === opt.id ? 'scale-110 rotate-3' : 'group-hover:scale-110'}`}>
                             {opt.icon}
                         </span>
-                        <span className="text-[9px] sm:text-[12px] font-black uppercase tracking-tight leading-tight text-center">
+                        <span className="text-[9px] sm:text-[12px] font-black tracking-tight leading-tight text-center">
                             {opt.label}
                         </span>
                         {currentVal === opt.id && (
@@ -55,13 +55,13 @@ const EditProfileModal = ({
     };
 
     return (
-        <div className="fixed inset-0 lg:left-[420px] bg-slate-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-2 sm:p-4 lg:pl-4">
+        <div className="fixed top-0 right-0 bottom-0 left-0 lg:left-[420px] bg-slate-900/60 backdrop-blur-md z-[1100] flex items-center justify-center p-2 sm:p-4 lg:pl-4">
             <div className="bg-white w-full max-w-2xl rounded-3xl sm:rounded-[3.5rem] p-5 sm:p-14 shadow-[0_40px_120px_rgba(0,0,0,0.4)] space-y-6 sm:space-y-12 overflow-y-auto max-h-[98vh] custom-scrollbar relative animate-in fade-in slide-in-from-bottom-8 duration-500">
 
                 {/* 1. Profile Identity */}
                 <div className="text-center space-y-1 sm:space-y-3 relative">
                     <div className="mx-auto w-12 h-1 bg-slate-100 rounded-full mb-3 sm:mb-6" />
-                    <p className="hidden sm:block text-[10px] font-black text-indigo-500 uppercase tracking-[0.5em] opacity-60">വിവര ശേഖരണം</p>
+                    <p className="hidden sm:block text-[10px] font-black text-indigo-500 tracking-[0.2em] opacity-60">വിവര ശേഖരണം</p>
                     <h2 className="text-2xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight px-2 sm:px-4 break-words">
                         {editData.full_name || 'System Voter'}
                     </h2>
@@ -189,14 +189,14 @@ const EditProfileModal = ({
 
                     {/* 4.5. Head of Family Toggle */}
                     <div className="space-y-2 sm:space-y-4">
-                        <label className="text-[10px] sm:text-[11px] font-black uppercase text-slate-400 tracking-[0.2em] ml-1 sm:ml-2">ഗൃഹനാഥനാണോ (Is Head of Family)?</label>
+                        <label className="text-[10px] sm:text-[11px] font-black text-slate-400 tracking-[0.15em] ml-1 sm:ml-2">ഗൃഹനാഥനാണോ (Is Head of Family)?</label>
                         <button
                             onClick={() => setEditData({ ...editData, is_head_of_family: !editData.is_head_of_family })}
                             className={`w-full flex items-center justify-between p-4 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border-2 transition-all duration-300 ${editData.is_head_of_family ? 'bg-amber-100 border-amber-300 shadow-[0_0_20px_rgba(251,191,36,0.2)]' : 'bg-slate-50 border-slate-100 hover:border-slate-300'}`}
                         >
                             <div className="flex items-center gap-3">
                                 <span className="text-2xl sm:text-4xl text-amber-500">👑</span>
-                                <span className={`text-sm sm:text-lg font-black uppercase tracking-widest ${editData.is_head_of_family ? 'text-amber-700' : 'text-slate-400'}`}>
+                                <span className={`text-sm sm:text-lg font-black tracking-wider ${editData.is_head_of_family ? 'text-amber-700' : 'text-slate-400'}`}>
                                     {editData.is_head_of_family ? 'അതെ (YES)' : 'അല്ല (NO)'}
                                 </span>
                             </div>
@@ -208,7 +208,7 @@ const EditProfileModal = ({
 
                     {/* 5. Mobile Connection */}
                     <div className="space-y-2 sm:space-y-4">
-                        <label className="text-[10px] sm:text-[11px] font-black uppercase text-slate-400 tracking-[0.2em] ml-1 sm:ml-2">ഫോൺ നമ്പർ</label>
+                        <label className="text-[10px] sm:text-[11px] font-black text-slate-400 tracking-[0.15em] ml-1 sm:ml-2">ഫോൺ നമ്പർ</label>
                         <div className="relative group">
                             <input
                                 type="text"
@@ -226,13 +226,13 @@ const EditProfileModal = ({
                 <div className="flex flex-row gap-2 sm:gap-5 pt-0 sm:pt-4">
                     <button
                         onClick={() => setEditMode(false)}
-                        className="flex-1 p-3 sm:p-7 rounded-xl sm:rounded-[2.5rem] font-black uppercase text-[10px] sm:text-[11px] tracking-[0.2em] border-2 border-slate-100 text-slate-400 hover:bg-slate-50 transition-all active:scale-95 whitespace-nowrap"
+                        className="flex-1 p-3 sm:p-7 rounded-xl sm:rounded-[2.5rem] font-black text-[10px] sm:text-[11px] tracking-[0.15em] border-2 border-slate-100 text-slate-400 hover:bg-slate-50 transition-all active:scale-95 whitespace-nowrap"
                     >
                         റദ്ദാക്കുക
                     </button>
                     <button
                         onClick={saveCorrection}
-                        className="flex-[2] p-3 sm:p-7 rounded-xl sm:rounded-[2.5rem] font-black uppercase text-[10px] sm:text-[11px] tracking-[0.1em] sm:tracking-[0.2em] bg-indigo-600 text-white shadow-[0_10px_30px_-5px_rgba(79,70,229,0.5)] sm:shadow-2xl sm:shadow-indigo-200 hover:bg-indigo-700 sm:hover:shadow-indigo-300 transition-all active:scale-95 relative overflow-hidden whitespace-nowrap"
+                        className="flex-[2] p-3 sm:p-7 rounded-xl sm:rounded-[2.5rem] font-black text-[10px] sm:text-[11px] tracking-[0.1em] sm:tracking-[0.15em] bg-indigo-600 text-white shadow-[0_10px_30px_-5px_rgba(79,70,229,0.5)] sm:shadow-2xl sm:shadow-indigo-200 hover:bg-indigo-700 sm:hover:shadow-indigo-300 transition-all active:scale-95 relative overflow-hidden whitespace-nowrap"
                     >
                         <span className="relative z-10">സേവ് ചെയ്യുക ➔</span>
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full hover:translate-x-full transition-transform duration-1000" />

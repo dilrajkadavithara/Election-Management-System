@@ -704,15 +704,16 @@ def create_managed_user(username, password, role, data):
     
     profile.save()
 
-    # Save scope assignments
-    const_ids = a_data.get('constituencies', [])
-    lb_ids = a_data.get('local_bodies', [])
-    booth_ids = a_data.get('booths', [])
-    
+    # Save scope assignments — handle both nested (assignments.booths) and flat (assigned_booths) formats
+    nested = p_data.get('assignments') if isinstance(p_data.get('assignments'), dict) else {}
+    const_ids = nested.get('constituencies') or p_data.get('assigned_constituencies') or a_data.get('constituencies', [])
+    lb_ids = nested.get('local_bodies') or p_data.get('assigned_local_bodies') or a_data.get('local_bodies', [])
+    booth_ids = nested.get('booths') or p_data.get('assigned_booths') or a_data.get('booths', [])
+
     if const_ids: profile.assigned_constituencies.set(const_ids)
     if lb_ids: profile.assigned_local_bodies.set(lb_ids)
     if booth_ids: profile.assigned_booths.set(booth_ids)
-    
+
     return True, "User created"
 
 def delete_user(user_id):
@@ -739,13 +740,17 @@ def update_user_profile(user_id, data):
     
     p.save()
 
-    # Update scope assignments (handle both flat and nested 'assignments' key)
-    a_data = data.get('assignments', {}) if isinstance(data.get('assignments'), dict) else {}
-    
-    if 'constituencies' in a_data: p.assigned_constituencies.set(a_data['constituencies'])
-    if 'local_bodies' in a_data: p.assigned_local_bodies.set(a_data['local_bodies'])
-    if 'booths' in a_data: p.assigned_booths.set(a_data['booths'])
-    
+    # Update scope assignments — handle both nested (assignments.booths) and flat (assigned_booths) formats
+    nested = data.get('assignments') if isinstance(data.get('assignments'), dict) else {}
+
+    const_ids = nested.get('constituencies') or data.get('assigned_constituencies')
+    lb_ids = nested.get('local_bodies') or data.get('assigned_local_bodies')
+    booth_ids = nested.get('booths') or data.get('assigned_booths')
+
+    if const_ids is not None: p.assigned_constituencies.set(const_ids)
+    if lb_ids is not None: p.assigned_local_bodies.set(lb_ids)
+    if booth_ids is not None: p.assigned_booths.set(booth_ids)
+
     return True, "User updated"
 
 def change_user_password(username, old_password, new_password):

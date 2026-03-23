@@ -259,7 +259,7 @@ const UserManagement = () => {
                                             <div className="flex flex-wrap gap-1 mt-1">
                                                 {(u.constituencies || []).map(n => <span key={n} className="text-[9px] text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">{n}</span>)}
                                                 {(u.local_bodies || []).map(n => <span key={n} className="text-[9px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">{n}</span>)}
-                                                {(u.booths || []).length > 0 && <span className="text-[9px] text-slate-400 bg-white/5 px-1.5 py-0.5 rounded">{u.booths.length} booth{u.booths.length > 1 ? 's' : ''}</span>}
+                                                {(u.booths || []).map(n => <span key={n} className="text-[9px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">Booth {n}</span>)}
                                             </div>
                                         </div>
                                     </div>
