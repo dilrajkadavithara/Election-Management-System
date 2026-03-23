@@ -55,7 +55,7 @@ const EditProfileModal = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-2 sm:p-4">
+        <div className="fixed inset-0 lg:left-[400px] bg-slate-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-2 sm:p-4">
             <div className="bg-white w-full max-w-2xl rounded-3xl sm:rounded-[3.5rem] p-5 sm:p-14 shadow-[0_40px_120px_rgba(0,0,0,0.4)] space-y-6 sm:space-y-12 overflow-y-auto max-h-[98vh] custom-scrollbar relative animate-in fade-in slide-in-from-bottom-8 duration-500">
 
                 {/* 1. Profile Identity */}
