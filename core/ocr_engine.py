@@ -94,9 +94,8 @@ class OCREngine:
     def get_throttle(self):
         """Standard thread-safe throttle for API calls."""
         with self.throttle_lock:
-            # Tier 2: 0.3s stagger for 8 parallel threads per batch
-            # 8 threads × 3 workers = 24 RPM peak, well within Tier 2's 1000+ RPM
-            time.sleep(0.3)
+            # Tier 2: 0.15s stagger (safe at ~400 RPM, Tier 2 allows 1000+)
+            time.sleep(0.15)
         # RELEASE LOCK: Allow next worker to stagger while THIS one hits Gemini.
         yield
 
@@ -724,8 +723,8 @@ Maintain 100% literal accuracy for all Malayalam text."""
             _, buf = cv2.imencode('.jpg', crop, [cv2.IMWRITE_JPEG_QUALITY, 90])
             cropped_boxes.append((i + 1, buf.tobytes()))
 
-        # Step 3: Split into batches of 5
-        BATCH_SIZE = 5
+        # Step 3: Split into batches of 8 (optimized for Tier 2 rate limits)
+        BATCH_SIZE = 8
         batches = []
         for i in range(0, len(cropped_boxes), BATCH_SIZE):
             batches.append(cropped_boxes[i:i + BATCH_SIZE])
