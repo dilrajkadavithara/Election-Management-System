@@ -4,6 +4,7 @@ services:
   db:
     image: postgres:15-alpine
     restart: always
+    command: postgres -c max_connections=300 -c shared_buffers=512MB -c work_mem=4MB -c effective_cache_size=1536MB
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -18,8 +19,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
-          memory: 2G
+          cpus: '2'
+          memory: 3G
 
   redis:
     image: redis:7-alpine
@@ -72,8 +73,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2'
-          memory: 4G
+          cpus: '3'
+          memory: 5G
     depends_on:
       - db
       - redis
@@ -105,8 +106,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '4'
-          memory: 6G
+          cpus: '2'
+          memory: 2G
     depends_on:
       - db
       - redis

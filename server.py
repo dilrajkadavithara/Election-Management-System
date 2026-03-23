@@ -127,5 +127,5 @@ if __name__ == "__main__":
         reload=False,
         proxy_headers=True,
         forwarded_allow_ips="*",
-        workers=2  # Optimized for single-user extraction: fewer app workers, more resources for Celery
+        workers=6  # 250 concurrent booth agents: 6 workers handles ~300 req/s of lightweight DB reads/writes
     )
