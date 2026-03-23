@@ -12,6 +12,9 @@ export default defineConfig({
             },
         },
     },
+    test: {
+        dir: 'src',
+    },
     build: {
         sourcemap: false,
         rollupOptions: {

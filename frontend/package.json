@@ -6,7 +6,7 @@
         "dev": "vite",
         "build": "vite build",
         "preview": "vite preview",
-        "test": "vitest run",
+        "test": "vitest run --dir src",
         "test:e2e": "npx playwright test",
         "test:e2e:local": "npx playwright test e2e/rbac.spec.js e2e/modal.spec.js e2e/pwa.spec.js",
         "test:e2e:prod": "TEST_URL=https://intelhub.live npx playwright test e2e/production.spec.js",
