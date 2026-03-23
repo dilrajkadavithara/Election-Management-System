@@ -16,6 +16,7 @@ import ChangePasswordModal from './components/modals/ChangePasswordModal';
 import WarRoom from './views/WarRoom';
 import ElectionDay from './views/ElectionDay';
 import FamilyHeads from './views/FamilyHeads';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { PARTY_PRESETS } from './constants';
 
 const AppInner = () => {
@@ -148,6 +149,7 @@ const AppInner = () => {
                     <h2 className="text-4xl font-black uppercase">Sync Complete</h2>
                 </div>
             )}
+            <PWAInstallPrompt />
         </div>
     );
 };

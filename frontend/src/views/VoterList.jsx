@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import api from '../api';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 
@@ -22,6 +22,7 @@ const VoterList = ({
 }) => {
     const pageSize = DEFAULT_PAGE_SIZE;
     const totalPages = Math.max(1, Math.ceil(voterTotal / pageSize));
+    const [filtersOpen, setFiltersOpen] = useState(false);
 
     React.useEffect(() => {
         // Auto-select booth for Booth Agents
@@ -79,11 +80,21 @@ const VoterList = ({
                 </div>
             </header>
 
-            {/* 🛡️ Intelligence Filter Bar */}
-            <div className="lux-glass p-6 sm:p-8 rounded-[3rem] border-white/5 shadow-2xl space-y-6 group">
+            {/* 🛡️ Intelligence Filter Bar — collapsible on mobile */}
+            <div className="lux-glass p-4 sm:p-8 rounded-2xl sm:rounded-[3rem] border-white/5 shadow-2xl space-y-4 sm:space-y-6 group relative">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-[100px] -mr-40 -mt-40 transition-all group-hover:bg-indigo-500/10" />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 items-end relative z-10">
+                {/* Mobile toggle */}
+                <button
+                    onClick={() => setFiltersOpen(o => !o)}
+                    className="lg:hidden w-full flex items-center justify-between text-[10px] font-black uppercase text-indigo-400 tracking-widest relative z-10"
+                >
+                    <span>Filters {Object.values(listFilters).filter(Boolean).length > 0 ? `(${Object.values(listFilters).filter(Boolean).length} active)` : ''}</span>
+                    <span className={`transition-transform ${filtersOpen ? 'rotate-180' : ''}`}>▼</span>
+                </button>
+
+                <div className={`${filtersOpen ? 'block' : 'hidden'} lg:block`}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 items-end relative z-10">
                     {[
                         { label: 'Constituency', key: 'constituency', icon: '🗺️', options: allLocations },
                         { label: 'Local Body', key: 'lb', icon: '🏘️', options: allLocations.find(c => String(c.id) === String(listFilters.constituency))?.local_bodies, disabled: !listFilters.constituency },
@@ -119,19 +130,20 @@ const VoterList = ({
                     ))}
                 </div>
 
-                <div className="flex gap-4 mt-8 pt-8 border-t border-white/5 relative z-10">
+                <div className="flex gap-3 sm:gap-4 mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-white/5 relative z-10">
                     <button
-                        onClick={() => { loadVoters(1); loadAdminData(); }}
-                        className="bg-indigo-600 text-white px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-500 transition-all shadow-[0_10px_20px_rgba(99,102,241,0.2)] active:scale-95"
+                        onClick={() => { loadVoters(1); loadAdminData(); setFiltersOpen(false); }}
+                        className="flex-1 sm:flex-none bg-indigo-600 text-white px-6 sm:px-10 py-3 sm:py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] hover:bg-indigo-500 transition-all shadow-[0_10px_20px_rgba(99,102,241,0.2)] active:scale-95"
                     >
-                        Update Data
+                        Apply
                     </button>
                     <button
                         onClick={() => { setListFilters({ constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '', serialFrom: '', serialTo: '', location: '' }); setSearchQuery(''); }}
-                        className="bg-white/5 text-slate-400 px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-white/10 hover:text-white transition-all border border-white/5"
+                        className="flex-1 sm:flex-none bg-white/5 text-slate-400 px-6 sm:px-10 py-3 sm:py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] hover:bg-white/10 hover:text-white transition-all border border-white/5"
                     >
-                        Reset Matrix
+                        Reset
                     </button>
+                </div>
                 </div>
             </div>
 
@@ -220,25 +232,25 @@ const VoterList = ({
                 </div>
 
                 {/* Pagination Controls */}
-                <div className="flex items-center justify-between px-10 py-6 border-t border-white/5">
-                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                        Showing {voterTotal > 0 ? ((currentPage - 1) * pageSize) + 1 : 0}–{Math.min(currentPage * pageSize, voterTotal)} of {voterTotal}
+                <div className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-10 py-4 sm:py-6 border-t border-white/5 gap-3">
+                    <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                        {voterTotal > 0 ? ((currentPage - 1) * pageSize) + 1 : 0}–{Math.min(currentPage * pageSize, voterTotal)} of {voterTotal}
                     </p>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
                         <button
                             onClick={() => loadVoters(currentPage - 1)}
                             disabled={currentPage <= 1}
-                            className="bg-white/5 text-slate-300 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                            className="flex-1 sm:flex-none bg-white/5 text-slate-300 px-3 sm:px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider sm:tracking-widest hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed text-center"
                         >
-                            ← Previous
+                            ← Prev
                         </button>
-                        <span className="text-[11px] font-black text-indigo-400 tracking-widest">
-                            Page {currentPage} / {totalPages}
+                        <span className="text-[10px] sm:text-[11px] font-black text-indigo-400 tracking-wider sm:tracking-widest whitespace-nowrap">
+                            {currentPage}/{totalPages}
                         </span>
                         <button
                             onClick={() => loadVoters(currentPage + 1)}
                             disabled={currentPage >= totalPages}
-                            className="bg-white/5 text-slate-300 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                            className="flex-1 sm:flex-none bg-white/5 text-slate-300 px-3 sm:px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider sm:tracking-widest hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed text-center"
                         >
                             Next →
                         </button>
