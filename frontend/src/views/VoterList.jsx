@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import api from '../api';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 
@@ -42,8 +42,23 @@ const VoterList = ({
         }
     }, [allLocations, currentUser, userRole]);
 
+    const [isOffline, setIsOffline] = useState(!navigator.onLine);
+    useEffect(() => {
+        const goOffline = () => setIsOffline(true);
+        const goOnline = () => setIsOffline(false);
+        window.addEventListener('offline', goOffline);
+        window.addEventListener('online', goOnline);
+        return () => { window.removeEventListener('offline', goOffline); window.removeEventListener('online', goOnline); };
+    }, []);
+
     return (
         <div className="min-h-screen lux-mesh-bg p-6 pt-24 lg:p-12 lg:pl-[420px] lg:pr-16 space-y-8 lg:space-y-12 lux-animate-in">
+            {isOffline && (
+                <div className="bg-amber-500/20 border border-amber-500/30 rounded-2xl px-5 py-3 flex items-center gap-3 text-amber-300 text-[11px] font-bold">
+                    <span className="text-lg">📡</span>
+                    You are offline — showing last loaded voter list. Edits will not be saved until you reconnect.
+                </div>
+            )}
             <header className="flex flex-col lg:flex-row justify-between items-center lg:items-end border-b border-white/5 pb-8 lg:pb-10 gap-6 lg:gap-10 text-center lg:text-left">
                 <div className="flex flex-col items-center lg:items-start">
                     <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black tracking-tighter uppercase lux-text-gradient">Voters Base</h1>

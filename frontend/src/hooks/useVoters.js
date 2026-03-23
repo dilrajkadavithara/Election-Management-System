@@ -69,7 +69,21 @@ export default function useVoters({ isLoggedIn, view }) {
             setVoterList(data.results);
             setVoterTotal(data.total || data.count || 0);
             setCurrentPage(page);
-        } catch (_) {}
+            // Cache for offline use
+            try {
+                localStorage.setItem('offline-voters', JSON.stringify({ results: data.results, total: data.total || data.count || 0, page, ts: Date.now() }));
+            } catch (_e) {}
+        } catch (_) {
+            // Offline fallback: load from cache
+            try {
+                const cached = JSON.parse(localStorage.getItem('offline-voters'));
+                if (cached?.results) {
+                    setVoterList(cached.results);
+                    setVoterTotal(cached.total || 0);
+                    setCurrentPage(cached.page || 1);
+                }
+            } catch (_e) {}
+        }
         setVoterLoading(false);
     }, [listFilters, searchQuery]);
 
