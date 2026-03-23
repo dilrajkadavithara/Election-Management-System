@@ -144,9 +144,10 @@ const AppInner = () => {
             {editMode && <EditProfileModal editData={editData} setEditData={setEditData} setEditMode={setEditMode} saveCorrection={saveCorrection} ocrBatch={ocrBatch} />}
             <ChangePasswordModal isOpen={showChangePassword} onClose={() => setShowChangePassword(false)} />
             {showSuccess && (
-                <div className="fixed inset-0 bg-emerald-600/90 backdrop-blur-md z-[200] flex flex-col items-center justify-center text-white animate-in">
+                <div className="fixed inset-0 bg-emerald-600/90 backdrop-blur-md z-[200] flex flex-col items-center justify-center text-white animate-in cursor-pointer" onClick={() => setShowSuccess(false)}>
                     <span className="text-8xl mb-8 animate-bounce">✅</span>
                     <h2 className="text-4xl font-black uppercase">Sync Complete</h2>
+                    <p className="text-sm opacity-60 mt-4">Tap to dismiss</p>
                 </div>
             )}
             <PWAInstallPrompt />

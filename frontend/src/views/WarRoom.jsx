@@ -276,7 +276,7 @@ const WarRoom = ({ allLocations, dashFilters, listFilters, setListFilters, setVi
                                     </div>
                                     <div className="text-right">
                                         <span className={`text-sm font-black tracking-tighter ${insight.color}`}>
-                                            {booth[insight.valKey].toLocaleString()}{insight.unit}
+                                            {(booth[insight.valKey] ?? 0).toLocaleString()}{insight.unit}
                                         </span>
                                     </div>
                                 </div>

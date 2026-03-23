@@ -8,6 +8,16 @@ const AdminControl = () => {
     const { allUsers, allLocations, userRole } = useAppContext();
     const [activeTab, setActiveTab] = useState('users');
 
+    // RBAC guard: only allowed roles can access admin panel
+    const allowed = ['SUPERUSER', 'MANAGER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER'];
+    if (!allowed.includes(userRole)) {
+        return (
+            <div className="min-h-screen lux-mesh-bg flex items-center justify-center text-white">
+                <p className="text-xl font-black">Access Denied</p>
+            </div>
+        );
+    }
+
     const unassignedBooths = (() => {
         const allBoothIds = allLocations.flatMap(c => c.local_bodies.flatMap(lb => lb.booths.map(b => b.id)));
         const assignedIds = allUsers.flatMap(u => u.booth_ids || []);

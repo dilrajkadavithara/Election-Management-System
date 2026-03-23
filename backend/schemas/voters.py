@@ -3,6 +3,7 @@ from typing import Optional, List, Dict, Any
 
 class VoterEdit(BaseModel):
     full_name: Optional[str] = None
+    epic_id: Optional[str] = None
     age: Optional[int] = None
     gender: Optional[str] = None
     house_name: Optional[str] = None
@@ -11,7 +12,7 @@ class VoterEdit(BaseModel):
     phone_no: Optional[str] = None
     voter_leaning: Optional[str] = None
     current_location: Optional[str] = None
-    voting_probability: Optional[float] = None
+    voting_probability: Optional[str] = None  # CharField choices: CONFIRMED, LIKELY, UNLIKELY, OUT_OF_STATION
     is_head_of_family: Optional[bool] = None
 
 class SaveBatchRequest(BaseModel):

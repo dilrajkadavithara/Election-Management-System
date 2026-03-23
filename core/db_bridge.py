@@ -381,8 +381,8 @@ def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id
         neutral_d=Count(Case(When(voter_leaning='NEUTRAL', then=1), output_field=IntegerField())),
     )
     
-    return {
-        "total": stats['total'], 
+    stats_result = {
+        "total": stats['total'],
         "gender": {"male": stats['male'], "female": stats['female']},
         "sentiment": {"UDF": stats['udf'], "LDF": stats['ldf'], "NDA": stats['nda'], "NEUTRAL": stats['neutral']},
         "outreach": {"with_phone": stats['with_phone']},
@@ -411,8 +411,8 @@ def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id
             "Outside District": {"UDF": stats['mv_district_udf'], "LDF": stats['mv_district_ldf'], "NDA": stats['mv_district_nda'], "NEUTRAL": stats['mv_district_neu']},
         }
     }
-    _set_cache(cache_key, result)
-    return result
+    _set_cache(cache_key, stats_result)
+    return stats_result
 
 def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None, serial_from=None, serial_to=None, location=None, is_head_of_family=None):
     voters = user_profile.get_accessible_voters()

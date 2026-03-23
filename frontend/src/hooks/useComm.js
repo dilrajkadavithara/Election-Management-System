@@ -12,7 +12,7 @@ import { STATS_DEBOUNCE_MS } from '../constants';
 export default function useComm({ isLoggedIn, view, setLoading }) {
     const [commStats, setCommStats] = useState({ total_sent: 0, whatsapp: 0, sms: 0, calls: 0, status_dist: {} });
     const [commTemplates, setCommTemplates] = useState([]);
-    const [commType, setCommType] = useState('WHATSAPP');
+    const [commType, setCommType] = useState('WATI');
     const [commMessage, setCommMessage] = useState('');
     const [selectedImage, setSelectedImage] = useState(null);
 

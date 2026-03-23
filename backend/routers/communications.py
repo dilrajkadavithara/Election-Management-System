@@ -32,20 +32,19 @@ async def send_broadcast(data: BroadcastRequest, user_info=Depends(get_current_u
 
     from core.comm_engine import CommunicationEngine
     from backend.django_bridge import get_voter_list
-    user = User.objects.get(username=user_info['username'])
 
-    # Resolve voters first
-    f = data.filters
-    voters_data = get_voter_list(
-        user.profile, "", 1, 1000000, 
-        f.constituency, f.lb, f.booth, f.gender, f.ageFrom, f.ageTo, 
-        f.leaning, f.serialFrom, f.serialTo, f.location
-    )
-    voter_ids = [v['id'] for v in voters_data['results'] if v.get('phone_no')]
+    def sync_broadcast():
+        user = User.objects.get(username=user_info['username'])
+        f = data.filters
+        voters_data = get_voter_list(
+            user.profile, "", 1, 10000,
+            f.constituency, f.lb, f.booth, f.gender, f.ageFrom, f.ageTo,
+            f.leaning, f.serialFrom, f.serialTo, f.location
+        )
+        voter_ids = [v['id'] for v in voters_data['results'] if v.get('phone_no')]
 
-    audit_logger.info(f"AUDIT: {user_info['username']} BROADCAST medium={data.medium} recipients={len(voter_ids)} filters={f}")
+        audit_logger.info(f"AUDIT: {user_info['username']} BROADCAST medium={data.medium} recipients={len(voter_ids)}")
 
-    def sync_send():
         return CommunicationEngine.send_direct_broadcast(
             voter_ids=voter_ids,
             heading=data.heading,
@@ -54,4 +53,4 @@ async def send_broadcast(data: BroadcastRequest, user_info=Depends(get_current_u
             image_path=data.image_path,
             user=user
         )
-    return await sync_to_async(sync_send, thread_sensitive=True)()
+    return await sync_to_async(sync_broadcast, thread_sensitive=True)()

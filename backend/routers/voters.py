@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/voters", tags=["Voter Records"])
 
 @router.get("")
 async def get_voters_api(
-    search: str = None, page: int = 1, page_size: int = 50,
+    search: str = None, page: int = 1, page_size: int = 50,  # max enforced below
     constituency: str = None, lb: str = None, booth: str = None,
     gender: str = None, age_from: str = None, age_to: str = None,
     leaning: str = None, serial_from: str = None, serial_to: str = None,
@@ -19,6 +19,7 @@ async def get_voters_api(
     is_head_of_family: bool = None,
     user_info=Depends(get_current_user)
 ):
+    page_size = min(page_size, 200)  # Prevent memory exhaustion
     c_id = int(constituency) if constituency and str(constituency).isdigit() else None
     l_id = int(lb) if lb and str(lb).isdigit() else None
     b_id = int(booth) if booth and str(booth).isdigit() else None
@@ -41,7 +42,14 @@ async def get_voter_stats_api(constituency: str = None, lb: str = None, booth: s
 async def toggle_attendance_api(voter_id: int, has_voted: bool, user_info=Depends(get_current_user)):
     if not user_info.get('can_edit_voters', False) and user_info.get('role') != 'BOOTH_AGENT':
          raise HTTPException(403, "You do not have permission to mark attendance")
-    
+
+    # RBAC scope check: booth agents can only toggle voters in their assigned booths
+    if user_info.get('role') == 'BOOTH_AGENT':
+        from backend.django_bridge import check_voter_scope_async
+        in_scope = await check_voter_scope_async(voter_id, user_info['username'])
+        if not in_scope:
+            raise HTTPException(403, "This voter is not in your assigned booth")
+
     success, result = await toggle_attendance_async(voter_id, has_voted)
     if not success:
         raise HTTPException(400, result)
@@ -51,7 +59,14 @@ async def toggle_attendance_api(voter_id: int, has_voted: bool, user_info=Depend
 async def edit_voter(voter_id: int, data: VoterEdit, user_info=Depends(get_current_user)):
     if user_info['role'] in ['CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD']:
         raise HTTPException(403, "Admins have read-only access to individual voter records")
-        
+
+    # RBAC scope check: booth agents can only edit voters in their assigned booths
+    if user_info.get('role') == 'BOOTH_AGENT':
+        from backend.django_bridge import check_voter_scope_async
+        in_scope = await check_voter_scope_async(voter_id, user_info['username'])
+        if not in_scope:
+            raise HTTPException(403, "This voter is not in your assigned booth")
+
     success, msg = await edit_voter_async(voter_id, data.dict(exclude_unset=True))
     return {"success": success, "message": msg}
 

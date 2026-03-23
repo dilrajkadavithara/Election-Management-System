@@ -25,6 +25,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD:-intelhub_redis_2026} --maxmemory 400mb --maxmemory-policy allkeys-lru --appendonly yes
     volumes:
       - redis_data:/data
     deploy:
@@ -45,7 +46,7 @@ services:
       - "8000"
     environment:
       - DATABASE_URL=postgres://${DB_USER:-admin}:${DB_PASSWORD:?DB_PASSWORD is required}@db:5432/voter_db
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-intelhub_redis_2026}@redis:6379/0
       - DJANGO_SETTINGS_MODULE=voter_vault.settings
       - RUN_MIGRATIONS=True
       - PYTHONPATH=/app:/app/voter_vault
@@ -85,7 +86,7 @@ services:
     command: celery -A backend.celery_app worker --loglevel=info --concurrency=1 --max-tasks-per-child=10 --prefetch-multiplier=1
     environment:
       - DATABASE_URL=postgres://${DB_USER:-admin}:${DB_PASSWORD:?DB_PASSWORD is required}@db:5432/voter_db
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-intelhub_redis_2026}@redis:6379/0
       - DJANGO_SETTINGS_MODULE=voter_vault.settings
       - PYTHONPATH=/app:/app/voter_vault
       - OMP_THREAD_LIMIT=1 

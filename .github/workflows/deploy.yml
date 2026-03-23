@@ -63,6 +63,12 @@ jobs:
             mkdir -p /opt/voterslist
             cd /opt/voterslist
 
+            # 0. Pre-deploy database backup (safety net)
+            mkdir -p /opt/voterslist/backups/pre-deploy
+            docker compose -f /opt/voterslist/docker-compose.remote.yml exec -T db pg_dump -U ${DB_USER:-admin} -d voter_db --clean --if-exists 2>/dev/null | gzip > /opt/voterslist/backups/pre-deploy/voter_db_pre_deploy_$(date +%Y%m%d_%H%M%S).sql.gz || echo "⚠️ Pre-deploy backup skipped (DB not running yet)"
+            # Keep only last 5 pre-deploy backups
+            ls -t /opt/voterslist/backups/pre-deploy/*.sql.gz 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null || true
+
             # 1. Update logic files (Ensure no local Git conflicts)
             git fetch origin master && git reset --hard origin/master
 
@@ -78,14 +84,15 @@ jobs:
             # Force-kill known stubborn names
             docker rm -f voterslist-redis-1 voterslist-worker-1 voterslist-app-1 voterslist-nginx-1 voterslist-certbot-1 2>/dev/null || true
             # Nuclear stop (DATA-SAFE: No --volumes flag)
-            docker compose -f docker-compose.remote.yml down --remove-orphans --timeout 1 || true
+            docker compose -f docker-compose.remote.yml down --remove-orphans --timeout 30 || true
             # Restart with the EXACT commit-SHA image that was just built and pulled
             export IMAGE_TAG=${{ github.sha }}
             echo "🚀 Starting containers with IMAGE_TAG=$IMAGE_TAG"
             docker compose -f docker-compose.remote.yml up -d
 
             # Fix data directory permissions (non-root container user)
-            chmod -R 777 ./data 2>/dev/null || true
+            chmod -R 775 ./data 2>/dev/null || true
+            chown -R 1000:1000 ./data 2>/dev/null || true
 
             # Run Django migrations if needed
             sleep 5
@@ -94,10 +101,15 @@ jobs:
             import django; django.setup()
             from django.core.management import call_command
             call_command('migrate', '--no-input')
-            " 2>/dev/null || true
+            " || echo "⚠️ Migration failed — check manually"
 
             docker image prune -f
 
-            # 5. Verify deployed version matches the commit
+            # 5. Setup daily backup cron (idempotent)
+            chmod +x /opt/voterslist/scripts/backup-db.sh 2>/dev/null || true
+            chmod +x /opt/voterslist/scripts/restore-db.sh 2>/dev/null || true
+            (crontab -l 2>/dev/null | grep -v 'backup-db.sh'; echo "0 2 * * * cd /opt/voterslist && /opt/voterslist/scripts/backup-db.sh >> /opt/voterslist/backups/backup.log 2>&1") | crontab -
+
+            # 6. Verify deployed version matches the commit
             RUNNING_IMAGE=$(docker compose -f docker-compose.remote.yml images app --format json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)[0].get('Tag','unknown'))" 2>/dev/null || echo "unknown")
             echo "✅ Deployed commit ${{ github.sha }}. Running image tag: $RUNNING_IMAGE"

@@ -9,7 +9,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY environment variable is required. Set it in your .env file.")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 10080  # 7 days
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 hours (was 7 days — reduced for security)
 
 # Paths
 DATA_DIR = BASE_DIR / "data"

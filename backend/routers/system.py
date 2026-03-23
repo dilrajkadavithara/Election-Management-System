@@ -58,7 +58,11 @@ async def get_party_symbol(image_name: str):
     """Serve party symbol images."""
     from fastapi.responses import FileResponse
     from backend.config import DATA_DIR
-    path = DATA_DIR / "party_symbols" / image_name
+    from pathlib import Path as P
+    safe_name = P(image_name).name
+    if safe_name != image_name or '..' in image_name:
+        raise HTTPException(400, "Invalid filename")
+    path = DATA_DIR / "party_symbols" / safe_name
     if not path.exists():
         raise HTTPException(404, "Symbol not found")
     return FileResponse(path)

@@ -87,7 +87,23 @@ async def admin_create_user(data: UserCreate, user_info=Depends(get_current_user
     allowed_roles = ['SUPERUSER', 'MANAGER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER']
     if user_info['role'] not in allowed_roles:
         raise HTTPException(403, "You do not have permission to create users")
-    
+
+    # Prevent privilege escalation: only SUPERUSER can create SUPERUSER/MANAGER
+    ROLE_HIERARCHY = {
+        'SUPERUSER': ['SUPERUSER', 'MANAGER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER', 'OPERATOR', 'BOOTH_AGENT'],
+        'MANAGER': ['CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER', 'OPERATOR', 'BOOTH_AGENT'],
+        'CONSTITUENCY_ADMIN': ['LOCAL_BODY_HEAD', 'ZONE_COMMANDER', 'OPERATOR', 'BOOTH_AGENT'],
+        'LOCAL_BODY_HEAD': ['ZONE_COMMANDER', 'BOOTH_AGENT'],
+        'ZONE_COMMANDER': ['BOOTH_AGENT'],
+    }
+    creatable = ROLE_HIERARCHY.get(user_info['role'], [])
+    if data.role not in creatable:
+        raise HTTPException(403, f"Your role ({user_info['role']}) cannot create users with role '{data.role}'")
+
+    # Basic password strength
+    if not data.password or len(data.password) < 6:
+        raise HTTPException(400, "Password must be at least 6 characters")
+
     audit_logger.info(f"AUDIT: {user_info['username']} CREATE_USER username={data.username} role={data.role}")
     success, msg = await create_user_async(
         data.username, data.password, data.role, data.dict()
@@ -153,7 +169,10 @@ async def create_party(
 
     from backend.django_bridge import add_party_async
 
-    ext = Path(file.filename).suffix
+    ALLOWED_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'}
+    ext = Path(file.filename).suffix.lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(400, f"File type '{ext}' not allowed. Use: {', '.join(ALLOWED_EXTENSIONS)}")
     sym_name = f"{uuid.uuid4()}{ext}"
     path = SYMBOLS_DIR / sym_name
 
@@ -164,9 +183,13 @@ async def create_party(
     return await add_party_async(name, sym_name, short_label, primary_color, accent_gradient)
 
 @router.get("/party-symbol/{image_name}")
-async def get_party_symbol(image_name: str):
+async def get_party_symbol(image_name: str, user_info=Depends(get_current_user)):
     from fastapi.responses import FileResponse
-    path = SYMBOLS_DIR / image_name
+    # Prevent path traversal
+    safe_name = Path(image_name).name
+    if safe_name != image_name or '..' in image_name:
+        raise HTTPException(400, "Invalid filename")
+    path = SYMBOLS_DIR / safe_name
     if not path.exists():
         raise HTTPException(404, "Symbol not found")
     return FileResponse(path)

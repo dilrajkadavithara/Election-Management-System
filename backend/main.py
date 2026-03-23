@@ -27,7 +27,13 @@ print("✅ Django Bridge Initialized (Production Strict Mode)")
 from backend.routers import auth, admin, voters, analytics, ocr, system, communications
 
 # 3. App Setup
-app = FastAPI(title="Election Management System Backend (V3)")
+import os as _os
+_is_prod = _os.getenv("DJANGO_SETTINGS_MODULE", "").endswith("settings")
+app = FastAPI(
+    title="Election Management System Backend (V3)",
+    docs_url=None if _is_prod and not _os.getenv("ENABLE_DOCS") else "/docs",
+    redoc_url=None if _is_prod and not _os.getenv("ENABLE_DOCS") else "/redoc",
+)
 
 # CORS
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "https://intelhub.live,https://www.intelhub.live,http://localhost:5173").split(",")

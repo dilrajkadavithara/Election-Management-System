@@ -163,6 +163,9 @@ voter_vault/static/
 *.webp
 *.ico
 
+# Allow PWA icons
+!frontend/public/icons/icon-*.png
+
 # ---------------------------------------------------
 
 # Marketing / Presentation Files

@@ -109,3 +109,18 @@ add_party_async = sync_to_async(add_party, thread_sensitive=True)
 update_const_async = sync_to_async(update_constituency, thread_sensitive=True)
 update_lb_async = sync_to_async(update_local_body, thread_sensitive=True)
 update_booth_async = sync_to_async(update_booth, thread_sensitive=True)
+
+def sync_check_voter_scope(voter_id, username):
+    """Check if a voter belongs to a booth the user is assigned to."""
+    from core_db.models import Voter
+    user = User.objects.get(username=username)
+    assigned_booth_ids = list(user.profile.assigned_booths.values_list('id', flat=True))
+    if not assigned_booth_ids:
+        return True  # No booth restriction (e.g., SUPERUSER)
+    try:
+        voter = Voter.objects.get(id=voter_id)
+        return voter.booth_id in assigned_booth_ids
+    except Voter.DoesNotExist:
+        return False
+
+check_voter_scope_async = sync_to_async(sync_check_voter_scope, thread_sensitive=True)
