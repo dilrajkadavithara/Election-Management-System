@@ -55,10 +55,7 @@ services:
       - .env
     volumes:
       - ./data:/app/data
-      # NEW: Robust static export system.
-      # Instead of mounting directly to the app paths (which can be masked by stale volumes), 
-      # we mount to an export path and let server.py force-sync the image contents on startup.
-      - static_volume:/mnt/static_export/frontend
+      # Backend static files (Django admin CSS/JS) — synced to nginx via shared volume
       - backend_static:/mnt/static_export/backend
     logging:
       driver: "json-file"
@@ -114,17 +111,15 @@ services:
       - redis
 
   nginx:
-    image: nginx:alpine
+    image: ghcr.io/dilrajkadavithara/voter-vault-nginx:${IMAGE_TAG:?CRITICAL_ERROR_DEPLOYMENT_TAG_MISSING}
     restart: always
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-      # These volumes are populated by the 'app' container's startup sync logic
-      - static_volume:/usr/share/nginx/html:ro
+      # Backend static files still need the shared volume (Django admin/API docs)
       - backend_static:/app/voter_vault/static:ro
     logging:
       driver: "json-file"
@@ -145,5 +140,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  static_volume:
   backend_static:
