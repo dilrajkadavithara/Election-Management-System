@@ -30,7 +30,7 @@ TOTAL_BOOTHS = 222
 TOTAL_VOTERS = 200_000
 
 # Ratios
-GENDER_RATIO = {'F': 0.52, 'M': 0.47, 'O': 0.01}
+GENDER_RATIO = {'F': 0.52, 'M': 0.48}
 AGE_RANGES = [(18, 30, 0.25), (31, 50, 0.40), (51, 70, 0.25), (71, 95, 0.10)]
 LEANING_RATIO = {'UDF': 0.38, 'LDF': 0.32, 'NDA': 0.15, 'NEUTRAL': 0.15}
 LOCATION_RATIO = {'LOCAL': 0.90, 'ABROAD': 0.05, 'STATE': 0.02, 'DISTRICT': 0.03}
@@ -219,10 +219,8 @@ def run():
             # Name
             if gender == 'M':
                 first = random.choice(MALE_FIRST)
-            elif gender == 'F':
-                first = random.choice(FEMALE_FIRST)
             else:
-                first = random.choice(MALE_FIRST + FEMALE_FIRST)
+                first = random.choice(FEMALE_FIRST)
             surname = random.choice(SURNAMES)
             full_name = f"{first} {surname}"
 
