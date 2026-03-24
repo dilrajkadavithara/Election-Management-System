@@ -1,4 +1,4 @@
-const CACHE_NAME = 'intelhub-v1';
+const CACHE_NAME = 'intelhub-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
