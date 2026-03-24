@@ -13,6 +13,10 @@ They have been tested and verified to produce 100% accuracy (1,087/1,087 voters)
 
 If a task seems to require changes to these files, ask the user first.
 
+## Git Commands
+
+Always ask the user for confirmation before running any git commands.
+
 ## Architecture Notes
 
 - **OCR Pipeline**: PDF → 300 DPI render → OpenCV grid detection → Gemini extraction (1 API call/page)

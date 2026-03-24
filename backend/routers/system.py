@@ -8,6 +8,12 @@ router = APIRouter(prefix="/api", tags=["System Diagnostics"])
 
 @router.get("/health")
 async def health():
+    """Lightweight health check for Docker/monitoring. No auth required."""
+    return {"status": "healthy"}
+
+@router.get("/health/details")
+async def health_details(user_info=Depends(get_current_user)):
+    """Full system diagnostics. Requires authentication."""
     health_data = {
         "status": "healthy",
         "redis": "connected" if state_manager.use_redis else "offline (fallback mode)",
@@ -21,11 +27,11 @@ async def health():
         def check_db(): return User.objects.exists()
         db_ok = await sync_to_async(check_db)()
         health_data["db"] = "connected" if db_ok else "empty"
-    except Exception as db_err:
+    except Exception:
         health_data["db"] = "error"
 
     if POPPLER_PATH and os.path.exists(os.path.join(POPPLER_PATH, "pdftoppm.exe")): health_data["poppler"] = "ready"
-    elif not os.name == 'nt' or os.path.exists("/usr/bin/pdftoppm"): health_data["poppler"] = "ready (system)"
+    elif os.name != 'nt' and os.path.exists("/usr/bin/pdftoppm"): health_data["poppler"] = "ready (system)"
 
     if health_data.get("db") == "error" or health_data["poppler"] == "missing" or health_data["google_ai"] == "missing":
         health_data["status"] = "degraded"

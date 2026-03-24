@@ -43,7 +43,9 @@ async def get_war_stats(
     from django.contrib.auth.models import User
     
     def sync_war_wrapper():
-        user = User.objects.get(username=user_info['username'])
+        user = User.objects.filter(username=user_info['username']).first()
+        if not user:
+            raise ValueError(f"User '{user_info['username']}' does not exist")
         return get_war_room_tactical_stats(user.profile, c_id, l_id, b_id, perspective)
         
     return await sync_to_async(sync_war_wrapper, thread_sensitive=True)()

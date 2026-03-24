@@ -24,6 +24,7 @@ class StateManager:
             self.use_redis = False
             self.persistence_path = "data/sessions.json"
             self._local_storage = self._load_from_disk()
+            self._cancelled_batches: set[str] = set()
 
     def _load_from_disk(self):
         if os.path.exists(self.persistence_path):
@@ -77,20 +78,23 @@ class StateManager:
             return all_batches
         return list(self._local_storage.values())
 
-    def is_cancelled(self, batch_id):
+    def is_cancelled(self, batch_id: str) -> bool:
         if self.use_redis:
             return self.redis.sismember("cancelled_batches", batch_id)
-        # We'll need to handle cancellation too
-        return False
+        return batch_id in self._cancelled_batches
 
-    def mark_cancelled(self, batch_id):
+    def mark_cancelled(self, batch_id: str) -> None:
         if self.use_redis:
             self.redis.sadd("cancelled_batches", batch_id)
             self.redis.expire("cancelled_batches", 3600*24)
-        
-    def remove_cancelled(self, batch_id):
+        else:
+            self._cancelled_batches.add(batch_id)
+
+    def remove_cancelled(self, batch_id: str) -> None:
         if self.use_redis:
             self.redis.srem("cancelled_batches", batch_id)
+        else:
+            self._cancelled_batches.discard(batch_id)
 
 # Global Instance
 state_manager = StateManager()

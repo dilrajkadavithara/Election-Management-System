@@ -1,9 +1,23 @@
+import logging
 import os
 import sys
 from pathlib import Path
+from typing import Any, Optional
+
 from asgiref.sync import sync_to_async
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+
+logger = logging.getLogger("django_bridge")
+
+
+def _get_user_or_raise(username: str) -> User:
+    """Fetch a User by username, raising a clear error if not found."""
+    try:
+        return User.objects.get(username=username)
+    except User.DoesNotExist:
+        logger.warning(f"User not found: {username}")
+        raise ValueError(f"User '{username}' does not exist")
 
 # Core imports
 from core.db_bridge import (
@@ -59,20 +73,20 @@ def sync_get_user_info(username):
         }
     return None
 
-def sync_dashboard_wrapper(username, constituency_id=None, lb_id=None, booth_id=None):
-    user = User.objects.get(username=username)
+def sync_dashboard_wrapper(username: str, constituency_id: Optional[int] = None, lb_id: Optional[int] = None, booth_id: Optional[int] = None) -> dict[str, Any]:
+    user = _get_user_or_raise(username)
     return get_dashboard_stats(user.profile, constituency_id, lb_id, booth_id)
 
-def sync_strategic_analytics_wrapper(username, constituency_id=None):
-    user = User.objects.get(username=username)
+def sync_strategic_analytics_wrapper(username: str, constituency_id: Optional[int] = None) -> dict[str, Any]:
+    user = _get_user_or_raise(username)
     return get_strategic_analytics(user.profile, constituency_id)
 
-def sync_voter_list_wrapper(username, search, page, page_size, **filters):
-    user = User.objects.get(username=username)
+def sync_voter_list_wrapper(username: str, search: str, page: int, page_size: int, **filters: Any) -> dict[str, Any]:
+    user = _get_user_or_raise(username)
     return get_voter_list(user.profile, search, page, page_size, **filters)
 
-def sync_locations_wrapper(username):
-    user = User.objects.get(username=username)
+def sync_locations_wrapper(username: str) -> dict[str, Any]:
+    user = _get_user_or_raise(username)
     return get_all_locations(user.profile)
 
 # ASYNC WRAPPERS
@@ -87,8 +101,8 @@ get_voters_async = sync_to_async(sync_voter_list_wrapper, thread_sensitive=True)
 edit_voter_async = sync_to_async(update_voter_in_db, thread_sensitive=True)
 get_strategic_analytics_async = sync_to_async(sync_strategic_analytics_wrapper, thread_sensitive=True)
 
-def sync_voting_stats_wrapper(username, constituency_id=None, lb_id=None, booth_id=None):
-    user = User.objects.get(username=username)
+def sync_voting_stats_wrapper(username: str, constituency_id: Optional[int] = None, lb_id: Optional[int] = None, booth_id: Optional[int] = None) -> dict[str, Any]:
+    user = _get_user_or_raise(username)
     return get_live_voting_stats(user.profile, constituency_id, lb_id, booth_id)
 
 get_voting_stats_async = sync_to_async(sync_voting_stats_wrapper, thread_sensitive=True)
@@ -110,10 +124,10 @@ update_const_async = sync_to_async(update_constituency, thread_sensitive=True)
 update_lb_async = sync_to_async(update_local_body, thread_sensitive=True)
 update_booth_async = sync_to_async(update_booth, thread_sensitive=True)
 
-def sync_check_voter_scope(voter_id, username):
+def sync_check_voter_scope(voter_id: int, username: str) -> bool:
     """Check if a voter belongs to a booth the user is assigned to."""
     from core_db.models import Voter
-    user = User.objects.get(username=username)
+    user = _get_user_or_raise(username)
     assigned_booth_ids = list(user.profile.assigned_booths.values_list('id', flat=True))
     if not assigned_booth_ids:
         return True  # No booth restriction (e.g., SUPERUSER)

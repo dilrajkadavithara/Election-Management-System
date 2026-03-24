@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from asgiref.sync import sync_to_async
 from backend.dependencies import get_current_user
-from backend.django_bridge import User
+from backend.django_bridge import User, _get_user_or_raise
 from backend.schemas.communications import BroadcastRequest, TemplateOp
 
 audit_logger = logging.getLogger("AuditLog")
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/comm", tags=["Communications"])
 
 def sync_comm_stats(username):
     from core.comm_engine import CommunicationEngine
-    user = User.objects.get(username=username)
+    user = _get_user_or_raise(username)
     return CommunicationEngine.get_comm_stats(user.profile)
 
 @router.get("/stats")
@@ -34,7 +34,7 @@ async def send_broadcast(data: BroadcastRequest, user_info=Depends(get_current_u
     from backend.django_bridge import get_voter_list
 
     def sync_broadcast():
-        user = User.objects.get(username=user_info['username'])
+        user = _get_user_or_raise(user_info['username'])
         f = data.filters
         voters_data = get_voter_list(
             user.profile, "", 1, 10000,

@@ -2,8 +2,9 @@ import os
 import sys
 import django
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
@@ -44,6 +45,11 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
+
+# Global handler: convert ValueError from _get_user_or_raise into HTTP 404
+@app.exception_handler(ValueError)
+async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
 
 # 4. Include Routers
 app.include_router(auth.router)
