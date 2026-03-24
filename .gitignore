@@ -106,6 +106,7 @@ var/
 
 test_*.py
 !tests/
+!tests/test_*.py
 debug_*.py
 diagnostics.py
 
