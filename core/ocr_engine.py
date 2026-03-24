@@ -214,6 +214,26 @@ class OCREngine:
 
                 except Exception as e:
                     last_error = str(e)
+                    # Capture raw Gemini response details for debugging
+                    try:
+                        raw_text = getattr(response, 'text', None) if 'response' in dir() else None
+                        finish_reason = None
+                        safety_ratings = None
+                        if 'response' in dir() and hasattr(response, 'candidates') and response.candidates:
+                            c = response.candidates[0]
+                            finish_reason = getattr(c, 'finish_reason', None)
+                            safety_ratings = getattr(c, 'safety_ratings', None)
+                        elif 'response' in dir():
+                            finish_reason = getattr(response, 'prompt_feedback', None)
+                        logger.error(f"🔍 Gemini debug batch (Attempt {attempt+1}): "
+                                     f"error={e} | finish_reason={finish_reason} | "
+                                     f"safety={safety_ratings} | "
+                                     f"raw_text_len={len(raw_text) if raw_text else 'None'} | "
+                                     f"raw_text_preview={repr(raw_text[:200]) if raw_text else 'None'}")
+                    except Exception:
+                        logger.error(f"🔍 Gemini debug batch (Attempt {attempt+1}): "
+                                     f"error={e} | (could not extract response details)")
+
                     # Specific handling for Rate Limits (429)
                     if "429" in last_error or "RESOURCE_EXHAUSTED" in last_error:
                         # Back off slightly shorter to check quota faster (3s per retry)
@@ -223,7 +243,7 @@ class OCREngine:
                     else:
                         logger.error(f"❌ Gemini Batch Failure (Attempt {attempt+1}): {e}")
                         time.sleep(1) # Quick fail for non-rate issues
-        
+
         raise Exception(f"Gemini API failed after 5 attempts. Last error: {last_error}")
 
     def extract_full_page_consolidated(self, img, page_num="?", force_full_scan=False, temperature=0.0):
@@ -663,6 +683,26 @@ Maintain 100% literal accuracy for all Malayalam text."""
 
                 except Exception as e:
                     last_error = str(e)
+                    # Capture raw Gemini response details for debugging
+                    try:
+                        raw_text = getattr(response, 'text', None) if 'response' in dir() else None
+                        finish_reason = None
+                        safety_ratings = None
+                        if 'response' in dir() and hasattr(response, 'candidates') and response.candidates:
+                            c = response.candidates[0]
+                            finish_reason = getattr(c, 'finish_reason', None)
+                            safety_ratings = getattr(c, 'safety_ratings', None)
+                        elif 'response' in dir():
+                            finish_reason = getattr(response, 'prompt_feedback', None)
+                        logger.error(f"🔍 Gemini debug page {page_num} (Attempt {attempt+1}): "
+                                     f"error={e} | finish_reason={finish_reason} | "
+                                     f"safety={safety_ratings} | "
+                                     f"raw_text_len={len(raw_text) if raw_text else 'None'} | "
+                                     f"raw_text_preview={repr(raw_text[:200]) if raw_text else 'None'}")
+                    except Exception:
+                        logger.error(f"🔍 Gemini debug page {page_num} (Attempt {attempt+1}): "
+                                     f"error={e} | (could not extract response details)")
+
                     if "429" in last_error or "RESOURCE_EXHAUSTED" in last_error:
                         wait_time = 10 * (attempt + 1)
                         logger.warning(f"Rate limit page {page_num} box batch: {wait_time}s (Attempt {attempt+1})")
