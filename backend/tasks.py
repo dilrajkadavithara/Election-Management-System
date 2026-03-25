@@ -342,3 +342,75 @@ def janitor_cleanup():
                     logger.error(f"Janitor failed to process {batch_dir.name}: {e}")
 
     return f"Cleanup complete. Removed {deleted_count} stagnant folders."
+
+
+@celery_app.task(name="tasks.snapshot_daily_progress")
+def snapshot_daily_progress() -> str:
+    """
+    Daily snapshot: For each booth, count digitized voters (all 4 fields present),
+    leaning totals, and compute deltas from yesterday's snapshot.
+    Creates/updates DailyProgress records for today.
+    """
+    from datetime import date, timedelta
+    from django.db.models import Count, Q
+    from core_db.models import Booth, Voter, DailyProgress
+    from core.db_bridge import DIGITIZED_Q
+
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+
+    # Single query: aggregate per-booth stats
+    booth_stats = Voter.objects.values('booth_id').annotate(
+        digitized=Count('id', filter=DIGITIZED_Q),
+        udf=Count('id', filter=Q(voter_leaning='UDF')),
+        ldf=Count('id', filter=Q(voter_leaning='LDF')),
+        nda=Count('id', filter=Q(voter_leaning='NDA')),
+        neutral=Count('id', filter=Q(voter_leaning='NEUTRAL')),
+    )
+
+    # Fetch yesterday's snapshots for delta calculation
+    yesterday_snaps: dict[int, DailyProgress] = {
+        dp.booth_id: dp
+        for dp in DailyProgress.objects.filter(date=yesterday)
+    }
+
+    created_count = 0
+    updated_count = 0
+
+    for row in booth_stats:
+        bid: int = row['booth_id']
+        y = yesterday_snaps.get(bid)
+
+        new_digitized = row['digitized'] - (y.digitized_total if y else 0)
+        new_udf = row['udf'] - (y.udf_total if y else 0)
+        new_ldf = row['ldf'] - (y.ldf_total if y else 0)
+        new_nda = row['nda'] - (y.nda_total if y else 0)
+
+        # Winning chance: largest party share of digitized voters
+        d = max(1, row['digitized'])
+        max_party = max(row['udf'], row['ldf'], row['nda'])
+        winning_chance = round(min(max_party / d, 1.0), 4)
+
+        _, created = DailyProgress.objects.update_or_create(
+            booth_id=bid,
+            date=today,
+            defaults={
+                'digitized_total': row['digitized'],
+                'udf_total': row['udf'],
+                'ldf_total': row['ldf'],
+                'nda_total': row['nda'],
+                'neutral_total': row['neutral'],
+                'new_digitized': new_digitized,
+                'new_udf': new_udf,
+                'new_ldf': new_ldf,
+                'new_nda': new_nda,
+                'winning_chance': winning_chance,
+            }
+        )
+        if created:
+            created_count += 1
+        else:
+            updated_count += 1
+
+    logger.info(f"DailyProgress snapshot for {today}: {created_count} created, {updated_count} updated")
+    return f"Snapshot complete for {today}: {created_count} created, {updated_count} updated."

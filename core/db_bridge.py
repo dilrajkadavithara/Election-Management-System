@@ -22,6 +22,23 @@ import logging
 
 logger = logging.getLogger("ElectionEngine")
 
+# Canonical "digitized" filter: voter has ALL 4 field-collected details populated.
+# A voter is digitized when phone, leaning, location, and voting probability are all present.
+DIGITIZED_Q = (
+    Q(phone_no__isnull=False) & ~Q(phone_no='') &
+    Q(voter_leaning__isnull=False) & ~Q(voter_leaning='') &
+    Q(current_location__isnull=False) & ~Q(current_location='') &
+    Q(voting_probability__isnull=False) & ~Q(voting_probability='')
+)
+
+# Same filter but for reverse relation queries (Booth.objects.annotate via voters__)
+DIGITIZED_Q_REV = (
+    Q(voters__phone_no__isnull=False) & ~Q(voters__phone_no='') &
+    Q(voters__voter_leaning__isnull=False) & ~Q(voters__voter_leaning='') &
+    Q(voters__current_location__isnull=False) & ~Q(voters__current_location='') &
+    Q(voters__voting_probability__isnull=False) & ~Q(voters__voting_probability='')
+)
+
 _stats_cache = {}
 _cache_lock = threading.Lock()
 CACHE_TTL = 30  # 30 seconds
@@ -190,7 +207,7 @@ def get_strategic_analytics(user_profile, constituency_id=None):
         ldf=Count(Case(When(voter_leaning='LDF', then=1), output_field=IntegerField())),
         nda=Count(Case(When(voter_leaning='NDA', then=1), output_field=IntegerField())),
         neutral=Count(Case(When(voter_leaning='NEUTRAL', then=1), output_field=IntegerField())),
-        intel_tagged=Count(Case(When(voter_leaning__isnull=False, then=1), output_field=IntegerField())),
+        intel_tagged=Count('id', filter=DIGITIZED_Q),
     ).order_by('booth__number')
 
     # 🕵️ Smart Agent Name Resolution
@@ -494,6 +511,13 @@ def update_voter_in_db(voter_id, data):
         if 'house_name' in data: voter.house_name = data['house_name']
         if 'relation_type' in data: voter.relation_type = data['relation_type']
         if 'relation_name' in data: voter.relation_name = data['relation_name']
+        # Sync is_digitized: True when all 4 field-collected details are present
+        voter.is_digitized = all([
+            voter.phone_no,
+            voter.voter_leaning,
+            voter.current_location,
+            voter.voting_probability,
+        ])
         voter.save()
         return True, "Voter updated"
     except Exception as e: return False, str(e)
@@ -912,7 +936,7 @@ def get_war_room_tactical_stats(user_profile, constituency_id=None, lb_id=None, 
             # Match ALL voters in the accessible booths
             voters = Voter.objects.filter(booth_id__in=booth_ids)
             stats = voters.aggregate(
-                digitized=Count('id', filter=Q(voter_leaning__isnull=False)),
+                digitized=Count('id', filter=DIGITIZED_Q),
                 supporters=Count('id', filter=Q(voter_leaning=perspective.upper())),
                 UDF=Count('id', filter=Q(voter_leaning='UDF')),
                 LDF=Count('id', filter=Q(voter_leaning='LDF')),
@@ -1013,7 +1037,7 @@ def get_war_room_tactical_stats(user_profile, constituency_id=None, lb_id=None, 
                 udf=Count(Case(When(voter_leaning='UDF', then=1), output_field=IntegerField())),
                 ldf=Count(Case(When(voter_leaning='LDF', then=1), output_field=IntegerField())),
                 nda=Count(Case(When(voter_leaning='NDA', then=1), output_field=IntegerField())),
-                tagged=Count(Case(When(voter_leaning__isnull=False, then=1), output_field=IntegerField()))
+                tagged=Count('id', filter=DIGITIZED_Q)
             )
             
             # Get daily deltas from snapshots
@@ -1047,7 +1071,7 @@ def get_war_room_tactical_stats(user_profile, constituency_id=None, lb_id=None, 
                 udf=Count(Case(When(voter_leaning='UDF', then=1), output_field=IntegerField())),
                 ldf=Count(Case(When(voter_leaning='LDF', then=1), output_field=IntegerField())),
                 nda=Count(Case(When(voter_leaning='NDA', then=1), output_field=IntegerField())),
-                tagged=Count(Case(When(voter_leaning__isnull=False, then=1), output_field=IntegerField()))
+                tagged=Count('id', filter=DIGITIZED_Q)
             )
             
             # Snapshots for daily progress
@@ -1087,7 +1111,7 @@ def get_war_room_tactical_stats(user_profile, constituency_id=None, lb_id=None, 
         h_name=F('head_name'),
         h_phone=F('head_phone'),
         total=Count('voters'),
-        tagged=Count('voters', filter=Q(voters__voter_leaning__isnull=False)),
+        tagged=Count('voters', filter=DIGITIZED_Q_REV),
         persp=Count('voters', filter=Q(voters__voter_leaning=perspective)),
         v_udf=Count('voters', filter=Q(voters__voter_leaning='UDF')),
         v_ldf=Count('voters', filter=Q(voters__voter_leaning='LDF')),
