@@ -50,7 +50,7 @@ services:
     restart: always
     # Use -P solo to avoid forking overhead on low-RAM servers
     # Add --max-tasks-per-child to prevent memory leaks over time
-    command: celery -A backend.celery_app worker --loglevel=info -P solo --max-tasks-per-child=5
+    command: celery -A backend.celery_app worker --beat --loglevel=info -P solo --max-tasks-per-child=5
     environment:
       - DATABASE_URL=postgres://${DB_USER:-admin}:${DB_PASSWORD:-secretpassword}@db:5432/voter_db
       - REDIS_URL=redis://redis:6379/0

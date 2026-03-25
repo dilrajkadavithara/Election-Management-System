@@ -80,7 +80,7 @@ services:
   worker:
     image: ghcr.io/dilrajkadavithara/voter-vault:${IMAGE_TAG:?CRITICAL_ERROR_DEPLOYMENT_TAG_MISSING}
     restart: always
-    command: celery -A backend.celery_app worker --loglevel=info --concurrency=5 --max-tasks-per-child=10 --prefetch-multiplier=1
+    command: celery -A backend.celery_app worker --beat --loglevel=info --concurrency=5 --max-tasks-per-child=10 --prefetch-multiplier=1
     environment:
       - DATABASE_URL=postgres://${DB_USER:-admin}:${DB_PASSWORD:?DB_PASSWORD is required}@db:5432/voter_db
       - REDIS_URL=redis://:${REDIS_PASSWORD:-intelhub_redis_2026}@redis:6379/0
