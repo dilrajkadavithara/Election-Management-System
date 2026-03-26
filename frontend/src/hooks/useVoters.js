@@ -47,7 +47,7 @@ export default function useVoters({ isLoggedIn, view }) {
     }, [dashFilters.constituency, dashFilters.lb, dashFilters.booth]);
 
     // --- Load voter list ---
-    const loadVoters = useCallback(async (page = 1, overrideFilters = null) => {
+    const loadVoters = useCallback(async (page = 1, overrideFilters = null, overridePageSize = null) => {
         setVoterLoading(true);
         const tf = overrideFilters || listFilters;
         try {
@@ -64,7 +64,7 @@ export default function useVoters({ isLoggedIn, view }) {
                 serial_from: tf.serialFrom,
                 serial_to: tf.serialTo,
                 page,
-                page_size: DEFAULT_PAGE_SIZE,
+                page_size: overridePageSize || DEFAULT_PAGE_SIZE,
             });
             setVoterList(data.results);
             setVoterTotal(data.total || data.count || 0);

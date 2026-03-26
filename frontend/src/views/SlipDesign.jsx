@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import VoterSlip from '../components/engine/VoterSlip';
 import { sendSlipViaWhatsApp } from '../utils/slipSender';
 import api from '../api';
@@ -13,6 +13,8 @@ const SlipDesign = ({
     listFilters,
     setListFilters,
     voterList: _voterList,
+    voterTotal,
+    currentPage,
     loadVoters,
     setSearchQuery,
     userRole,
@@ -24,13 +26,11 @@ const SlipDesign = ({
     const [phoneValue, setPhoneValue] = useState('');
     const [phoneSaving, setPhoneSaving] = useState(false);
     const [sentCount, setSentCount] = useState(0);
-    const [allVoters, setAllVoters] = useState([]);
-    const allVotersRef = useRef([]);
-    const [loadingAll, setLoadingAll] = useState(false);
 
-    // Use allVoters (full booth list) if available, otherwise fall back to paginated list
-    // Also check ref in case state was reset by parent re-render
-    const voterList = allVoters.length > 0 ? allVoters : (allVotersRef.current.length > 0 ? allVotersRef.current : _voterList);
+    // Use parent's paginated voter list directly
+    const voterList = _voterList;
+    const PAGE_SIZE = 200;
+    const totalPages = Math.ceil((voterTotal || 0) / PAGE_SIZE) || 1;
     // slipRefs no longer needed — Canvas API draws from voter data directly
 
     const handleSendWhatsApp = useCallback(async (voter) => {
@@ -67,14 +67,12 @@ const SlipDesign = ({
         const blankFilters = {
             constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '', serialFrom: '', serialTo: '', location: ''
         };
-
         // Auto-select booth for Booth Agents
         if (userRole === 'BOOTH_AGENT' && userAssignments?.booths?.length > 0) {
             blankFilters.booth = String(userAssignments.booths[0]);
         }
-
         setListFilters(blankFilters);
-        loadVoters(1, blankFilters);
+        loadVoters(1, blankFilters, 200);
     }, [userRole, userAssignments]);
 
     const handleReset = () => {
@@ -83,8 +81,7 @@ const SlipDesign = ({
             blankFilters.booth = String(userAssignments.booths[0]);
         }
         setListFilters(blankFilters);
-        setAllVoters([]);
-        loadVoters(1, blankFilters);
+        loadVoters(1, blankFilters, 200);
     };
 
     return (
@@ -177,17 +174,9 @@ const SlipDesign = ({
                     </div>
 
                     <div className="col-span-1 sm:col-span-2 lg:col-span-3 flex flex-col sm:flex-row gap-4 mt-2 h-auto sm:h-11">
-                        <button onClick={async () => {
-                            // Fetch ALL voters for slip generation (no 50-item cap)
-                            setLoadingAll(true);
-                            try {
-                                const res = await api.getVoters({ ...listFilters, page: 1, page_size: 9999 });
-                                const voters = res.voters || [];
-                                allVotersRef.current = voters;
-                                setAllVoters(voters);
-                            } catch (e) { console.error('Failed to load all voters:', e); }
-                            setLoadingAll(false);
-                        }} className="lux-btn-primary w-full sm:flex-1 py-4 sm:!p-0 sm:max-w-[200px] text-[10px] sm:text-xs tracking-widest shadow-xl">{loadingAll ? 'LOADING...' : 'APPLY FILTERS'}</button>
+                        <button onClick={() => {
+                            loadVoters(1, null, 200);
+                        }} className="lux-btn-primary w-full sm:flex-1 py-4 sm:!p-0 sm:max-w-[200px] text-[10px] sm:text-xs tracking-widest shadow-xl">APPLY FILTERS</button>
                         <button onClick={handleReset} className="bg-white/5 text-slate-300 w-full sm:flex-1 py-4 sm:!p-0 sm:max-w-[150px] rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all">CLEAR ALL</button>
                     </div>
                 </div>
@@ -303,6 +292,25 @@ const SlipDesign = ({
                     </div>
                 )}
             </div>
+
+            {/* Pagination */}
+            {voterList.length > 0 && totalPages > 1 && (
+                <div className="flex items-center justify-center gap-4 no-print pb-8">
+                    <button
+                        onClick={() => loadVoters((currentPage || 1) - 1, null, 200)}
+                        disabled={!currentPage || currentPage <= 1}
+                        className="bg-white/5 text-slate-300 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                    >← PREV</button>
+                    <span className="text-sm font-black text-indigo-400 tracking-widest">
+                        {currentPage || 1} / {totalPages}
+                    </span>
+                    <button
+                        onClick={() => loadVoters((currentPage || 1) + 1, null, 200)}
+                        disabled={currentPage >= totalPages}
+                        className="bg-white/5 text-slate-300 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                    >NEXT →</button>
+                </div>
+            )}
         </div>
     );
 };
