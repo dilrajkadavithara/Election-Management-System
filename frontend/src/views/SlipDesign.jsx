@@ -176,8 +176,8 @@ const SlipDesign = ({
 
                     <div className="col-span-1 sm:col-span-2 lg:col-span-3 flex flex-col sm:flex-row gap-4 mt-2 h-auto sm:h-11">
                         <button onClick={async () => {
-                            loadVoters(1); // Update shared state
-                            // Also fetch ALL voters for slip generation (no 50-item cap)
+                            // Fetch ALL voters for slip generation (no 50-item cap)
+                            // Don't call loadVoters(1) — it re-renders parent and resets allVoters
                             setLoadingAll(true);
                             try {
                                 const res = await api.getVoters({ ...listFilters, page: 1, page_size: 9999 });
