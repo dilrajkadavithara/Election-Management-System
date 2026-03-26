@@ -14,6 +14,7 @@ class VoterEdit(BaseModel):
     current_location: Optional[str] = None
     voting_probability: Optional[str] = None  # CharField choices: CONFIRMED, LIKELY, UNLIKELY, OUT_OF_STATION
     is_head_of_family: Optional[bool] = None
+    family_number: Optional[str] = None
 
 class SaveBatchRequest(BaseModel):
     batch_id: str

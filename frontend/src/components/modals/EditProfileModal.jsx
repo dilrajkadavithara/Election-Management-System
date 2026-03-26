@@ -266,6 +266,21 @@ const EditProfileModal = ({
                             </button>
                         </div>
 
+                        {/* 4.6. Family Number */}
+                        <div className="space-y-2 sm:space-y-4">
+                            <label className="text-[10px] sm:text-[11px] font-black text-slate-400 tracking-[0.15em] ml-1 sm:ml-2">കുടുംബ നമ്പർ (Family Number)</label>
+                            <div className="relative group">
+                                <input
+                                    type="text"
+                                    value={editData.family_number || ''}
+                                    placeholder="കുടുംബ നമ്പർ നൽകുക"
+                                    onChange={(e) => setEditData({ ...editData, family_number: e.target.value })}
+                                    className="w-full text-lg sm:text-3xl font-black bg-slate-50 border-2 border-slate-100 rounded-2xl sm:rounded-[2.5rem] p-3 sm:p-8 focus:border-indigo-500 focus:bg-white transition-all text-slate-900 outline-none tracking-[0.1em] placeholder:text-slate-200"
+                                />
+                                <div className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 text-lg sm:text-3xl">👨‍👩‍👧‍👦</div>
+                            </div>
+                        </div>
+
                         {/* 5. Mobile Connection */}
                         <div className="space-y-2 sm:space-y-4">
                             <label className="text-[10px] sm:text-[11px] font-black text-slate-400 tracking-[0.15em] ml-1 sm:ml-2">Phone Number</label>

@@ -84,6 +84,7 @@ class Voter(models.Model):
     phone_no = models.CharField(max_length=20, blank=True, null=True, db_index=True,
         validators=[RegexValidator(r'^\d{10,15}$', 'Phone number must be 10-15 digits')])
     is_head_of_family = models.BooleanField(default=False, db_index=True)
+    family_number = models.CharField(max_length=50, blank=True, null=True, db_index=True)
     is_digitized = models.BooleanField(default=False, db_index=True)
     
     LOCATION_CHOICES = [
