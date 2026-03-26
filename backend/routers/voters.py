@@ -19,7 +19,10 @@ async def get_voters_api(
     is_head_of_family: bool = None,
     user_info=Depends(get_current_user)
 ):
-    page_size = min(page_size, 200)  # Prevent memory exhaustion
+    # Allow up to 2000 when a specific booth is selected (Election Day needs all voters)
+    # Otherwise cap at 200 to prevent memory exhaustion on unfiltered queries
+    max_size = 2000 if booth else 200
+    page_size = min(page_size, max_size)
     c_id = int(constituency) if constituency and str(constituency).isdigit() else None
     l_id = int(lb) if lb and str(lb).isdigit() else None
     b_id = int(booth) if booth and str(booth).isdigit() else None
