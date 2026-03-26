@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import VoterSlip from '../components/engine/VoterSlip';
 import { sendSlipViaWhatsApp } from '../utils/slipSender';
 import api from '../api';
@@ -26,9 +26,17 @@ const SlipDesign = ({
     const [phoneValue, setPhoneValue] = useState('');
     const [phoneSaving, setPhoneSaving] = useState(false);
     const [sentCount, setSentCount] = useState(0);
+    const [allVoters, setAllVoters] = useState([]);
+    const allVotersRef = useRef([]);
+    const [loadingAll, setLoadingAll] = useState(false);
+    const [slipSearch, setSlipSearch] = useState('');
 
-    // Use parent's paginated voter list directly
-    const voterList = _voterList;
+    // Use allVoters (full booth list) if available, otherwise fall back to paginated list
+    const baseList = allVoters.length > 0 ? allVoters : (allVotersRef.current.length > 0 ? allVotersRef.current : _voterList);
+    // Apply search filter on top
+    const voterList = slipSearch.trim()
+        ? baseList.filter(v => (v.full_name || '').toLowerCase().includes(slipSearch.trim().toLowerCase()) || (v.serial_no && String(v.serial_no).includes(slipSearch.trim())) || (v.epic_id || '').toLowerCase().includes(slipSearch.trim().toLowerCase()))
+        : baseList;
     const PAGE_SIZE = 200;
     const totalPages = Math.ceil((voterTotal || 0) / PAGE_SIZE) || 1;
     // slipRefs no longer needed — Canvas API draws from voter data directly
@@ -174,9 +182,21 @@ const SlipDesign = ({
                     </div>
 
                     <div className="col-span-1 sm:col-span-2 lg:col-span-3 flex flex-col sm:flex-row gap-4 mt-2 h-auto sm:h-11">
-                        <button onClick={() => {
-                            loadVoters(1, null, 200);
-                        }} className="lux-btn-primary w-full sm:flex-1 py-4 sm:!p-0 sm:max-w-[200px] text-[10px] sm:text-xs tracking-widest shadow-xl">APPLY FILTERS</button>
+                        <button onClick={async () => {
+                            setLoadingAll(true);
+                            setSlipSearch('');
+                            try {
+                                const res = await api.getVoters({ ...listFilters, page: 1, page_size: 2000 });
+                                const voters = res.results || res.voters || [];
+                                allVotersRef.current = voters;
+                                setAllVoters(voters);
+                            } catch (e) {
+                                console.error('Failed to load all voters:', e);
+                                // Fall back to parent's paginated list
+                                loadVoters(1, null, 200);
+                            }
+                            setLoadingAll(false);
+                        }} className="lux-btn-primary w-full sm:flex-1 py-4 sm:!p-0 sm:max-w-[200px] text-[10px] sm:text-xs tracking-widest shadow-xl">{loadingAll ? 'LOADING...' : 'APPLY FILTERS'}</button>
                         <button onClick={handleReset} className="bg-white/5 text-slate-300 w-full sm:flex-1 py-4 sm:!p-0 sm:max-w-[150px] rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all">CLEAR ALL</button>
                     </div>
                 </div>
@@ -195,8 +215,31 @@ const SlipDesign = ({
                 </div>
             )}
 
+            {/* Search Box */}
+            {baseList.length > 0 && (
+                <div className="lux-glass p-4 lg:p-6 rounded-3xl lg:rounded-[3rem] border-white/5 shadow-2xl no-print">
+                    <div className="flex items-center gap-3">
+                        <span className="text-xl">🔍</span>
+                        <input
+                            type="text"
+                            value={slipSearch}
+                            onChange={(e) => setSlipSearch(e.target.value)}
+                            placeholder="വോട്ടറുടെ പേര് അല്ലെങ്കിൽ ക്രമ നമ്പർ തിരയുക..."
+                            className="flex-1 bg-slate-900/80 text-white border border-white/10 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500/50 transition-all placeholder-slate-500"
+                        />
+                        {slipSearch && (
+                            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest shrink-0">
+                                {voterList.length} / {baseList.length} കാണിക്കുന്നു
+                            </span>
+                        )}
+                    </div>
+                </div>
+            )}
+
             <div className="flex justify-center no-print pb-4 px-4">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] text-center">Showing Preview of Slips Generated Using Applied Filters</p>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] text-center">
+                    {baseList.length > 0 ? `Showing ${voterList.length} of ${baseList.length} Slips` : 'Showing Preview of Slips Generated Using Applied Filters'}
+                </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8 w-full sm:w-fit mx-auto print:p-0 print:gap-0 print-grid relative justify-items-center">
