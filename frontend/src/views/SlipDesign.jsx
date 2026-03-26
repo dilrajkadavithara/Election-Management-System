@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import VoterSlip from '../components/engine/VoterSlip';
 import { sendSlipViaWhatsApp } from '../utils/slipSender';
 import api from '../api';
@@ -25,10 +25,12 @@ const SlipDesign = ({
     const [phoneSaving, setPhoneSaving] = useState(false);
     const [sentCount, setSentCount] = useState(0);
     const [allVoters, setAllVoters] = useState([]);
+    const allVotersRef = useRef([]);
     const [loadingAll, setLoadingAll] = useState(false);
 
     // Use allVoters (full booth list) if available, otherwise fall back to paginated list
-    const voterList = allVoters.length > 0 ? allVoters : _voterList;
+    // Also check ref in case state was reset by parent re-render
+    const voterList = allVoters.length > 0 ? allVoters : (allVotersRef.current.length > 0 ? allVotersRef.current : _voterList);
     // slipRefs no longer needed — Canvas API draws from voter data directly
 
     const handleSendWhatsApp = useCallback(async (voter) => {
@@ -177,11 +179,12 @@ const SlipDesign = ({
                     <div className="col-span-1 sm:col-span-2 lg:col-span-3 flex flex-col sm:flex-row gap-4 mt-2 h-auto sm:h-11">
                         <button onClick={async () => {
                             // Fetch ALL voters for slip generation (no 50-item cap)
-                            // Don't call loadVoters(1) — it re-renders parent and resets allVoters
                             setLoadingAll(true);
                             try {
                                 const res = await api.getVoters({ ...listFilters, page: 1, page_size: 9999 });
-                                setAllVoters(res.voters || []);
+                                const voters = res.voters || [];
+                                allVotersRef.current = voters;
+                                setAllVoters(voters);
                             } catch (e) { console.error('Failed to load all voters:', e); }
                             setLoadingAll(false);
                         }} className="lux-btn-primary w-full sm:flex-1 py-4 sm:!p-0 sm:max-w-[200px] text-[10px] sm:text-xs tracking-widest shadow-xl">{loadingAll ? 'LOADING...' : 'APPLY FILTERS'}</button>
