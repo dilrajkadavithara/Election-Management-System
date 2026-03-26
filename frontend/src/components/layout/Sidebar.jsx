@@ -51,7 +51,7 @@ const Sidebar = ({ view, setView, userRole, username, handleLogout, setShowChang
                         { id: 'voters', label: 'Voter List', icon: '👥' },
                         { id: 'familyheads', label: 'Influencer Segment', icon: '👑' },
                         { id: 'comm', label: 'Send Messages', icon: '💬' },
-                        ...(['SUPERUSER', 'MANAGER', 'CONSTITUENCY_ADMIN'].includes(userRole) ? [{ id: 'design', label: 'Voter Slips', icon: '🎨' }] : []),
+                        ...(['SUPERUSER', 'MANAGER', 'CONSTITUENCY_ADMIN', 'BOOTH_AGENT'].includes(userRole) ? [{ id: 'design', label: 'Voter Slips', icon: '🎨' }] : []),
                         { id: 'electionday', label: 'Election Day', icon: '🗳️' },
                         ...(['SUPERUSER', 'MANAGER', 'CONSTITUENCY_ADMIN', 'LOCAL_BODY_HEAD', 'ZONE_COMMANDER'].includes(userRole) ? [{ id: 'admin', label: 'User Settings', icon: '⚙️' }] : [])
                     ].map(item => (

@@ -1,5 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import VoterSlip from '../components/engine/VoterSlip';
+import { sendSlipViaWhatsApp } from '../utils/slipSender';
+import api from '../api';
+
+// No text message — only slip image is sent via WhatsApp
 
 const SlipDesign = ({
     activePrintParty,
@@ -14,18 +18,54 @@ const SlipDesign = ({
     userRole,
     userAssignments
 }) => {
+    const waMessage = ''; // No text message, kept for function signature compatibility
+    const [sendingId, setSendingId] = useState(null);
+    const [phoneInputId, setPhoneInputId] = useState(null);
+    const [phoneValue, setPhoneValue] = useState('');
+    const [phoneSaving, setPhoneSaving] = useState(false);
+    const [sentCount, setSentCount] = useState(0);
+    // slipRefs no longer needed — Canvas API draws from voter data directly
+
+    const handleSendWhatsApp = useCallback(async (voter) => {
+        if (!voter.phone_no) return;
+
+        setSendingId(voter.id);
+        try {
+            await sendSlipViaWhatsApp(null, voter, waMessage, activePrintParty);
+            setSentCount(c => c + 1);
+        } finally {
+            setSendingId(null);
+        }
+    }, [waMessage, activePrintParty]);
+
+    const handleSavePhoneAndSend = useCallback(async (voter) => {
+        if (!phoneValue || phoneValue.length < 10) return;
+
+        setPhoneSaving(true);
+        try {
+            await api.editVoterInDB(voter.id, { phone_no: phoneValue });
+            voter.phone_no = phoneValue;
+            setPhoneInputId(null);
+            setPhoneValue('');
+            await handleSendWhatsApp(voter);
+        } catch (err) {
+            console.error('Failed to save phone:', err);
+        } finally {
+            setPhoneSaving(false);
+        }
+    }, [phoneValue, handleSendWhatsApp]);
 
     useEffect(() => {
         if (setSearchQuery) setSearchQuery('');
         const blankFilters = {
             constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '', serialFrom: '', serialTo: '', location: ''
         };
-        
+
         // Auto-select booth for Booth Agents
         if (userRole === 'BOOTH_AGENT' && userAssignments?.booths?.length > 0) {
             blankFilters.booth = String(userAssignments.booths[0]);
         }
-        
+
         setListFilters(blankFilters);
         loadVoters(1, blankFilters);
     }, [userRole, userAssignments]);
@@ -135,6 +175,19 @@ const SlipDesign = ({
                 </div>
             </div>
 
+            {/* WhatsApp Sent Counter */}
+            {sentCount > 0 && (
+                <div className="lux-glass p-4 lg:p-6 rounded-3xl lg:rounded-[3rem] border-white/5 shadow-2xl no-print">
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl">📲</span>
+                        <h3 className="text-sm lg:text-base font-black text-emerald-400 uppercase tracking-widest">WhatsApp സ്ലിപ്പ് അയച്ചു</h3>
+                        <span className="ml-auto bg-emerald-500/10 text-emerald-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">
+                            {sentCount} അയച്ചു
+                        </span>
+                    </div>
+                </div>
+            )}
+
             <div className="flex justify-center no-print pb-4 px-4">
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] text-center">Showing Preview of Slips Generated Using Applied Filters</p>
             </div>
@@ -144,7 +197,7 @@ const SlipDesign = ({
                 {voterList.length > 0 ? (
                     voterList.map((v) => (
                         <div key={v.id} className="relative group/slip">
-                            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 to-transparent rounded-lg opacity-0 group-hover/slip:opacity-100 transition-opacity no-print" />
+                            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 to-transparent rounded-lg opacity-0 group-hover/slip:opacity-100 transition-opacity no-print pointer-events-none" />
                             <VoterSlip
                                 voterName={v.full_name}
                                 serialNo={v.serial_no}
@@ -158,6 +211,68 @@ const SlipDesign = ({
                                 houseNo={v.house_no}
                                 party={activePrintParty}
                             />
+
+                            {/* WhatsApp Action Bar */}
+                            <div className="mt-2 rounded-xl bg-slate-900/80 border border-white/5 p-3 no-print relative z-10">
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider truncate">
+                                            {v.full_name}
+                                        </span>
+                                        {v.phone_no ? (
+                                            <span className="text-[10px] font-mono font-bold text-emerald-400 shrink-0">{v.phone_no}</span>
+                                        ) : (
+                                            <span className="text-[10px] font-bold text-amber-400 shrink-0">ഫോൺ ഇല്ല</span>
+                                        )}
+                                    </div>
+
+                                    {v.phone_no ? (
+                                        <button
+                                            onClick={() => handleSendWhatsApp(v)}
+                                            disabled={sendingId === v.id}
+                                            className="shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 disabled:cursor-wait flex items-center gap-2"
+                                        >
+                                            {sendingId === v.id ? (
+                                                <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> തയ്യാറാക്കുന്നു...</>
+                                            ) : (
+                                                <>📲 WhatsApp</>
+                                            )}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => { setPhoneInputId(phoneInputId === v.id ? null : v.id); setPhoneValue(''); }}
+                                            className="shrink-0 bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
+                                        >
+                                            📞 ഫോൺ ചേർക്കുക
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Phone Input (for voters without phone) */}
+                                {phoneInputId === v.id && (
+                                    <div className="mt-3 flex gap-2 items-center border-t border-white/5 pt-3">
+                                        <input
+                                            type="tel"
+                                            value={phoneValue}
+                                            onChange={(e) => setPhoneValue(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                            placeholder="10 അക്ക ഫോൺ നമ്പർ"
+                                            className="flex-1 bg-slate-800 text-white border border-white/10 rounded-lg px-3 py-2 text-sm font-mono font-bold outline-none focus:border-amber-500/50 transition-all"
+                                            autoFocus
+                                        />
+                                        <button
+                                            onClick={() => handleSavePhoneAndSend(v)}
+                                            disabled={phoneValue.length < 10 || phoneSaving}
+                                            className="shrink-0 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2"
+                                        >
+                                            {phoneSaving ? (
+                                                <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> സേവ്...</>
+                                            ) : (
+                                                <>സേവ് & അയയ്ക്കുക</>
+                                            )}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ))
                 ) : (

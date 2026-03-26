@@ -13,6 +13,15 @@ They have been tested and verified to produce 100% accuracy (1,087/1,087 voters)
 
 If a task seems to require changes to these files, ask the user first.
 
+### WhatsApp Slip Generator — PROTECTED
+
+The following file contains the approved Canvas API-based voter slip image generator.
+It produces pixel-perfect slip images for WhatsApp delivery. **Do NOT modify** without explicit user approval:
+
+- `frontend/src/utils/slipSender.js` — Canvas API slip drawing, image download, wa.me WhatsApp integration
+
+If a task seems to require changes to these files, ask the user first.
+
 ## Git Commands
 
 Always ask the user for confirmation before running any git commands.
