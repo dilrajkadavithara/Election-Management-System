@@ -12,7 +12,7 @@ const SlipDesign = ({
     allLocations,
     listFilters,
     setListFilters,
-    voterList,
+    voterList: _voterList,
     loadVoters,
     setSearchQuery,
     userRole,
@@ -24,6 +24,11 @@ const SlipDesign = ({
     const [phoneValue, setPhoneValue] = useState('');
     const [phoneSaving, setPhoneSaving] = useState(false);
     const [sentCount, setSentCount] = useState(0);
+    const [allVoters, setAllVoters] = useState([]);
+    const [loadingAll, setLoadingAll] = useState(false);
+
+    // Use allVoters (full booth list) if available, otherwise fall back to paginated list
+    const voterList = allVoters.length > 0 ? allVoters : _voterList;
     // slipRefs no longer needed — Canvas API draws from voter data directly
 
     const handleSendWhatsApp = useCallback(async (voter) => {
@@ -76,6 +81,7 @@ const SlipDesign = ({
             blankFilters.booth = String(userAssignments.booths[0]);
         }
         setListFilters(blankFilters);
+        setAllVoters([]);
         loadVoters(1, blankFilters);
     };
 
@@ -169,7 +175,16 @@ const SlipDesign = ({
                     </div>
 
                     <div className="col-span-1 sm:col-span-2 lg:col-span-3 flex flex-col sm:flex-row gap-4 mt-2 h-auto sm:h-11">
-                        <button onClick={() => loadVoters(1)} className="lux-btn-primary w-full sm:flex-1 py-4 sm:!p-0 sm:max-w-[200px] text-[10px] sm:text-xs tracking-widest shadow-xl">APPLY FILTERS</button>
+                        <button onClick={async () => {
+                            loadVoters(1); // Update shared state
+                            // Also fetch ALL voters for slip generation (no 50-item cap)
+                            setLoadingAll(true);
+                            try {
+                                const res = await api.getVoters({ ...listFilters, page: 1, page_size: 9999 });
+                                setAllVoters(res.voters || []);
+                            } catch (e) { console.error('Failed to load all voters:', e); }
+                            setLoadingAll(false);
+                        }} className="lux-btn-primary w-full sm:flex-1 py-4 sm:!p-0 sm:max-w-[200px] text-[10px] sm:text-xs tracking-widest shadow-xl">{loadingAll ? 'LOADING...' : 'APPLY FILTERS'}</button>
                         <button onClick={handleReset} className="bg-white/5 text-slate-300 w-full sm:flex-1 py-4 sm:!p-0 sm:max-w-[150px] rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all">CLEAR ALL</button>
                     </div>
                 </div>
