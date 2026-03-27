@@ -111,7 +111,7 @@ export async function downloadSlipImage(element, voterName, boothNo, voter, part
 
         // Height — calculated exactly from content, minimal bottom pad
         let H = PAD + 80 + 30 + 24 + nameLines.length * 58 + 50 + 24 + 48 + 68 + 28 + 54 + psLines.length * 38 + 24;
-        H = Math.max(H, 530);
+        H = Math.max(H, 660); // Optimal height for 100x60mm aspect ratio
 
         // --- Create actual canvas ---
         const canvas = document.createElement('canvas');

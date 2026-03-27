@@ -215,6 +215,10 @@ body {
 }
 
 @media print {
+    @page {
+        margin: 0;
+        size: auto;
+    }
 
     .no-print,
     aside,
@@ -267,7 +271,7 @@ body {
         /* Standard A4 width */
         max-width: 100% !important;
         margin: 0 auto !important;
-        padding: 5mm !important;
+        padding: 2mm !important;
     }
 
     .lux-animate-in {

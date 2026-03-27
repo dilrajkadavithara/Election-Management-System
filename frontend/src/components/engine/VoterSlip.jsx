@@ -28,7 +28,7 @@ const VoterSlip = ({ voterName, serialNo, epicNo, boothNo, pollingStation, party
     const activeTheme = isPlain ? { primary: '#475569', secondary: '#f8fafc', accent: '#64748b', text: 'text-slate-800', grad: 'from-[#475569] to-[#64748b]', shadow: 'shadow-slate-500/30' } : theme;
 
     return (
-        <div className={`w-[102mm] h-[48mm] bg-white rounded-xl shadow-xl border border-slate-200 relative flex overflow-hidden shrink-0 print:border print:shadow-none print:border-slate-300 print:rounded-none font-sans`} style={{ pageBreakInside: 'avoid' }}>
+        <div className={`w-[100mm] h-[60mm] bg-white rounded-xl shadow-xl border border-slate-200 relative flex overflow-hidden shrink-0 print:border print:shadow-none print:border-slate-300 print:rounded-none font-sans`} style={{ pageBreakInside: 'avoid' }}>
 
             {/* BRANDING STRIP */}
             {!isPlain && (
