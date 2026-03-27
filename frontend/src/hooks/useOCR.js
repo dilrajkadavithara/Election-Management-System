@@ -137,8 +137,11 @@ export default function useOCR({ isLoggedIn, view, loadStats, loadAdminData, set
         setLoading(true);
         try {
             if (editData.id) {
-                // Regular database edit
-                await api.editVoterInDB(editData.id, editData);
+                // Regular database edit — clean empty strings to null for numeric fields
+                const cleanData = { ...editData };
+                if (cleanData.voting_probability === '' || cleanData.voting_probability === undefined) cleanData.voting_probability = null;
+                if (cleanData.age === '' || cleanData.age === undefined) cleanData.age = null;
+                await api.editVoterInDB(editData.id, cleanData);
                 setEditMode(false);
                 loadVoters(currentPage);
                 loadStats();
