@@ -936,6 +936,7 @@ def get_war_room_tactical_stats(user_profile, constituency_id=None, lb_id=None, 
             # Match ALL voters in the accessible booths
             voters = Voter.objects.filter(booth_id__in=booth_ids)
             stats = voters.aggregate(
+                total_voters=Count('id'),
                 digitized=Count('id', filter=DIGITIZED_Q),
                 supporters=Count('id', filter=Q(voter_leaning=perspective.upper())),
                 UDF=Count('id', filter=Q(voter_leaning='UDF')),
@@ -948,7 +949,7 @@ def get_war_room_tactical_stats(user_profile, constituency_id=None, lb_id=None, 
             stats['ldf'] = stats['LDF']
             stats['nda'] = stats['NDA']
             stats['neutral'] = stats['NEUTRAL']
-            
+
             # Still get deltas from snapshots
             snaps = DailyProgress.objects.filter(booth_id__in=booth_ids, date=date_val).aggregate(
                 new_dig=Sum('new_digitized'),
@@ -957,11 +958,10 @@ def get_war_room_tactical_stats(user_profile, constituency_id=None, lb_id=None, 
                 new_ldf=Sum('new_ldf'),
                 new_nda=Sum('new_nda')
             )
-            
-            # Dynamic Win Prob calculation: Supporters / Digitized * 100
-            # We use a slight multiplier to represent 'likely' votes for a more dynamic feel
-            raw_prob = (stats['supporters'] / max(1, stats['digitized'])) * 100
-            stats['win_prob'] = min(99, round(raw_prob * 1.05, 1))
+
+            # Win Prob: Supporters / Total Voters * 100
+            raw_prob = (stats['supporters'] / max(1, stats['total_voters'])) * 100
+            stats['win_prob'] = min(99, round(raw_prob, 1))
             
             res = {**stats, **snaps}
         else:
@@ -978,9 +978,10 @@ def get_war_room_tactical_stats(user_profile, constituency_id=None, lb_id=None, 
                 new_ldf=Sum('new_ldf'),
                 new_nda=Sum('new_nda')
             )
-            # Dynamic Win Prob for non-live snapshots too (handle None supporters)
-            raw_prob = ((res['supporters'] or 0) / max(1, res['digitized'] or 0)) * 100
-            res['win_prob'] = min(99, round(raw_prob * 1.05, 1))
+            # Win Prob for snapshots: use total voters count from booths
+            total_voters = Voter.objects.filter(booth_id__in=booth_ids).count()
+            raw_prob = ((res['supporters'] or 0) / max(1, total_voters)) * 100
+            res['win_prob'] = min(99, round(raw_prob, 1))
 
         for k in res: 
             if res[k] is None: res[k] = 0
@@ -1124,7 +1125,7 @@ def get_war_room_tactical_stats(user_profile, constituency_id=None, lb_id=None, 
         total = b['total']
         tagged = b['tagged']
         coverage = (tagged / total * 100) if total > 0 else 0
-        win_prob = (b['persp'] / tagged * 100) if tagged > 0 else 0
+        win_prob = (b['persp'] / total * 100) if total > 0 else 0
         
         perf_list.append({
             "id": b['id'],
