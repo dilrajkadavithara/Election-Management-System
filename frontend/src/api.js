@@ -178,7 +178,7 @@ const api = {
     },
 
     exportVoters: (filters) => {
-        return client.get(`/api/export-voters`, { params: filters, responseType: 'blob', timeout: 120000 })
+        return client.get(`/api/voters/export`, { params: filters, responseType: 'blob', timeout: 120000 })
             .then(response => {
                 const url = window.URL.createObjectURL(new Blob([response.data]));
                 const link = document.createElement('a');
