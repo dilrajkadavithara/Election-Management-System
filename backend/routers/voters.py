@@ -89,7 +89,12 @@ async def export_voters(
     l_id = int(lb) if lb and str(lb).isdigit() else None
     b_id = int(booth) if booth and str(booth).isdigit() else None
     
-    data = await get_voters_async(user_info['username'], search, None, 0, c_id, l_id, b_id, gender, age_from, age_to, leaning, serial_from, serial_to, location)
+    data = await get_voters_async(
+        user_info['username'], search, None, 0,
+        constituency_id=c_id, lb_id=l_id, booth_id=b_id, gender=gender,
+        age_from=age_from, age_to=age_to, leaning=leaning,
+        serial_from=serial_from, serial_to=serial_to, location=location
+    )
     results = data['results']
     
     def generate():

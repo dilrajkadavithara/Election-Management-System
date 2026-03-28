@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import VoterSlip from '../components/engine/VoterSlip';
+import PlainVoterSlip from '../components/engine/PlainVoterSlip';
 import { sendSlipViaWhatsApp } from '../utils/slipSender';
 import api from '../api';
 
@@ -248,19 +249,29 @@ const SlipDesign = ({
                     voterList.map((v) => (
                         <div key={v.id} className="relative group/slip">
                             <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 to-transparent rounded-lg opacity-0 group-hover/slip:opacity-100 transition-opacity no-print pointer-events-none" />
-                            <VoterSlip
-                                voterName={v.full_name}
-                                serialNo={v.serial_no}
-                                epicNo={v.epic_id}
-                                boothNo={v.booth_no}
-                                constituency={v.constituency}
-                                pollingStation={v.ps_name}
-                                relationName={v.relation_name}
-                                relationType={v.relation_type}
-                                houseName={v.house_name}
-                                houseNo={v.house_no}
-                                party={activePrintParty}
-                            />
+                            {activePrintParty ? (
+                                <VoterSlip
+                                    voterName={v.full_name}
+                                    serialNo={v.serial_no}
+                                    epicNo={v.epic_id}
+                                    boothNo={v.booth_no}
+                                    constituency={v.constituency}
+                                    pollingStation={v.ps_name}
+                                    relationName={v.relation_name}
+                                    relationType={v.relation_type}
+                                    houseName={v.house_name}
+                                    houseNo={v.house_no}
+                                    party={activePrintParty}
+                                />
+                            ) : (
+                                <PlainVoterSlip
+                                    voterName={v.full_name}
+                                    serialNo={v.serial_no}
+                                    epicNo={v.epic_id}
+                                    boothNo={v.booth_no}
+                                    pollingStation={v.ps_name}
+                                />
+                            )}
 
                             {/* WhatsApp Action Bar */}
                             <div className="mt-2 rounded-xl bg-slate-900/80 border border-white/5 p-3 no-print relative z-10">
