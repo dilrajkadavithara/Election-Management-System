@@ -72,7 +72,7 @@ const LoginForm = ({
                                 />
                                 <span className="absolute left-1.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none text-xs">✓</span>
                             </div>
-                            <label htmlFor="consent" className="text-[10px] font-semibold text-slate-400 leading-relaxed cursor-pointer group-hover/consent:text-slate-300 transition-colors">
+                            <label htmlFor="consent" className="text-xs font-bold text-white leading-relaxed cursor-pointer">
                                 I verify authorization protocol compliance under the <a href="#" className="text-indigo-400 underline italic">Neural Governance Framework</a>.
                                 Access is cryptographically audited for strategic integrity.
                             </label>
