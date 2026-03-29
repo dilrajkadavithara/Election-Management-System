@@ -61,7 +61,7 @@ class BatchProcessor:
             page_img_path = page_to_image_map.get(page_num)
             if not page_img_path or not os.path.exists(page_img_path):
                 logger.error(f"Page {page_num} image not found")
-                return page_num, "Image Missing", False
+                return page_num, "Image Missing", False, {}
 
             try:
                 # Use OpenCV box-guided extraction with 5-box batches
