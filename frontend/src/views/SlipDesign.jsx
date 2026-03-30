@@ -31,13 +31,13 @@ const SlipDesign = ({
     const allVotersRef = useRef([]);
     const [loadingAll, setLoadingAll] = useState(false);
     const [slipSearch, setSlipSearch] = useState('');
+    const [searchResults, setSearchResults] = useState(null);
+    const searchTimerRef = useRef(null);
 
     // Use allVoters (full booth list) if available, otherwise fall back to paginated list
     const baseList = allVoters.length > 0 ? allVoters : (allVotersRef.current.length > 0 ? allVotersRef.current : _voterList);
-    // Apply search filter on top
-    const voterList = slipSearch.trim()
-        ? baseList.filter(v => (v.full_name || '').toLowerCase().includes(slipSearch.trim().toLowerCase()) || (v.serial_no && String(v.serial_no).includes(slipSearch.trim())) || (v.epic_id || '').toLowerCase().includes(slipSearch.trim().toLowerCase()))
-        : baseList;
+    // When searching, use server-side results; otherwise use baseList
+    const voterList = searchResults !== null ? searchResults : baseList;
     const PAGE_SIZE = 200;
     const totalPages = Math.ceil((voterTotal || 0) / PAGE_SIZE) || 1;
     // slipRefs no longer needed — Canvas API draws from voter data directly
@@ -90,6 +90,8 @@ const SlipDesign = ({
             blankFilters.booth = String(userAssignments.booths[0]);
         }
         setListFilters(blankFilters);
+        setSlipSearch('');
+        setSearchResults(null);
         loadVoters(1, blankFilters, 200);
     };
 
@@ -186,6 +188,7 @@ const SlipDesign = ({
                         <button onClick={async () => {
                             setLoadingAll(true);
                             setSlipSearch('');
+                            setSearchResults(null);
                             try {
                                 const res = await api.getVoters({ ...listFilters, page: 1, page_size: 2000 });
                                 const voters = res.results || res.voters || [];
@@ -224,13 +227,27 @@ const SlipDesign = ({
                         <input
                             type="text"
                             value={slipSearch}
-                            onChange={(e) => setSlipSearch(e.target.value)}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSlipSearch(val);
+                                if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                                if (!val.trim()) {
+                                    setSearchResults(null);
+                                    return;
+                                }
+                                searchTimerRef.current = setTimeout(async () => {
+                                    try {
+                                        const res = await api.getVoters({ ...listFilters, search: val.trim(), page: 1, page_size: 200 });
+                                        setSearchResults(res.results || []);
+                                    } catch (_) {}
+                                }, 500);
+                            }}
                             placeholder="വോട്ടറുടെ പേര് അല്ലെങ്കിൽ ക്രമ നമ്പർ തിരയുക..."
                             className="flex-1 bg-slate-900/80 text-white border border-white/10 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500/50 transition-all placeholder-slate-500"
                         />
                         {slipSearch && (
                             <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest shrink-0">
-                                {voterList.length} / {baseList.length} കാണിക്കുന്നു
+                                {voterList.length} കാണിക്കുന്നു
                             </span>
                         )}
                     </div>
