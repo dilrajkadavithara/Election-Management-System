@@ -220,39 +220,62 @@ const SlipDesign = ({
             )}
 
             {/* Search Box */}
-            {baseList.length > 0 && (
-                <div className="lux-glass p-4 lg:p-6 rounded-3xl lg:rounded-[3rem] border-white/5 shadow-2xl no-print">
-                    <div className="flex items-center gap-3">
-                        <span className="text-xl">🔍</span>
-                        <input
-                            type="text"
-                            value={slipSearch}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                setSlipSearch(val);
+            <div className="lux-glass p-4 lg:p-6 rounded-3xl lg:rounded-[3rem] border-white/5 shadow-2xl no-print">
+                <div className="flex items-center gap-3">
+                    <input
+                        type="text"
+                        value={slipSearch}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setSlipSearch(val);
+                            if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                            if (!val.trim()) {
+                                setSearchResults(null);
+                                return;
+                            }
+                            searchTimerRef.current = setTimeout(async () => {
+                                try {
+                                    const res = await api.getVoters({ ...listFilters, search: val.trim(), page: 1, page_size: 200 });
+                                    setSearchResults(res.results || []);
+                                } catch (_) {}
+                            }, 500);
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && slipSearch.trim()) {
                                 if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-                                if (!val.trim()) {
-                                    setSearchResults(null);
-                                    return;
-                                }
-                                searchTimerRef.current = setTimeout(async () => {
+                                (async () => {
                                     try {
-                                        const res = await api.getVoters({ ...listFilters, search: val.trim(), page: 1, page_size: 200 });
+                                        const res = await api.getVoters({ ...listFilters, search: slipSearch.trim(), page: 1, page_size: 200 });
                                         setSearchResults(res.results || []);
                                     } catch (_) {}
-                                }, 500);
-                            }}
-                            placeholder="വോട്ടറുടെ പേര് അല്ലെങ്കിൽ ക്രമ നമ്പർ തിരയുക..."
-                            className="flex-1 bg-slate-900/80 text-white border border-white/10 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500/50 transition-all placeholder-slate-500"
-                        />
-                        {slipSearch && (
-                            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest shrink-0">
-                                {voterList.length} കാണിക്കുന്നു
-                            </span>
-                        )}
-                    </div>
+                                })();
+                            }
+                        }}
+                        placeholder="പേര്, EPIC ID, അല്ലെങ്കിൽ ക്രമ നമ്പർ..."
+                        className="flex-1 bg-slate-900/80 text-white border border-white/10 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500/50 transition-all placeholder-slate-500"
+                    />
+                    <button
+                        onClick={() => {
+                            if (!slipSearch.trim()) return;
+                            if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                            (async () => {
+                                try {
+                                    const res = await api.getVoters({ ...listFilters, search: slipSearch.trim(), page: 1, page_size: 200 });
+                                    setSearchResults(res.results || []);
+                                } catch (_) {}
+                            })();
+                        }}
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all shrink-0 flex items-center gap-2"
+                    >
+                        <span>🔍</span> Search
+                    </button>
+                    {slipSearch && (
+                        <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest shrink-0">
+                            {voterList.length} കാണിക്കുന്നു
+                        </span>
+                    )}
                 </div>
-            )}
+            </div>
 
             <div className="flex justify-center no-print pb-4 px-4">
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] text-center">
