@@ -76,7 +76,7 @@ class BatchProcessor:
                     page_tokens = {}
 
                 if not success or not isinstance(batch_results, list):
-                    return page_num, f"AI Error: {batch_results}", False
+                    return page_num, f"AI Error: {batch_results}", False, {}
 
                 page_results = []
                 for entry in batch_results:
