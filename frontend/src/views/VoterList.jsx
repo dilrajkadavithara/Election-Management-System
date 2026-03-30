@@ -82,15 +82,17 @@ const VoterList = ({
                     >
                         Export Assets 📥
                     </button>
-                    <div className="relative group">
+                    <div className="flex items-center gap-2">
                         <input
                             type="text"
-                            placeholder="Search Intelligence..."
-                            className="lux-glass w-full sm:w-80 py-4 px-8 rounded-2xl text-[11px] font-black uppercase tracking-widest outline-none border border-white/5 focus:border-indigo-500/50 transition-all text-white placeholder-slate-500"
+                            placeholder="Search Voter..."
+                            className="lux-glass w-full sm:w-72 py-4 px-8 rounded-2xl text-[11px] font-black uppercase tracking-widest outline-none border border-white/5 focus:border-indigo-500/50 transition-all text-white placeholder-slate-500"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
-                        <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 group-hover:text-indigo-400 transition-colors">🔍</div>
+                        <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0 flex items-center gap-2">
+                            <span>🔍</span> Search
+                        </button>
                     </div>
                 </div>
             </header>
