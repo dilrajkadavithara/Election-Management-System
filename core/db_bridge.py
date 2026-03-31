@@ -205,7 +205,7 @@ def get_strategic_analytics(user_profile, constituency_id=None):
 
     from django.db.models import Count, Case, When, IntegerField, F, Value
 
-    voters = user_profile.get_accessible_voters()
+    voters = user_profile.get_accessible_voters().filter(booth__constituency__is_active=True)
     if constituency_id:
         voters = voters.filter(booth__constituency_id=constituency_id)
     
@@ -304,7 +304,7 @@ def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id
 
     from django.db.models import Count, Case, When, IntegerField, Value
 
-    voters = user_profile.get_accessible_voters()
+    voters = user_profile.get_accessible_voters().filter(booth__constituency__is_active=True)
     if constituency_id: voters = voters.filter(booth__constituency_id=constituency_id)
     if lb_id: voters = voters.filter(booth__local_body_id=lb_id)
     if booth_id: voters = voters.filter(booth_id=booth_id)
@@ -451,7 +451,7 @@ def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency
     if is_constituency_blocked(constituency_id):
         return {"blocked": True, "message": "This constituency is currently unavailable.", "voters": [], "total": 0, "pages": 0}
 
-    voters = user_profile.get_accessible_voters()
+    voters = user_profile.get_accessible_voters().filter(booth__constituency__is_active=True)
     
     if search:
         voters = voters.filter(Q(full_name__icontains=search) | Q(epic_id__icontains=search) | Q(house_name__icontains=search))
@@ -562,9 +562,9 @@ def get_live_voting_stats(user_profile, constituency_id=None, lb_id=None, booth_
     from django.db.models import Count, Case, When, IntegerField
     # If user_profile is None (Internal call), we use all voters
     if user_profile:
-        voters = user_profile.get_accessible_voters()
+        voters = user_profile.get_accessible_voters().filter(booth__constituency__is_active=True)
     else:
-        voters = Voter.objects.all()
+        voters = Voter.objects.filter(booth__constituency__is_active=True)
         
     if constituency_id: voters = voters.filter(booth__constituency_id=constituency_id)
     if lb_id: voters = voters.filter(booth__local_body_id=lb_id)
