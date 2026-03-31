@@ -6,6 +6,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator, RegexVa
 class Constituency(models.Model):
     name = models.CharField(max_length=200, unique=True, help_text="e.g. Trippunithura")
     code = models.CharField(max_length=50, blank=True, help_text="e.g. TPA")
+    is_active = models.BooleanField(default=True, help_text="Uncheck to block all services for this constituency")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -3,7 +3,9 @@ from .models import Constituency, LocalBody, Booth, Voter, UserProfile
 
 @admin.register(Constituency)
 class ConstituencyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code', 'created_at')
+    list_display = ('name', 'code', 'is_active', 'created_at')
+    list_filter = ('is_active',)
+    list_editable = ('is_active',)
     search_fields = ('name', 'code')
     ordering = ('name',)
 

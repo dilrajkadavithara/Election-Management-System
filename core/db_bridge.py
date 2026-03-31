@@ -57,6 +57,16 @@ def _set_cache(key, val):
     with _cache_lock:
         _stats_cache[key] = (val, time.time())
 
+def is_constituency_blocked(constituency_id):
+    """Check if a constituency is inactive/blocked. Returns True if blocked."""
+    if not constituency_id:
+        return False
+    try:
+        c = Constituency.objects.get(id=int(constituency_id))
+        return not c.is_active
+    except (Constituency.DoesNotExist, ValueError):
+        return False
+
 def get_parties():
     """Fetch list of active political parties"""
     return list(PoliticalParty.objects.filter(is_active=True).values('id', 'name', 'short_label', 'symbol_image', 'primary_color', 'accent_gradient'))
@@ -72,8 +82,8 @@ def add_party(name, symbol_image, short_label="", primary_color="#000080", accen
     return {"id": p.id, "name": p.name, "created": created}
 
 def get_constituencies():
-    """Fetch list of constituency names for dropdown"""
-    return list(Constituency.objects.values_list('name', flat=True))
+    """Fetch list of constituency names for dropdown (only active ones)"""
+    return list(Constituency.objects.filter(is_active=True).values_list('name', flat=True))
 
 def get_local_bodies(constituency_name=None):
     """Fetch list of local bodies for a constituency"""
@@ -186,12 +196,15 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
 
 def get_strategic_analytics(user_profile, constituency_id=None):
     """Deep analytics aggregation for Command Center V2"""
+    if is_constituency_blocked(constituency_id):
+        return {"blocked": True, "message": "This constituency is currently unavailable."}
+
     cache_key = f"strategic_{user_profile.id}_{constituency_id}"
     cached = _get_cache(cache_key)
     if cached: return cached
 
     from django.db.models import Count, Case, When, IntegerField, F, Value
-    
+
     voters = user_profile.get_accessible_voters()
     if constituency_id:
         voters = voters.filter(booth__constituency_id=constituency_id)
@@ -282,12 +295,15 @@ def get_strategic_analytics(user_profile, constituency_id=None):
     return result
 
 def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id=None, gender=None, leaning=None, location=None):
+    if is_constituency_blocked(constituency_id):
+        return {"blocked": True, "message": "This constituency is currently unavailable."}
+
     cache_key = f"dash_{user_profile.id}_{constituency_id}_{lb_id}_{booth_id}_{gender}_{leaning}_{location}"
     cached = _get_cache(cache_key)
     if cached: return cached
 
     from django.db.models import Count, Case, When, IntegerField, Value
-    
+
     voters = user_profile.get_accessible_voters()
     if constituency_id: voters = voters.filter(booth__constituency_id=constituency_id)
     if lb_id: voters = voters.filter(booth__local_body_id=lb_id)
@@ -432,6 +448,9 @@ def get_dashboard_stats(user_profile, constituency_id=None, lb_id=None, booth_id
     return stats_result
 
 def get_voter_list(user_profile, search=None, page=1, page_size=50, constituency_id=None, lb_id=None, booth_id=None, gender=None, age_from=None, age_to=None, leaning=None, serial_from=None, serial_to=None, location=None, is_head_of_family=None):
+    if is_constituency_blocked(constituency_id):
+        return {"blocked": True, "message": "This constituency is currently unavailable.", "voters": [], "total": 0, "pages": 0}
+
     voters = user_profile.get_accessible_voters()
     
     if search:
@@ -593,7 +612,7 @@ def get_all_locations(user_profile=None):
     if user_profile and user_profile.role == 'BOOTH_AGENT':
         assigned_booth_ids = list(user_profile.assigned_booths.values_list('id', flat=True))
 
-    for c in Constituency.objects.prefetch_related('local_bodies__booths').all().order_by('name'):
+    for c in Constituency.objects.prefetch_related('local_bodies__booths').filter(is_active=True).order_by('name'):
         c_node = {"id": c.id, "name": c.name, "local_bodies": []}
         for lb in c.local_bodies.all():
             lb_node = {"id": lb.id, "name": lb.name, "booths": []}
