@@ -26,6 +26,7 @@ print("✅ Django Bridge Initialized (Production Strict Mode)")
 
 # 2. Router Imports
 from backend.routers import auth, admin, voters, analytics, ocr, system, communications
+from backend import engine_selector
 
 # 3. App Setup
 import os as _os
@@ -56,7 +57,7 @@ app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(voters.router)
 app.include_router(analytics.router)
-app.include_router(ocr.router)
+app.include_router(engine_selector.router)
 app.include_router(system.router)
 app.include_router(communications.router)
 

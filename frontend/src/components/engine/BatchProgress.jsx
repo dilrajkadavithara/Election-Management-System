@@ -1,5 +1,6 @@
 import React from 'react';
 import api from '../../api';
+import EngineToggle from './EngineToggle';
 
 /**
  * Active batch processing view: step tracker, stats, action buttons, live terminal.
@@ -9,7 +10,7 @@ import api from '../../api';
  *   isLocationValid — computed boolean from parent
  *   systemLogs — from parent's polling effect
  */
-const BatchProgress = ({ ocrBatch, startExtraction, startOcr, handleSaveBatch, stopAndClearRAM, isLocationValid, systemLogs }) => {
+const BatchProgress = ({ ocrBatch, startExtraction, startOcr, handleSaveBatch, stopAndClearRAM, isLocationValid, systemLogs, engineVersion, setEngineVersion }) => {
     const isComplete = ocrBatch && ['processed', 'warning', 'completed'].includes(ocrBatch.status);
     const hasFailed = ocrBatch && ocrBatch.status === 'error';
 
@@ -162,6 +163,11 @@ const BatchProgress = ({ ocrBatch, startExtraction, startOcr, handleSaveBatch, s
                         <div className="text-right">
                             <p className="lux-tech-label !text-amber-400 mb-1">Estimated Cost</p>
                             <p className="text-3xl font-black text-amber-400">${ocrBatch.cost.estimated_cost_usd || '0.00'}</p>
+                            {ocrBatch.engine_version && (
+                                <p className={`text-[9px] mt-1 font-bold tracking-wider ${ocrBatch.engine_version === 'v2' ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                    ENGINE {ocrBatch.engine_version.toUpperCase()}
+                                </p>
+                            )}
                         </div>
                     </div>
                 )}
@@ -174,9 +180,12 @@ const BatchProgress = ({ ocrBatch, startExtraction, startOcr, handleSaveBatch, s
                         </button>
                     )}
                     {ocrBatch.status === 'extracted' && (
-                        <button onClick={startOcr} disabled={!isLocationValid} className="lux-btn-primary flex-1 !py-8 text-sm tracking-[0.3em] !font-bold !from-indigo-600 !to-purple-600 shadow-[0_0_30px_rgba(99,102,241,0.5)] disabled:opacity-30 disabled:cursor-not-allowed" style={{ fontFamily: '"Rajdhani", sans-serif' }}>
-                            Run Data Processor ⚡
-                        </button>
+                        <div className="flex-1 flex flex-col gap-4">
+                            <EngineToggle engineVersion={engineVersion} onToggle={setEngineVersion} disabled={false} />
+                            <button onClick={startOcr} disabled={!isLocationValid} className="lux-btn-primary w-full !py-8 text-sm tracking-[0.3em] !font-bold !from-indigo-600 !to-purple-600 shadow-[0_0_30px_rgba(99,102,241,0.5)] disabled:opacity-30 disabled:cursor-not-allowed" style={{ fontFamily: '"Rajdhani", sans-serif' }}>
+                                Run Data Processor {engineVersion === 'v2' ? '(V2) ⚡' : '⚡'}
+                            </button>
+                        </div>
                     )}
                     {isComplete && (
                         <div className="flex-1 flex gap-6">

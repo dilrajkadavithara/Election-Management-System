@@ -17,6 +17,7 @@ export default function useOCR({ isLoggedIn, view, loadStats, loadAdminData, set
     const [ocrTargetLoc, setOcrTargetLoc] = useState({ constId: '', lbId: '', boothId: '', psNo: '', psName: '' });
     const [useDirectPdf, setUseDirectPdf] = useState(false);
     const [useGemini, setUseGemini] = useState(true);
+    const [engineVersion, setEngineVersion] = useState('v1');
     const ocrRef = useRef(null);
 
     // --- Auto-reconnect to latest batch when engine view opens ---
@@ -73,8 +74,13 @@ export default function useOCR({ isLoggedIn, view, loadStats, loadAdminData, set
     const startOcr = async () => {
         if (!ocrBatch) return;
         try {
-            await api.startProcess(ocrBatch.id, useGemini, ocrBatch.direct_pdf || useDirectPdf);
-            setOcrBatch(prev => ({ ...prev, status: 'processing', use_gemini: useGemini }));
+            if (engineVersion === 'v2') {
+                await api.startProcessV2(ocrBatch.id);
+                setOcrBatch(prev => ({ ...prev, status: 'processing', use_gemini: true, engine_version: 'v2' }));
+            } else {
+                await api.startProcess(ocrBatch.id, useGemini, ocrBatch.direct_pdf || useDirectPdf);
+                setOcrBatch(prev => ({ ...prev, status: 'processing', use_gemini: useGemini, engine_version: 'v1' }));
+            }
         } catch (e) { setOcrError(e.message); }
     };
 
@@ -186,6 +192,7 @@ export default function useOCR({ isLoggedIn, view, loadStats, loadAdminData, set
         ocrTargetLoc, setOcrTargetLoc,
         useDirectPdf, setUseDirectPdf,
         useGemini, setUseGemini,
+        engineVersion, setEngineVersion,
         ocrRef,
         handleFileUpload, startExtraction, startOcr,
         handleSaveBatch, stopAndClearRAM, discardBatch,

@@ -10,7 +10,7 @@ celery_app = Celery(
     "election_tasks",
     broker=redis_url,
     backend=redis_url,
-    include=["backend.tasks"]
+    include=["backend.tasks", "backend.tasks_v2"]
 )
 
 # Optional configuration

@@ -105,6 +105,11 @@ const api = {
         return response.data;
     },
 
+    startProcessV2: async (batchId) => {
+        const response = await client.post(`/api/v2/process-batch/${batchId}`);
+        return response.data;
+    },
+
     getBatchStatus: async (batchId) => {
         const response = await client.get(`/api/batch/${batchId}/status`);
         return response.data;

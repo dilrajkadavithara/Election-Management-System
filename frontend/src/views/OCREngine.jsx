@@ -15,7 +15,7 @@ const OCREngine = () => {
     const { loadStats } = voters;
 
     const ocr = useOCR({ isLoggedIn, view, loadStats, loadAdminData, setView, setShowSuccess, setEditData, setEditMode });
-    const { ocrBatch, ocrError, setOcrError, ocrTargetLoc, startExtraction, startOcr, handleSaveBatch, stopAndClearRAM } = ocr;
+    const { ocrBatch, ocrError, setOcrError, ocrTargetLoc, startExtraction, startOcr, handleSaveBatch, stopAndClearRAM, engineVersion, setEngineVersion } = ocr;
 
     // System health + logs polling (owned here, passed to BatchProgress)
     const [systemHealth, setSystemHealth] = useState(null);
@@ -103,6 +103,8 @@ const OCREngine = () => {
                         stopAndClearRAM={stopAndClearRAM}
                         isLocationValid={isLocationValid}
                         systemLogs={systemLogs}
+                        engineVersion={engineVersion}
+                        setEngineVersion={setEngineVersion}
                     />
                 )}
             </div>
