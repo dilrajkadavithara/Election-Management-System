@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import api from '../api';
 import { DEFAULT_PAGE_SIZE } from '../constants';
+import BoothSelector from '../components/engine/BoothSelector';
 
 const VoterList = ({
     voterList,
@@ -109,6 +110,18 @@ const VoterList = ({
                     <span>Filters {Object.values(listFilters).filter(Boolean).length > 0 ? `(${Object.values(listFilters).filter(Boolean).length} active)` : ''}</span>
                     <span className={`transition-transform ${filtersOpen ? 'rotate-180' : ''}`}>▼</span>
                 </button>
+
+                {userRole === 'BOOTH_AGENT' && currentUser?.assignments?.booths?.length > 1 && (
+                    <div className="mb-4">
+                        <BoothSelector
+                            userRole={userRole}
+                            userAssignments={currentUser?.assignments}
+                            allLocations={allLocations}
+                            selectedBooth={listFilters.booth}
+                            onSelect={(b) => setListFilters(f => ({ ...f, constituency: b.constId, lb: b.lbId, booth: b.id }))}
+                        />
+                    </div>
+                )}
 
                 <div className={`${filtersOpen ? 'block' : 'hidden'} lg:block`}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 items-end relative z-10">

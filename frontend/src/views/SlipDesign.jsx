@@ -3,6 +3,7 @@ import VoterSlip from '../components/engine/VoterSlip';
 import PlainVoterSlip from '../components/engine/PlainVoterSlip';
 import { sendSlipViaWhatsApp } from '../utils/slipSender';
 import api from '../api';
+import BoothSelector from '../components/engine/BoothSelector';
 
 // No text message — only slip image is sent via WhatsApp
 
@@ -115,6 +116,19 @@ const SlipDesign = ({
             </header>
 
             <div className="lux-glass p-6 lg:p-8 rounded-3xl lg:rounded-[3rem] border-white/5 shadow-2xl space-y-6 no-print group">
+                {userRole === 'BOOTH_AGENT' && userAssignments?.booths?.length > 1 && (
+                    <BoothSelector
+                        userRole={userRole}
+                        userAssignments={userAssignments}
+                        allLocations={allLocations}
+                        selectedBooth={listFilters.booth}
+                        onSelect={(b) => {
+                            const newFilters = { ...listFilters, constituency: b.constId, lb: b.lbId, booth: b.id };
+                            setListFilters(newFilters);
+                            loadVoters(1, newFilters, 200);
+                        }}
+                    />
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6 items-end">
                     {userRole !== 'BOOTH_AGENT' && (
                         <>

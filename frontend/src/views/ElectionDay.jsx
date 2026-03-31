@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import api from '../api';
+import BoothSelector from '../components/engine/BoothSelector';
 
 const LEANING_CONFIG = {
     UDF: { color: 'bg-blue-500', border: 'border-blue-500/60', glow: 'shadow-[0_0_15px_rgba(59,130,246,0.4)]', text: 'text-blue-400', badge: 'bg-blue-500/20 text-blue-300' },
@@ -212,15 +213,17 @@ const ElectionDay = ({ userRole, userAssignments, username, setShowChangePasswor
                             disabled={!selLB && userRole !== 'BOOTH_AGENT'}
                             className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 disabled:opacity-30">
                             <option value="" className="bg-slate-800">Select Booth</option>
-                            {userRole === 'BOOTH_AGENT'
-                                ? userAssignments?.booths?.map(bid => {
-                                    const b = locations.flatMap(c => c.local_bodies).flatMap(lb => lb.booths).find(bo => bo.id === bid);
-                                    return <option key={bid} value={bid} className="bg-slate-800">Booth {b?.number || bid}</option>;
-                                })
-                                : currentLB?.booths.map(b => <option key={b.id} value={b.id} className="bg-slate-800">Booth {b.number}</option>)
-                            }
+                            {currentLB?.booths.map(b => <option key={b.id} value={b.id} className="bg-slate-800">Booth {b.number}</option>)}
                         </select>
-                    ) : null}
+                    ) : (
+                        <BoothSelector
+                            userRole={userRole}
+                            userAssignments={userAssignments}
+                            allLocations={locations}
+                            selectedBooth={selBooth}
+                            onSelect={(b) => { setSelConst(b.constId); setSelLB(b.lbId); setSelBooth(b.id); }}
+                        />
+                    )}
                 </div>
             </div>
 

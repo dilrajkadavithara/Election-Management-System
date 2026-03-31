@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
+import BoothSelector from '../components/engine/BoothSelector';
 
 const FamilyHeads = ({
     allLocations,
@@ -102,6 +103,17 @@ const FamilyHeads = ({
             <div className="lux-glass p-6 sm:p-8 rounded-[3rem] border-white/5 shadow-2xl space-y-6 group">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 rounded-full blur-[100px] -mr-40 -mt-40 transition-all group-hover:bg-amber-500/10" />
 
+                {userRole === 'BOOTH_AGENT' && currentUser?.assignments?.booths?.length > 1 && (
+                    <div className="mb-4">
+                        <BoothSelector
+                            userRole={userRole}
+                            userAssignments={currentUser?.assignments}
+                            allLocations={allLocations}
+                            selectedBooth={filters.booth}
+                            onSelect={(b) => setFilters(f => ({ ...f, constituency: b.constId, lb: b.lbId, booth: b.id }))}
+                        />
+                    </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-end relative z-10">
                     {[
                         { label: 'Constituency', key: 'constituency', icon: '🗺️', options: allLocations },

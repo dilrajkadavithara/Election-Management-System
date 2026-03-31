@@ -134,6 +134,7 @@ const AppInner = () => {
                             setListFilters={setListFilters}
                             setView={setView}
                             userRole={userRole}
+                            currentUser={currentUser}
                             setShowChangePassword={setShowChangePassword}
                         />
                     </div>

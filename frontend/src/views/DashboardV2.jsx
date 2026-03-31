@@ -3,6 +3,7 @@ import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
     BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts';
+import BoothSelector from '../components/engine/BoothSelector';
 
 const RADIAN = Math.PI / 180;
 
@@ -139,6 +140,7 @@ const DashboardV2 = ({
     setListFilters,
     setView,
     userRole,
+    currentUser,
     setShowChangePassword
 }) => {
     const [turnoutScenario, setTurnoutScenario] = React.useState(85);
@@ -225,7 +227,14 @@ const DashboardV2 = ({
                             </button>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-6">
+                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                            <BoothSelector
+                                userRole={userRole}
+                                userAssignments={currentUser?.assignments}
+                                allLocations={allLocations}
+                                selectedBooth={dashFilters.booth}
+                                onSelect={(b) => setDashFilters({ ...dashFilters, constituency: b.constId, lb: b.lbId, booth: b.id })}
+                            />
                             <button
                                 onClick={() => setShowChangePassword(true)}
                                 className="lux-glass text-white/70 hover:text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border border-white/5 hover:bg-white/10 transition-all flex items-center gap-3 shadow-2xl"
