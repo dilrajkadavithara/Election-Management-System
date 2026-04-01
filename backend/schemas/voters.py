@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any
 
 class VoterEdit(BaseModel):
@@ -6,6 +6,13 @@ class VoterEdit(BaseModel):
     epic_id: Optional[str] = None
     age: Optional[int] = None
     gender: Optional[str] = None
+
+    @field_validator('age', mode='before')
+    @classmethod
+    def empty_str_to_none(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
     house_name: Optional[str] = None
     house_no: Optional[str] = None
     relation_name: Optional[str] = None
