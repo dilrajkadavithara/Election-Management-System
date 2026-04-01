@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import api from '../api';
 import BoothSelector from '../components/engine/BoothSelector';
+import useVotingSSE from '../hooks/useVotingSSE';
 
 const LEANING_CONFIG = {
     UDF: { color: 'bg-blue-500', border: 'border-blue-500/60', glow: 'shadow-[0_0_15px_rgba(59,130,246,0.4)]', text: 'text-blue-400', badge: 'bg-blue-500/20 text-blue-300' },
@@ -83,12 +84,11 @@ const ElectionDay = ({ userRole, userAssignments, username, setShowChangePasswor
         finally { setLoading(false); }
     }, []);
 
+    // SSE: real-time stats pushed from server (~3s latency instead of 30s polling)
+    useVotingSSE(selBooth, setStats);
+
     useEffect(() => {
         fetchData(selBooth);
-        const interval = setInterval(() => {
-            if (selBooth) api.getVotingStats(null, null, selBooth).then(setStats);
-        }, 30000);
-        return () => clearInterval(interval);
     }, [selBooth, fetchData]);
 
     const handleVoteToggle = useCallback(async (voter, val) => {

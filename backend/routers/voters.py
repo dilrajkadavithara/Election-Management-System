@@ -1,13 +1,90 @@
-import csv, io
-from fastapi import APIRouter, Depends, HTTPException
+import csv, io, json, hashlib, asyncio, logging
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
-from backend.dependencies import get_current_user
+from backend.dependencies import get_current_user, verify_token_from_query
 from backend.django_bridge import (
     get_voters_async, edit_voter_async, toggle_attendance_async, get_voting_stats_async
 )
 from backend.schemas.voters import VoterEdit
 
+logger = logging.getLogger("ElectionEngine")
 router = APIRouter(prefix="/api/voters", tags=["Voter Records"])
+
+
+# ─── SSE: Live voting stats stream ───────────────────────────────────
+# Must be defined BEFORE /voting-stats so FastAPI matches the longer path first
+@router.get("/voting-stats/stream")
+async def voting_stats_stream(
+    request: Request,
+    booth: str = Query(..., description="Booth ID to stream stats for"),
+    token: str = Query(..., description="JWT token (EventSource can't send headers)")
+):
+    """Server-Sent Events endpoint for real-time voting stats.
+    Polls DB every 3 seconds, only pushes when stats change."""
+
+    # Verify JWT from query param
+    user_info = await verify_token_from_query(token)
+    username = user_info['username']
+    b_id = int(booth) if booth and str(booth).isdigit() else None
+    if not b_id:
+        raise HTTPException(400, "Valid booth ID required")
+
+    async def event_generator():
+        prev_hash = None
+        iteration = 0
+        max_iterations = 2400  # 2400 * 3s = 2 hours hard cap
+
+        try:
+            while iteration < max_iterations:
+                # Check if client disconnected
+                if await request.is_disconnected():
+                    logger.debug(f"SSE client disconnected (booth={b_id}, user={username})")
+                    break
+
+                # Re-verify token every ~5 minutes (100 iterations * 3s)
+                if iteration > 0 and iteration % 100 == 0:
+                    try:
+                        await verify_token_from_query(token)
+                    except HTTPException:
+                        yield f"event: auth_expired\ndata: {{}}\n\n"
+                        logger.info(f"SSE token expired (booth={b_id}, user={username})")
+                        break
+
+                # Fetch fresh stats from DB
+                try:
+                    stats = await get_voting_stats_async(username, None, None, b_id)
+                    stats_json = json.dumps(stats, default=str)
+                    stats_hash = hashlib.md5(stats_json.encode()).hexdigest()
+
+                    # Only emit when stats actually changed
+                    if stats_hash != prev_hash:
+                        yield f"data: {stats_json}\n\n"
+                        prev_hash = stats_hash
+                except Exception as e:
+                    logger.warning(f"SSE stats query failed (booth={b_id}): {e}")
+
+                # Heartbeat every 15 seconds (5 iterations) to keep connection alive
+                if iteration % 5 == 0 and iteration > 0:
+                    yield ": heartbeat\n\n"
+
+                iteration += 1
+                await asyncio.sleep(3)
+
+        except asyncio.CancelledError:
+            logger.debug(f"SSE cancelled (booth={b_id}, user={username})")
+        except Exception as e:
+            logger.error(f"SSE error (booth={b_id}): {e}")
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Tell Nginx not to buffer
+        }
+    )
+
 
 @router.get("")
 async def get_voters_api(
