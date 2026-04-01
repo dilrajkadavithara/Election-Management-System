@@ -249,7 +249,7 @@ const DashboardV2 = ({
                 {/* 🛡️ Strategic Control Bar */}
                 {userRole !== 'BOOTH_AGENT' && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white/5 p-6 rounded-[2.5rem] border border-white/5 shadow-2xl relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] -mr-32 -mt-32 transition-all group-hover:bg-indigo-500/10" />
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] -mr-32 -mt-32 transition-all group-hover:bg-indigo-500/10 pointer-events-none" />
 
                         {/* Constituency Filter */}
                         <div className="flex flex-col gap-2 relative z-10">
@@ -369,7 +369,7 @@ const DashboardV2 = ({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
                 {/* 1. Winning Chance */}
                 <div className="lux-glass rounded-[2rem] !p-4 flex flex-col bg-indigo-600/5 border border-indigo-500/20 shadow-[0_0_50px_rgba(99,102,241,0.1)] relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[100px] -mr-32 -mt-32" />
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none" />
                     <h3 className="font-black uppercase tracking-[0.3em] text-[10px] text-indigo-400 mb-2 border-b border-white/5 pb-2 text-center">{perspective} Winning Chance</h3>
                     <div className="flex items-center gap-6">
                         {/* Gauge */}

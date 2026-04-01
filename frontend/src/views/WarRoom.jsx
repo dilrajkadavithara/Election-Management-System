@@ -126,7 +126,7 @@ const WarRoom = ({ allLocations, dashFilters, listFilters, setListFilters, setVi
                 {/* 🛡️ Tactical Control Bar */}
                 {userRole !== 'BOOTH_AGENT' && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white/5 p-6 rounded-[2.5rem] border border-white/5 shadow-2xl relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/5 rounded-full blur-[80px] -mr-32 -mt-32 transition-all group-hover:bg-rose-500/10" />
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/5 rounded-full blur-[80px] -mr-32 -mt-32 transition-all group-hover:bg-rose-500/10 pointer-events-none" />
 
                         {/* Constituency Filter */}
                         <div className="flex flex-col gap-2 relative z-10">

@@ -100,7 +100,7 @@ const VoterList = ({
 
             {/* 🛡️ Intelligence Filter Bar — collapsible on mobile */}
             <div className="lux-glass p-4 sm:p-8 rounded-2xl sm:rounded-[3rem] border-white/5 shadow-2xl space-y-4 sm:space-y-6 group relative">
-                <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-[100px] -mr-40 -mt-40 transition-all group-hover:bg-indigo-500/10" />
+                <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-[100px] -mr-40 -mt-40 transition-all group-hover:bg-indigo-500/10 pointer-events-none" />
 
                 {/* Mobile toggle */}
                 <button

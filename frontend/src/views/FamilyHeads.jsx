@@ -101,7 +101,7 @@ const FamilyHeads = ({
 
             {/* Matrix Filter Bar */}
             <div className="lux-glass p-6 sm:p-8 rounded-[3rem] border-white/5 shadow-2xl space-y-6 group">
-                <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 rounded-full blur-[100px] -mr-40 -mt-40 transition-all group-hover:bg-amber-500/10" />
+                <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 rounded-full blur-[100px] -mr-40 -mt-40 transition-all group-hover:bg-amber-500/10 pointer-events-none" />
 
                 {userRole === 'BOOTH_AGENT' && currentUser?.assignments?.booths?.length > 1 && (
                     <div className="mb-4">
