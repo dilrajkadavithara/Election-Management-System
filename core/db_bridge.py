@@ -187,9 +187,24 @@ def save_booth_data(constituency_name, local_body_type, local_body_name, booth_n
                     created_by=created_by_user
                 )
                 voters_to_create.append(voter)
-            
-            Voter.objects.bulk_create(voters_to_create)
-            return True, f"Successfully saved {len(voters_to_create)} voters."
+
+            # DEDUP GUARD: Remove duplicate serial numbers (keep first occurrence)
+            seen_serials = set()
+            deduped_voters = []
+            skipped = 0
+            for v in voters_to_create:
+                if v.serial_no in seen_serials:
+                    skipped += 1
+                    logger.warning(f"DEDUP: Skipping duplicate serial {v.serial_no} - {v.full_name} ({v.epic_id})")
+                    continue
+                seen_serials.add(v.serial_no)
+                deduped_voters.append(v)
+
+            Voter.objects.bulk_create(deduped_voters)
+            msg = f"Successfully saved {len(deduped_voters)} voters."
+            if skipped:
+                msg += f" ({skipped} duplicate serials removed)"
+            return True, msg
 
     except Exception as e:
         return False, f"Database Error: {str(e)}"
