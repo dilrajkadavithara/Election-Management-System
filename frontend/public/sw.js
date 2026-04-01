@@ -1,4 +1,4 @@
-const CACHE_NAME = 'intelhub-v2';
+const CACHE_NAME = 'intelhub-v3';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -12,7 +12,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate: clean up old caches
+// Activate: clean up old caches (including stale intelhub-v2)
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -22,29 +22,27 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: network-first for API calls, cache-first for static assets
+// Fetch: network-first for everything (cache is offline fallback only)
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // API calls — always go to network, never cache
+  // API calls and SSE streams — always go to network, never cache
   if (url.pathname.startsWith('/api/')) {
     return;
   }
 
-  // Static assets — try cache first, then network, then update cache
+  // All static assets — network-first, cache fallback for offline
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const fetchPromise = fetch(request).then((response) => {
-        // Only cache successful same-origin responses
+    fetch(request)
+      .then((response) => {
+        // Cache successful same-origin responses for offline use
         if (response.ok && url.origin === self.location.origin) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
         return response;
-      }).catch(() => cached); // If network fails, fall back to cache
-
-      return cached || fetchPromise;
-    })
+      })
+      .catch(() => caches.match(request)) // Offline: serve from cache
   );
 });
