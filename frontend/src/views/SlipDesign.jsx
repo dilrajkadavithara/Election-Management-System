@@ -72,18 +72,32 @@ const SlipDesign = ({
         }
     }, [phoneValue, handleSendWhatsApp]);
 
+    const slipInitDone = useRef(false);
     useEffect(() => {
+        if (slipInitDone.current) return;
         if (setSearchQuery) setSearchQuery('');
         const blankFilters = {
             constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '', serialFrom: '', serialTo: '', location: ''
         };
-        // Auto-select booth for Booth Agents
-        if (userRole === 'BOOTH_AGENT' && userAssignments?.booths?.length > 0) {
-            blankFilters.booth = String(userAssignments.booths[0]);
+        // Auto-select booth for Booth Agents (resolve constituency/lb for proper filtering)
+        if (userRole === 'BOOTH_AGENT' && userAssignments?.booths?.length > 0 && allLocations.length > 0) {
+            const bid = parseInt(userAssignments.booths[0]);
+            for (const c of allLocations) {
+                for (const lb of c.local_bodies) {
+                    if (lb.booths.some(b => parseInt(b.id) === bid)) {
+                        blankFilters.constituency = c.id;
+                        blankFilters.lb = lb.id;
+                        blankFilters.booth = bid;
+                        break;
+                    }
+                }
+            }
+            if (!blankFilters.constituency) blankFilters.booth = String(userAssignments.booths[0]);
         }
         setListFilters(blankFilters);
         loadVoters(1, blankFilters, 200);
-    }, [userRole, userAssignments]);
+        slipInitDone.current = true;
+    }, [userRole, userAssignments, allLocations]);
 
     const handleReset = () => {
         const blankFilters = { constituency: '', lb: '', booth: '', gender: '', ageFrom: '', ageTo: '', leaning: '', serialFrom: '', serialTo: '', location: '' };

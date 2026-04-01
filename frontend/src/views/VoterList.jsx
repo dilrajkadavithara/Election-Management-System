@@ -25,20 +25,20 @@ const VoterList = ({
     const totalPages = Math.max(1, Math.ceil(voterTotal / pageSize));
     const [filtersOpen, setFiltersOpen] = useState(false);
 
+    const boothInitDone = React.useRef(false);
     React.useEffect(() => {
-        // Auto-select booth for Booth Agents
-        if (userRole === 'BOOTH_AGENT' && currentUser?.assignments?.booths?.length > 0) {
+        // Auto-select FIRST booth for Booth Agents (only on initial load)
+        if (boothInitDone.current) return;
+        if (userRole === 'BOOTH_AGENT' && currentUser?.assignments?.booths?.length > 0 && allLocations.length > 0) {
             const bid = parseInt(currentUser.assignments.booths[0]);
-            let resolved = false;
             for (const c of allLocations) {
                 for (const lb of c.local_bodies) {
                     if (lb.booths.some(b => parseInt(b.id) === bid)) {
                         setListFilters(f => ({ ...f, constituency: c.id, lb: lb.id, booth: bid }));
-                        resolved = true;
-                        break;
+                        boothInitDone.current = true;
+                        return;
                     }
                 }
-                if (resolved) break;
             }
         }
     }, [allLocations, currentUser, userRole]);

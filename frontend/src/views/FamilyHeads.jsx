@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../api';
 import BoothSelector from '../components/engine/BoothSelector';
 
@@ -53,20 +53,20 @@ const FamilyHeads = ({
         setLoading(false);
     };
 
+    const familyInitDone = useRef(false);
     useEffect(() => {
-        // Auto-select booth for Booth Agents
-        if (userRole === 'BOOTH_AGENT' && currentUser?.assignments?.booths?.length > 0) {
+        // Auto-select FIRST booth for Booth Agents (only on initial load)
+        if (familyInitDone.current) return;
+        if (userRole === 'BOOTH_AGENT' && currentUser?.assignments?.booths?.length > 0 && allLocations.length > 0) {
             const bid = parseInt(currentUser.assignments.booths[0]);
-            let resolved = false;
             for (const c of allLocations) {
                 for (const lb of c.local_bodies) {
                     if (lb.booths.some(b => parseInt(b.id) === bid)) {
                         setFilters(f => ({ ...f, constituency: c.id, lb: lb.id, booth: bid }));
-                        resolved = true;
-                        break;
+                        familyInitDone.current = true;
+                        return;
                     }
                 }
-                if (resolved) break;
             }
         }
     }, [allLocations, currentUser, userRole]);
