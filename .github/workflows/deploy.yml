@@ -91,14 +91,20 @@ jobs:
             echo "🚀 Verifying Serial Number: $IMAGE_TAG"
             docker compose -f docker-compose.remote.yml pull || (echo "🚨 CRITICAL ERROR: Version $IMAGE_TAG was not found on GitHub. Stopping update to prevent old code use." && exit 1)
 
-            # 3. Nuclear-Cleanup Swap (Prevention of Name Conflicts)
-            echo "🧹 Clearing old memory and stubborn containers..."
-            # Force-kill known stubborn names
-            docker rm -f voterslist-redis-1 voterslist-worker-1 voterslist-app-1 voterslist-nginx-1 voterslist-certbot-1 2>/dev/null || true
-            # Nuclear stop (DATA-SAFE: No --volumes flag)
-            docker compose -f docker-compose.remote.yml down --remove-orphans --timeout 30 || true
-            # Restart with the EXACT commit-SHA image that was just built and pulled
+            # 3. Clean Swap (Stop first, then remove — prevents restart:always race)
+            echo "🧹 Stopping containers before removal..."
+            docker compose -f docker-compose.remote.yml stop --timeout 30 2>/dev/null || true
+            docker compose -f docker-compose.remote.yml down --remove-orphans --timeout 10 2>/dev/null || true
+            # Fallback: kill anything still lingering with the project label
+            for cid in $(docker ps -aq --filter "label=com.docker.compose.project=voterslist" 2>/dev/null); do
+                docker rm -f "$cid" 2>/dev/null || true
+            done
+
+            # Persist IMAGE_TAG to .env so manual `docker compose up -d` always works
+            sed -i '/^IMAGE_TAG=/d' .env 2>/dev/null || true
+            echo "IMAGE_TAG=${{ github.sha }}" >> .env
             export IMAGE_TAG=${{ github.sha }}
+
             echo "🚀 Starting containers with IMAGE_TAG=$IMAGE_TAG"
             docker compose -f docker-compose.remote.yml up -d
 

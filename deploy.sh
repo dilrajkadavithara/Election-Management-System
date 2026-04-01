@@ -1,37 +1,67 @@
 #!/bin/bash
+set -euo pipefail
 
-# 1. Update orchestration file
+COMPOSE_FILE="docker-compose.remote.yml"
+
+# 1. Update orchestration files
 git pull origin master
 
-# 2. Get the unique commit SHA (The Serial Number)
-export IMAGE_TAG=$(git rev-parse HEAD)
+# 2. Lock the commit SHA and persist it to .env so ANY future
+#    `docker compose up -d` (manual or scripted) uses the correct image.
+IMAGE_TAG=$(git rev-parse HEAD)
+export IMAGE_TAG
 
-echo "🚀 [DATA-SHIELD]: Starting Safe Deployment for Commit: $IMAGE_TAG"
+# Write/update IMAGE_TAG in .env (preserve all other vars)
+if [ -f .env ]; then
+    # Remove old IMAGE_TAG line, then append new one
+    sed -i '/^IMAGE_TAG=/d' .env
+fi
+echo "IMAGE_TAG=${IMAGE_TAG}" >> .env
 
-# 3. Pull the specific image (The 'Waiter' Loop)
-# We pull BEFORE we stop anything to keep your current server running!
-until docker compose -f docker-compose.remote.yml pull; do
-  echo "⚠️ Build for $IMAGE_TAG is still in progress on GitHub... waiting 30 seconds..."
+echo "🚀 Deploying commit: $IMAGE_TAG"
+
+# 3. Pull new images BEFORE stopping anything (zero-gap swap)
+until docker compose -f "$COMPOSE_FILE" pull; do
+  echo "⚠️ Image not ready yet... retrying in 30s"
   sleep 30
 done
 
-# 4. SWAP PROTOCOL (Data-Safe)
-echo "🛠️ Clearing 'Zombie' containers (leaving Data Volumes untouched)..."
+# 4. STOP first (prevents restart:always from respawning during cleanup)
+echo "🛠️ Stopping running containers..."
+docker compose -f "$COMPOSE_FILE" stop --timeout 30 2>/dev/null || true
 
-# First, force-kill the known stubborn containers
-docker rm -f voterslist-redis-1 voterslist-worker-1 voterslist-app-1 voterslist-nginx-1 voterslist-certbot-1 voterslist-db-1 2>/dev/null || true
+# 5. Remove containers (compose-native, no hardcoded names)
+docker compose -f "$COMPOSE_FILE" down --remove-orphans --timeout 10 2>/dev/null || true
 
-# Second, perform a safe shutdown (WITHOUT --volumes flag)
-docker compose -f docker-compose.remote.yml down --remove-orphans --timeout 1 || true
+# 6. Nuclear fallback — kill anything still lingering with the project prefix
+for cid in $(docker ps -aq --filter "label=com.docker.compose.project=voterslist" 2>/dev/null); do
+    docker rm -f "$cid" 2>/dev/null || true
+done
 
-# 5. Start the new version into the empty house
-echo "✨ Starting the fresh v3.2.1-SHA-LOCK engine..."
-docker compose -f docker-compose.remote.yml up -d
+# 7. Start fresh containers with the locked IMAGE_TAG
+echo "✨ Starting containers (IMAGE_TAG=$IMAGE_TAG)..."
+docker compose -f "$COMPOSE_FILE" up -d
 
-# 6. Flush Redis cache (Safe - does not touch Postgres data)
-if docker ps | grep -q "voterslist-redis-1"; then
-    docker exec -it voterslist-redis-1 redis-cli FLUSHALL
-fi
+# 8. Wait for Redis to be ready, then flush cache
+echo "⏳ Waiting for Redis..."
+for i in $(seq 1 15); do
+    if docker compose -f "$COMPOSE_FILE" exec -T redis redis-cli ping 2>/dev/null | grep -q PONG; then
+        REDIS_PASS=$(grep -oP 'REDIS_PASSWORD=\K.*' .env 2>/dev/null || echo "intelhub_redis_2026")
+        docker compose -f "$COMPOSE_FILE" exec -T redis redis-cli -a "$REDIS_PASS" --no-auth-warning FLUSHALL
+        echo "✅ Redis cache flushed"
+        break
+    fi
+    sleep 2
+done
 
-echo "✨ Deployment Complete. Your server is now running Commit: $IMAGE_TAG"
-echo "🛠️ Verification: run 'docker logs voterslist-worker-1' to see the startup tracer."
+# 9. Quick health check
+echo "⏳ Waiting for app to start..."
+for i in $(seq 1 20); do
+    if docker compose -f "$COMPOSE_FILE" exec -T app curl -sf http://localhost:8000/api/health > /dev/null 2>&1; then
+        echo "✅ App is healthy"
+        break
+    fi
+    sleep 3
+done
+
+echo "✅ Deployment complete. Running commit: $IMAGE_TAG"
